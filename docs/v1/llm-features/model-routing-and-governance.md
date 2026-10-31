@@ -53,6 +53,10 @@ generative_llm:
 
 **This YAML is a design target**, not something to copy into the existing `config/opencode/llm.json` unmodified. When support is proven, an owner-reviewed revision may set `pro_enabled: true`, append **only** `deepseek-v4.1-pro` to `allowed_models`, set a finite per-run Pro-call cap and require reason-coded approval. If no actual ID is exposed, keep Pro disabled. Limit values are example ceilings to be tuned to real quotas. Prices/context windows are provider- and account-dependent and must not be guessed.
 
+## Existing weekly Codex workflow compatibility
+
+The repository's [weekly optimization design](../weekly-optimization.md) and [local Codex skill](../../../.agents/skills/trady-weekly-optimization/SKILL.md) predate this restrictive owner policy. **The new policy is stricter than the existing design**: if Codex CLI, any coding subagent, experiment orchestration or summarization invokes a generative model other than the two exact OpenCodeGo IDs above, that run is **noncompliant**, even if it operates offline and does not place trades. Do not call a Codex model an approved DeepSeek model or treat an AI coding agent as exempt. Until a verified OpenCodeGo-only coding-agent replacement exists, keep that generative part of weekly automation disabled/manual; deterministic LEAN and Lean 4 processes remain separate. The documentation change alone does not reconfigure the current Codex CLI, installed timers or any running worker. Audit enabled local schedules before applying the owner restriction to production.
+
 ## Credential, privacy and tool boundaries
 
 Only the existing `OPENCODE_API_KEY` credential route is allowed for these generative calls. Never give model prompts or skills API keys, raw broker trading credentials, tax identity, arbitrary SQL/shell access or order submission. Apply source-processing/retention rights before forwarding X, licensed transcript, market data, private portfolio or tax material. Isolate agent memory and summaries by owner/account/run and reviewed skill manifest. Prompt/tool-injection in source text does not authorize another model, URL or tool.
