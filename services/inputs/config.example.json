@@ -1,0 +1,13 @@
+{
+  "config_version": 1,
+  "store_directory": "../../var/inputs-service",
+  "listen": "127.0.0.1:8787",
+  "workers": 4,
+  "request_timeout_ms": 2000,
+  "maximum_body_bytes": 262144,
+  "maximum_response_bytes": 1048576,
+  "sources": {},
+  "reviewers": {},
+  "accounts": [],
+  "model": null
+}

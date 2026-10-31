@@ -11,6 +11,8 @@ use crate::{
     floor_to, fresh, mul, size_entry, sub, target_ceiling, validate_risk,
 };
 
+pub mod proof_bridge;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FormulaFamily {
@@ -340,6 +342,8 @@ pub fn calculate_limits(
     let loss = sub(acquisition_cost.amount, proceeds_at_stop.amount)?;
     require(
         acquisition_cost.amount <= upper.budget.amount
+            && upper.budget.amount <= cash.amount
+            && acquisition_cost.amount <= cash.amount
             && loss > Decimal::ZERO
             && loss <= account_risk_cap
             && loss <= mul(acquisition_cost.amount, policy.max_initial_loss_fraction)?,

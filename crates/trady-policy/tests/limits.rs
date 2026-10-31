@@ -248,3 +248,59 @@ fn precision_exhaustion_never_silently_returns_an_off_grid_price() {
         .is_err()
     );
 }
+
+#[test]
+fn allocation_rounding_at_decimal_boundaries_never_spends_past_cash() {
+    for cash in [
+        "79228162514264337593543950335",
+        "1000.0000000000000000000000001",
+    ] {
+        let (envelope, parameters, mut input) = fixture();
+        input.account.spendable_cash = money(cash);
+        input.rules.quantity_step = Decimal::ONE;
+        input.rules.currency_unit = Decimal::ONE;
+        let limits = calculate_limits(
+            &Policy::default(),
+            &envelope,
+            &parameters,
+            d("0.01"),
+            &input,
+            now(),
+        )
+        .unwrap();
+        assert!(limits.acquisition_cost.amount <= limits.budget.amount);
+        assert!(limits.budget.amount <= input.account.spendable_cash.amount);
+        assert!(limits.acquisition_cost.amount <= input.account.spendable_cash.amount);
+    }
+
+    // At the smallest supported unit 0.98 * cash rounds upward to cash. This
+    // remains an affordable unit, with no manufactured remaining cash.
+    let (_, _, mut input) = fixture();
+    let unit = d("0.0000000000000000000000000001");
+    input.account.spendable_cash = money("0.0000000000000000000000000001");
+    input.quote.bid = unit;
+    input.quote.ask = unit;
+    input.entry_range.minimum = unit;
+    input.entry_range.maximum = unit;
+    input.entry_costs.fixed = money("0");
+    input.entry_costs.uncertainty = money("0");
+    input.entry_costs.rate = Decimal::ZERO;
+    input.rules.price_tick = unit;
+    input.rules.quantity_step = Decimal::ONE;
+    input.rules.minimum_quantity = Decimal::ONE;
+    input.rules.currency_unit = unit;
+    let sized = trady_policy::size_entry(
+        &input.account.spendable_cash,
+        &input.quote,
+        &input.entry_range,
+        &input.entry_costs,
+        &input.rules,
+        now(),
+        &Policy::default(),
+    )
+    .unwrap();
+    assert_eq!(sized.budget.amount, unit);
+    assert_eq!(sized.quantity, Decimal::ONE);
+    assert_eq!(sized.estimated_cost.amount, unit);
+    assert_eq!(sized.remaining_cash.amount, Decimal::ZERO);
+}

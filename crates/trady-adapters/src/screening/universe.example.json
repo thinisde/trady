@@ -1,0 +1,17 @@
+{
+  "config_version": 1,
+  "enabled": false,
+  "source_id": "sp500_universe",
+  "url": "https://approved-universe.example.invalid/sp500.json",
+  "allowed_hosts": ["approved-universe.example.invalid"],
+  "expected_provider": "REPLACE_WITH_APPROVED_PROVIDER",
+  "expected_taxonomy_edition": "REPLACE_WITH_EFFECTIVE_GICS_EDITION",
+  "rights": {
+    "store_content": false,
+    "llm_processing": false,
+    "retention_hours": 24,
+    "terms_reference": ""
+  },
+  "minimum_interval_seconds": 60,
+  "daily_request_limit": 96
+}

@@ -42,7 +42,19 @@ The broader [v1 interface](./v1/telegram.md) remains the product specification.
    cp config/telegram.example.json config/telegram.local.json
    ```
 
-   Replace both empty arrays in `access` with your verified numeric ID:
+   For a single owner, store your verified numeric ID as a string under
+   `credentials` in the central credentials file:
+
+   ```json
+   "TRADY_TELEGRAM_WHITELIST_USER_ID": "123456789"
+   ```
+
+   Leave both `access` arrays empty. The central setting replaces both user/chat
+   allowlists with that single private ID before configuration validation. An
+   environment value takes precedence over the file entry. A malformed configured
+   ID prevents startup.
+
+   If the central ID is empty or absent, configure explicit lists instead:
 
    ```json
    "access": {
@@ -52,8 +64,9 @@ The broader [v1 interface](./v1/telegram.md) remains the product specification.
    ```
 
    The number above is illustrative. Use the number from your verified private
-   chat. Private user/chat IDs must match. Empty lists prevent startup. Adding
-   another owner requires explicitly adding their verified ID to both lists;
+   chat. Private user/chat IDs must match. Empty effective lists prevent startup.
+   To allow multiple owners, leave the central ID empty and explicitly add each
+   verified ID to both configuration lists;
    enabling notifications sends account updates to every configured private chat.
 
 The bot token is resolved through the central loader. Telegram configuration rejects token,
@@ -62,7 +75,8 @@ default `var/` state directory are ignored by Git.
 
 ## Check and run
 
-Validate configuration without credentials, provider requests or state writes:
+Validate configuration and resolved access lists without requiring bot/broker
+credentials, provider requests or state writes:
 
 ```sh
 cargo run --locked --bin trady -- telegram check --config config/telegram.local.json
@@ -100,10 +114,10 @@ when the command is launched from another working directory. Defaults are:
 Prepare an account-bound configuration using the [Trading 212 guide](./trading212.md).
 Set `trading212_config` to its path, for example `trading212.demo.example.json`
 after replacing that file's illustrative account values. Its `environment`
-selects `TRADY_T212_DEMO_READ_API_KEY` / `TRADY_T212_DEMO_READ_API_SECRET` for demo
-or `TRADY_T212_LIVE_READ_API_KEY` / `TRADY_T212_LIVE_READ_API_SECRET` for live.
+selects `TRADY_T212_DEMO_API_KEY` / `TRADY_T212_DEMO_API_SECRET` for demo
+or `TRADY_T212_LIVE_API_KEY` / `TRADY_T212_LIVE_API_SECRET` for live.
 Supply the selected pair through the [central store](./credentials.md) or service
-environment using an account-scoped key with information permissions. Monitoring
+environment using an account-scoped API key. The monitor makes information requests only. Monitoring
 requires both values from the selected mode and never falls back to the other pair.
 
 The monitor constructs only `Trading212Reader`. A live broker binding remains

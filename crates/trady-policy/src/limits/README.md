@@ -14,6 +14,13 @@ do not certify readiness or grant permission to place orders.
   supplied evidence flags and account/quote/cost/rule snapshots.
 - `[mod.rs:CalculatedLimits]`, `calculate_limits`: checked quantity, entry/stop/
   target prices, modeled account risk and correlated source snapshot identifiers.
+- `[proof_bridge.rs:Request]`, `Operation`, `Reply`, `evaluate`: offline execution
+  of the real formula and checked decimal helpers, returning full accepted limits
+  or the actual rejection message. Successful decimals use exact normalized
+  base-ten strings.
+  Requests use `kind` tags `FORMULA`/`DECIMAL`; replies use `status` tags
+  `ACCEPTED`/`DECIMAL`/`REJECTED`. `[proof_bridge.rs:Operation]` supports
+  `Add`, `Sub`, `Mul`, `Div`, `Rem`, `Floor` and `Ceil`.
 - [Parent policy contract](../README.md) documents the shared economics helpers.
 
 ## Invariants
@@ -33,7 +40,11 @@ noise/minimum distances, downward quantity sizing under both cash and modeled
 account-risk budgets, and the shared net target/reward-risk checks. Arithmetic
 uses instrument-currency prices and account-currency costs. The planned
 account-risk cap uses reconciled spendable cash. Final tick/lot remainders and
-the original allocation/downside/reward inequalities are checked again. The
+the original allocation/downside/reward inequalities are checked again, including
+explicit `budget <= cash` and `acquisition_cost <= cash` checks after rounding. The
+quantity correction tries at most two lot reductions and checks that the next
+lot would violate a quantity, allocation or risk bound
+(`[mod.rs:calculate_limits]`). The
 calendar-resolved holding deadline is carried unchanged in the result. Arithmetic
 failure rejects the calculation. Evidence flags and supported fee/calendaring/
 protection assumptions must be established by callers; this function does not
@@ -46,7 +57,8 @@ It is not a permission, durable execution acceptance or owner policy relaxation.
 ## Side Effects
 
 None. `[mod.rs:calculate_limits]` returns values and performs no I/O or mutation
-of input policy, application state or orders.
+of input policy, application state or orders. The proof bridge is also pure;
+CLI serialization and process execution belong to its callers.
 
 ## Verification
 
@@ -54,3 +66,9 @@ Run `cargo test -p trady-policy --locked` and
 `cargo clippy -p trady-policy --all-targets --locked -- -D warnings` from the
 repository root. Formula-specific evidence/provenance and runtime activation are
 separate integration responsibilities.
+
+`tests/limits.rs:allocation_rounding_at_decimal_boundaries_never_spends_past_cash`
+retains maximum-magnitude, 28-place and smallest-unit allocation regressions.
+The offline `lab/proofs` project proves the reference acceptance checks and runs
+exact Lean/production/simulation-adapter parity under its explicit translation
+and compiler trust boundary.

@@ -1,0 +1,132 @@
+{
+  "config_version": 1,
+  "max_pages": 2,
+  "page_size": 10,
+  "lookback_seconds": 86400,
+  "overlap_seconds": 60,
+  "x_budget": {
+    "enabled": false,
+    "billing_scope": "primary_x_app",
+    "version": 1,
+    "cycle_start": "2026-11-01T00:00:00Z",
+    "cycle_end": "2026-12-01T00:00:00Z",
+    "ceiling_microusd": 10000000,
+    "ordinary_microusd": 8000000,
+    "support_microusd": 2000000,
+    "post_read_microusd": 5000,
+    "user_read_microusd": 10000,
+    "recent_counts_microusd": 5000,
+    "burst_margin_percent": 150,
+    "approval_reference": "",
+    "entitlement_reference": "",
+    "provider_limit_reference": ""
+  },
+  "sources": [
+    {
+      "id": "x_pilot_ackman",
+      "kind": "X_RECENT_SEARCH",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 86400,
+      "daily_request_limit": 8,
+      "query": null,
+      "x_account": {
+        "person": "Bill Ackman", "handle": "BillAckman", "user_id": null,
+        "verified_at": null, "ownership_reference": "", "priority": 0,
+        "scope": ["investment", "company", "macro"]
+      },
+      "x_rule": {
+        "version": 1,
+        "terms": ["stock", "shares", "investment", "portfolio", "earnings", "guidance", "acquisition", "merger", "tariff", "tariffs", "inflation", "rates"],
+        "exclude_reposts": false, "approved_at": null, "approval_reference": ""
+      },
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+    },
+    {
+      "id": "x_pilot_musk",
+      "kind": "X_RECENT_SEARCH",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 86400,
+      "daily_request_limit": 8,
+      "query": null,
+      "x_account": {
+        "person": "Elon Musk", "handle": "elonmusk", "user_id": null,
+        "verified_at": null, "ownership_reference": "", "priority": 0,
+        "scope": ["Tesla", "business"]
+      },
+      "x_rule": {
+        "version": 1,
+        "terms": ["Tesla", "TSLA", "robotaxi", "Cybercab", "FSD", "Optimus", "earnings", "guidance"],
+        "exclude_reposts": false, "approved_at": null, "approval_reference": ""
+      },
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+    },
+    {
+      "id": "x_pilot_bessent",
+      "kind": "X_RECENT_SEARCH",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 86400,
+      "daily_request_limit": 8,
+      "query": null,
+      "x_account": {
+        "person": "Scott Bessent", "handle": "SecScottBessent", "user_id": null,
+        "verified_at": null, "ownership_reference": "", "priority": 0,
+        "scope": ["Treasury", "macro", "policy"]
+      },
+      "x_rule": {
+        "version": 1,
+        "terms": ["trade", "tariff", "tariffs", "sanctions", "Treasury", "debt", "yields", "inflation", "economy"],
+        "exclude_reposts": false, "approved_at": null, "approval_reference": ""
+      },
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+    },
+    {
+      "id": "x_pilot_burry",
+      "kind": "X_RECENT_SEARCH",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 86400,
+      "daily_request_limit": 8,
+      "query": null,
+      "x_account": {
+        "person": "Michael Burry", "handle": "michaeljburry", "user_id": null,
+        "verified_at": null, "ownership_reference": "", "priority": 0,
+        "scope": ["valuation", "contrary_analysis"]
+      },
+      "x_rule": {"version": 1, "terms": [], "exclude_reposts": false, "approved_at": null, "approval_reference": ""},
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+    },
+    {
+      "id": "x_pilot_altman",
+      "kind": "X_RECENT_SEARCH",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 86400,
+      "daily_request_limit": 8,
+      "query": null,
+      "x_account": {
+        "person": "Sam Altman", "handle": "sama", "user_id": null,
+        "verified_at": null, "ownership_reference": "", "priority": 0,
+        "scope": ["AI", "partnership", "infrastructure"]
+      },
+      "x_rule": {
+        "version": 1,
+        "terms": ["OpenAI", "partnership", "Microsoft", "NVIDIA", "Amazon", "compute", "datacenter", "data center", "funding", "chips"],
+        "exclude_reposts": false, "approved_at": null, "approval_reference": ""
+      },
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+    }
+  ]
+}

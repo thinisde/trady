@@ -2,9 +2,10 @@
 
 Status: Docker files, Rust provider/application adapters, a CLI scoring command and
 a pure threshold calculation are implemented. The service has not been built or
-started and no weights have been downloaded. Durable sentiment jobs, readiness
-dossier binding, LLM tool registration and automatic plan activation remain v1
-integration work. Automated trading is still unavailable.
+started and no weights have been downloaded. [Durable sentiment jobs and tools](../../../crates/trady-adapters/src/research_jobs/README.md),
+source/claim invalidation and atomic plan dependency checks are implemented in the
+[autonomous runtime](../../autonomous.md). Real source verification, model rights,
+deployment configuration and financial release evidence remain required.
 
 ## Ownership and evidence flow
 
@@ -27,7 +28,7 @@ from the [native Rust Perpetual advisor](../perpetual.md). Sentiment describes t
 tone, not expected returns, factual truth, exceptional-catalyst verification or a
 probability that a trade will win.
 
-The planned production flow is collection → rights/provenance and issuer checks →
+The production interfaces support collection → rights/provenance and issuer checks →
 one text per reporting lineage → FinBERT → correlated sentiment assessment →
 versioned Rust threshold calculation → readiness dossier or holding review →
 executor revalidation. No executor lock or financial transaction spans inference.
@@ -131,7 +132,8 @@ evidence record retains its item/lineage/hash and original expiry. At threshold
 calculation time, inference must be at most 15 minutes old, every source must still
 be within 24 hours and every expiry must still be in the future. Recompute these
 checks at use time; source edits, deletion, changed permission or changed relevance
-must invalidate the bound assessment in the future durable pipeline.
+invalidate the persisted readiness reference. Its validity is capped by the
+15-minute assessment age and every original source's 24-hour observation bound.
 
 ## Threshold calculation version 1
 
@@ -155,8 +157,10 @@ falls from 3% to 2%. Positive tone keeps the base ceiling; it cannot supply miss
 primary evidence, price confirmation or readiness points.
 
 `entry_score_passes` and `target_increase_allowed` describe this calculation only.
-They do not authorize an order or plan activation. A checked holding update can
-lower its target, tighten its stop or shorten expiry; it cannot widen a long stop,
+They do not authorize an order or plan activation. The generic `checked_update`
+policy can lower its target, tighten its stop or shorten expiry; native
+`activate_reviewed_holding_update` additionally requires the broker stop to remain
+unchanged. Neither path can widen a long stop,
 extend the holding deadline, exceed 10%, cancel an exit latch or sell merely
 because a post sounds negative. Existing quote, cost, account, reward/risk and
 readiness checks remain mandatory. Evaluate the old plan/quote before activating
@@ -203,7 +207,7 @@ exceptional gate. Supplied features are unverified preview inputs; output always
 has `evidence_verified=false` and `entry_authorized=false`. Without them the
 command reports the assessment and `thresholds: null`. It writes no database.
 
-## Invariants and side effects
+## Invariants
 
 `[../../../crates/trady-application/src/sentiment/mod.rs:assess_sentiment]` enforces rights,
 batch/lineage correlation and source freshness before calling the provider.
@@ -212,13 +216,15 @@ rechecks source/assessment freshness; it never mutates a plan or policy.
 `[../../../services/finbert/serve.py:main]` alone loads the model and opens the listener;
 module imports, configuration validation and offline tests do neither.
 
+## Side Effects
+
 Explicit scoring sends permitted text to the configured service. Later service
 startup can download pinned model artifacts into its cache; inference consumes
 CPU/RAM and returns probabilities without persisting source text or logging request
-content. Future durable assessment storage must follow the source's derivative
+content. Durable assessment storage follows the source's derivative
 retention/deletion rules, as specified in [memory and data](../memory-and-data.md).
 
-## Verification and remaining integration
+## Verification and deployment evidence
 
 ```sh
 cargo test -p trady-policy -p trady-application --test sentiment --locked
@@ -230,8 +236,10 @@ python3 scripts/verify-assets.py
 Offline tests use deterministic predictions, in-memory handler streams and
 one-shot mock HTTP fixtures. They do not establish container startup, actual
 FinBERT quality, latency or resource capacity. Model/image smoke testing is deferred
-because the service must remain unlaunched. Before automated integration, add
-durable assessment/dependency storage, approved revision binding, instrument and
-rights invalidation, required-assessment readiness gates, watchdog scheduling and
-atomic executor plan checks. Do not advertise a new LLM tool until its exact
-schema, persistence and scope validation are implemented.
+because the service must remain unlaunched. Durable assessment/dependency storage,
+approved revision binding, instrument/rights invalidation, required-assessment
+readiness, watchdog scheduling and atomic executor plan checks now have concrete
+implementations. The research tools advertise sentiment only for an enabled,
+approved revision. Production still requires actual verified source packets,
+approved model use, deployed service health and independently accepted trading
+evidence; fixture tests supply none of those approvals.

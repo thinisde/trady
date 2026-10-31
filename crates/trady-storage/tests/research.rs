@@ -14,6 +14,7 @@ fn dsn(role: &str) -> String {
 }
 fn source() -> SourceConfig {
     SourceConfig {
+        x_rule: None,
         id: "fixture_news_storage".into(),
         kind: SourceKind::PublisherRss,
         enabled: true,

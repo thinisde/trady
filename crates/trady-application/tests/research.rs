@@ -26,6 +26,7 @@ fn config() -> ResearchConfig {
             daily_request_limit: 100,
             query: None,
             x_account: None,
+            x_rule: None,
             rights: SourceRights {
                 store_content: true,
                 llm_processing: false,
@@ -33,6 +34,7 @@ fn config() -> ResearchConfig {
                 terms_reference: "fixture permission".into(),
             },
         }],
+        x_budget: None,
     }
 }
 #[derive(Default)]

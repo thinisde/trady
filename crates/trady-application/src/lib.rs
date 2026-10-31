@@ -1,12 +1,19 @@
 //! Use cases and ports. Analyst and gateway deliberately receive no broker mutation port.
 
+pub mod autonomous;
 pub mod broker;
 pub mod contracts;
+pub mod financial;
 pub mod harness;
+pub mod model_lab;
 pub mod optimization;
+pub mod perpetual;
 pub mod research;
+pub mod research_jobs;
+pub mod screening;
 pub mod sentiment;
 pub mod telegram;
+pub mod x_monitoring;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,6 @@
 //! Bounded collection orchestration. Providers cannot grant policy or order authority.
 
+use crate::x_monitoring::{XBudgetPolicy, XRule, planned_post_cost};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -31,6 +32,8 @@ pub struct SourceConfig {
     pub daily_request_limit: u32,
     pub query: Option<String>,
     pub x_account: Option<XAccount>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_rule: Option<XRule>,
     pub rights: SourceRights,
 }
 
@@ -78,11 +81,11 @@ impl SourceConfig {
                 "enabled sources require a reviewed terms reference",
             )?;
         }
-        if self.kind == SourceKind::XTimeline {
+        if matches!(self.kind, SourceKind::XTimeline | SourceKind::XRecentSearch) {
             let a = self
                 .x_account
                 .as_ref()
-                .ok_or_else(|| Error("X timeline requires an account".into()))?;
+                .ok_or_else(|| Error("X collection requires an account".into()))?;
             require(
                 !a.handle.is_empty()
                     && a.handle.len() <= 15
@@ -97,7 +100,23 @@ impl SourceConfig {
         } else {
             require(
                 self.x_account.is_none(),
-                "account belongs only to an X timeline",
+                "account belongs only to an X collector",
+            )?;
+        }
+        if self.kind == SourceKind::XRecentSearch {
+            let rule = self
+                .x_rule
+                .as_ref()
+                .ok_or_else(|| Error("X search requires a versioned rule".into()))?;
+            rule.query(&self.x_account.as_ref().expect("validated account").handle)?;
+            require(
+                self.query.is_none(),
+                "X search uses the versioned rule, not a separate query",
+            )?;
+        } else {
+            require(
+                self.x_rule.is_none(),
+                "X rule belongs only to recent search",
             )?;
         }
         Ok(())
@@ -106,6 +125,12 @@ impl SourceConfig {
     pub fn activation_gap(&self, now: DateTime<Utc>) -> Option<&'static str> {
         if !self.enabled {
             return Some("source_disabled");
+        }
+        if let Some(rule) = &self.x_rule
+            && (rule.approval_reference.trim().is_empty()
+                || rule.approved_at.is_none_or(|at| at > now))
+        {
+            return Some("x_watchlist_and_coverage_not_approved");
         }
         if let Some(a) = &self.x_account {
             if a.user_id.is_none() || a.ownership_reference.trim().is_empty() {
@@ -142,6 +167,8 @@ pub struct ResearchConfig {
     pub lookback_seconds: i64,
     pub overlap_seconds: i64,
     pub sources: Vec<SourceConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_budget: Option<XBudgetPolicy>,
 }
 
 impl ResearchConfig {
@@ -158,9 +185,29 @@ impl ResearchConfig {
             "invalid research configuration or collection bounds",
         )?;
         let mut ids = BTreeSet::new();
+        let mut authors = BTreeSet::new();
+        let mut user_ids = BTreeSet::new();
+        if let Some(budget) = &self.x_budget {
+            budget.validate()?;
+        }
         for source in &self.sources {
             source.validate()?;
             require(ids.insert(&source.id), "duplicate research source ID")?;
+            if let Some(account) = &source.x_account {
+                require(
+                    authors.insert(account.handle.to_ascii_lowercase()),
+                    "overlapping primary X collectors",
+                )?;
+                if let Some(id) = &account.user_id {
+                    require(user_ids.insert(id), "overlapping primary X stable IDs")?;
+                }
+            }
+            if source.kind == SourceKind::XRecentSearch {
+                require(
+                    self.page_size >= 10,
+                    "X recent search requires page_size at least 10",
+                )?;
+            }
         }
         Ok(())
     }
@@ -213,6 +260,16 @@ pub trait NewsSource {
 }
 
 pub trait ResearchRepository {
+    /// Production repositories reserve a shared provider/credential allowance before I/O.
+    /// The default supports offline in-memory fixtures without a database.
+    fn reserve_shared_requests(
+        &mut self,
+        _source: &SourceConfig,
+        _at: DateTime<Utc>,
+        _requests: u32,
+    ) -> Result<bool> {
+        Ok(true)
+    }
     fn state(&mut self, source_id: &str) -> Result<SourceState>;
     /// Items, status, cursor, and audit event are committed in one compare-and-swap.
     fn commit_page(
@@ -233,6 +290,21 @@ pub trait ResearchRepository {
 }
 
 pub fn prepare_state(source: &SourceConfig, mut state: SourceState) -> Result<SourceState> {
+    if let (Some(old), Some(rule), Some(account)) =
+        (&state.coverage, &source.x_rule, &source.x_account)
+    {
+        let hash = rule.hash(
+            &account.handle,
+            account.user_id.as_deref().unwrap_or_default(),
+        )?;
+        if old.approved_at.is_some() && old.rule_hash.as_ref().is_some_and(|prior| prior != &hash) {
+            require(
+                old.rule_version
+                    .is_none_or(|version| rule.version > version),
+                "changed X rule requires a new approved version",
+            )?;
+        }
+    }
     let hash: String = Sha256::digest(
         serde_json::to_vec(source)
             .map_err(|_| Error("source registry serialization failed".into()))?,
@@ -248,9 +320,33 @@ pub fn prepare_state(source: &SourceConfig, mut state: SourceState) -> Result<So
         state.etag = None;
         state.last_modified = None;
         state.last_attempt_at = None;
+        state.x_counts = None;
+        state.coverage_revision = state
+            .coverage_revision
+            .checked_add(1)
+            .ok_or_else(|| Error("source coverage revision overflow".into()))?;
     }
     state.registry_hash = Some(hash);
     state.rights = Some(source.rights.clone());
+    let rule = source.x_rule.as_ref();
+    state.coverage = Some(SourceCoverage {
+        transport: source.kind,
+        revision: state.coverage_revision,
+        rule_version: rule.map(|r| r.version),
+        rule_hash: match (rule, source.x_account.as_ref()) {
+            (Some(rule), Some(account)) => Some(rule.hash(
+                &account.handle,
+                account.user_id.as_deref().unwrap_or_default(),
+            )?),
+            _ => None,
+        },
+        query: match (rule, source.x_account.as_ref()) {
+            (Some(rule), Some(account)) => Some(rule.query(&account.handle)?),
+            _ => None,
+        },
+        approved_at: rule.and_then(|r| r.approved_at),
+        approval_reference: rule.map(|r| r.approval_reference.clone()),
+    });
     Ok(state)
 }
 
@@ -270,7 +366,8 @@ pub fn reserve_source_requests(
         state.request_day = Some(at.date_naive());
         state.requests_today = 0;
     }
-    let allowed = state.requests_today.saturating_add(requests) <= source.daily_request_limit;
+    let allowed = state.requests_today.saturating_add(requests) <= source.daily_request_limit
+        && repository.reserve_shared_requests(source, at, requests)?;
     state.last_attempt_at = Some(at);
     if allowed {
         state.requests_today += requests;
@@ -336,6 +433,48 @@ pub fn collect_source(
         report.gaps = state.gaps;
         return Ok(report);
     }
+    if matches!(
+        source.kind,
+        SourceKind::XTimeline | SourceKind::XLookup | SourceKind::XRecentSearch
+    ) && config
+        .x_budget
+        .as_ref()
+        .is_none_or(|budget| budget.active(now).is_err())
+    {
+        state.last_status = Some(CollectionStatus::Disabled);
+        state.gaps = vec!["x_active_reviewed_billing_policy_required".into()];
+        state.last_attempt_at = Some(now);
+        repository.commit_page(&source.id, state.revision, &state, &[], now)?;
+        report.status = CollectionStatus::Disabled;
+        report.gaps = state.gaps;
+        return Ok(report);
+    }
+    if source.kind == SourceKind::XRecentSearch {
+        let account = source.x_account.as_ref().expect("validated account");
+        let hash = source.x_rule.as_ref().expect("validated rule").hash(
+            &account.handle,
+            account.user_id.as_deref().unwrap_or_default(),
+        )?;
+        let ready = state.x_counts.as_ref().is_some_and(|count| {
+            count.complete
+                && count.rule_hash == hash
+                && count.measured_at <= now
+                && now - count.measured_at <= Duration::days(7)
+                && config.x_budget.as_ref().is_some_and(|budget| {
+                    planned_post_cost(count, budget)
+                        .is_ok_and(|cost| cost <= budget.ordinary_microusd)
+                })
+        });
+        if !ready {
+            state.last_status = Some(CollectionStatus::Disabled);
+            state.last_attempt_at = Some(now);
+            state.gaps = vec!["x_complete_affordable_preflight_counts_required".into()];
+            repository.commit_page(&source.id, state.revision, &state, &[], now)?;
+            report.status = CollectionStatus::Disabled;
+            report.gaps = state.gaps;
+            return Ok(report);
+        }
+    }
     // An explicit one-shot run can skip cadence, never a provider's retry deadline.
     if state.retry_at.is_some_and(|at| at > now)
         || (!force
@@ -347,8 +486,15 @@ pub fn collect_source(
         report.gaps = vec!["collection_not_due".into()];
         return Ok(report);
     }
-    let end = state.window_end.unwrap_or(now);
-    let start = match state.window_start {
+    let end = state
+        .window_end
+        .unwrap_or(if source.kind == SourceKind::XRecentSearch {
+            DateTime::from_timestamp((now - Duration::seconds(30)).timestamp(), 0)
+                .ok_or_else(|| Error("invalid X search timestamp".into()))?
+        } else {
+            now
+        });
+    let mut start = match state.window_start {
         Some(at) => at,
         None => {
             state
@@ -357,6 +503,10 @@ pub fn collect_source(
                 - Duration::seconds(config.overlap_seconds)
         }
     };
+    if source.kind == SourceKind::XRecentSearch {
+        start = DateTime::from_timestamp(start.timestamp(), 0)
+            .ok_or_else(|| Error("invalid X search timestamp".into()))?;
+    }
     require(
         start < end && end <= now,
         "invalid stored collection interval",
@@ -374,7 +524,7 @@ pub fn collect_source(
             limit: config.page_size,
         };
         let requests = match source.kind {
-            SourceKind::XTimeline => 2,
+            SourceKind::XTimeline | SourceKind::XRecentSearch => 2,
             SourceKind::GoogleNewsRss | SourceKind::PublisherRss => 4,
             _ => 1,
         };

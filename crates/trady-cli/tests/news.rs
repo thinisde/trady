@@ -23,7 +23,7 @@ fn news_status_exposes_disabled_five_account_seeds_without_provider_access() {
     assert_eq!(value["entry_authorized"], false);
     assert_eq!(value["provider_access_verified"], false);
     let sources = value["sources"].as_array().unwrap();
-    assert_eq!(sources.len(), 10);
+    assert_eq!(sources.len(), 12);
     let accounts: Vec<_> = sources
         .iter()
         .filter(|s| s["kind"] == "X_TIMELINE")
@@ -84,4 +84,47 @@ fn news_input_errors_and_missing_authorization_fail_before_network_calls() {
     let output = run(&["--help"]);
     assert!(output.status.success());
     assert!(String::from_utf8_lossy(&output.stdout).contains("news collect --once"));
+}
+
+#[test]
+fn pilot_status_is_offline_disabled_and_exposes_cost_and_coverage_policy() {
+    let path = format!(
+        "{}/../../config/x-pilot.example.json",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = run(&["news", "status", "--config", &path]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["x_budget"]["ceiling_microusd"], 10_000_000);
+    assert_eq!(value["x_budget"]["enabled"], false);
+    let sources = value["sources"].as_array().unwrap();
+    assert_eq!(sources.len(), 5);
+    assert!(
+        sources
+            .iter()
+            .all(|s| s["enabled"] == false && s["delivery"] == "INCREMENTAL_RECENT_SEARCH")
+    );
+    let disabled = run(&[
+        "news",
+        "counts-x",
+        "--source",
+        "x_pilot_ackman",
+        "--config",
+        &path,
+    ]);
+    assert!(disabled.status.success());
+    let value: Value = serde_json::from_slice(&disabled.stdout).unwrap();
+    assert_eq!(value["status"], "DISABLED");
+    for args in [
+        vec!["news", "export-x", "--as-of", "invalid"],
+        vec!["news", "status", "--as-of", "2026-10-31T12:00:00Z"],
+        vec!["news", "export-x", "--for-model"],
+        vec!["news", "budget-x"],
+    ] {
+        assert!(!run(&args).status.success());
+    }
 }

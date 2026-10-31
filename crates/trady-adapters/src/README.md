@@ -3,32 +3,125 @@
 ## Overview
 
 [lib.rs](./lib.rs) implements application ports over explicit fixture data.
+Its public modules also expose configured provider transports, automatic research
+inputs, native advisory inference and Telegram delivery state.
 
 ## Interface
 
+- [Financial adapters](./financial/README.md): `[financial/mod.rs:FinancialClient]`
+  implements the application `FinancialProvider` port with fixed routes and central
+  credential lookup; `offline_page` handles explicit yfinance research imports.
+
+- [Weekly lab](./weekly_lab/README.md): bounded pinned offline helpers.
+- `[shadow.rs:ShadowSource]`: explicit `Real { market_data_hash }` or
+  `Fixture { description }` provenance.
+- `[shadow.rs:ShadowBroker]`: `new`, `update`, `source`, `record_proposal` and
+  `observed_at`; recording-only `ExecutionBroker::observe` and
+  `BrokerExecutionPort` implementations without a network client or real broker handle.
+
+- [Verified inputs service](./inputs_service/README.md): immutable provider imports,
+  separate operator reviews, explicit calendars and bounded authenticated HTTP
+  reads for the actual autonomous DTOs. Model bundles require deployment pins and
+  resolved approval evidence; HTTP exposes no import or broker mutation route.
+- [Research automation](./research_jobs/README.md): scoped information tools,
+  registered-source collector composition and durable sentiment jobs.
+
 - `[credentials.rs:CredentialStore]`: bounded strict private-file parsing,
   environment overrides, redacted secret values and metadata-only status.
+  Public methods are `load`, `from_path`, `optional`, `required` and `status`.
+- `[credentials.rs:SecretValue]`: redacted `Debug`, explicit `expose`/`into_inner`
+  access and no serialization implementation. `[credentials.rs:CredentialSource]`
+  identifies `Environment`, `File` or `Missing`; `[credentials.rs:CredentialStatus]`
+  exposes `name`, `configured` and `source` without secret values.
+- `[credentials.rs:file_path]`, `initialize`, free `required`/`optional`, and
+  `DEFAULT_CREDENTIALS_FILE`, `CREDENTIALS_FILE_ENV`, `CREDENTIALS_TEMPLATE`,
+  `KNOWN_CREDENTIALS`: central path selection, exclusive initialization,
+  per-call loading and the status catalog.
+
+- [Automatic inputs](./autonomous/README.md): `TradingInputsConfig`, packet DTOs
+  including `PredictionRequest`, and `AutomaticInputs::{new, with_ports, with_clock}`.
+  Its `TradingInputs` implementation combines configured HTTP observations,
+  screening, authoritative limits and persisted native advice. `MarketInputs`
+  exposes separate session/quote/cost reads without research or model state.
+- [Universe ingestion](./screening/README.md): `ApprovedUniverseConfig`,
+  `UniverseDocument` and `HttpUniverseSource` implement approved point-in-time
+  universe fetching with instance-local throttling.
+- [Native Perpetual](./perpetual/README.md): `ApprovedArtifact`,
+  `NativePerpetualAdvisor` and pinned runtime/format constants; deployment-owned
+  immutable classifiers implement the application advisory port.
+- [Telegram](./telegram/README.md): token/identity/client/failure types,
+  `MESSAGE_UNITS`/`split_message`, and `spool` state records with `StateStore`.
 
 - `[finbert/mod.rs:FinBertConfig]`, `FinBertClient`: `SentimentProvider` implementation
   for pinned self-hosted CPU classification; [contract](./finbert/README.md).
 
 - [OpenCode Go](./opencode/README.md): provider transport and approved runtime tools;
-  [setup](../../../docs/opencode/README.md).
+  `[opencode/llm.rs:OpenCodeGoConfig::default]` uses `deepseek-v4.1-flash`.
+  [Setup](../../../docs/opencode/README.md).
 - `[sessions.rs:MemorySessionRepository]`: owner/account/policy-scoped session
-  fixtures implementing `SessionRepository`, with generation and revision checks.
+  fixtures implementing `SessionRepository::{create, load, list, acquire, save,
+  release}`, with generation and revision checks.
 - [News source contract](./news/README.md): `SourceClient`, safe HTTPS transport,
   RSS/Atom/news API normalization and X identity/timeline/lookup adapters.
 
-- `[lib.rs:FakeClock]`: shared time, checked `advance`; `[lib.rs:SystemClock]`: UTC wall time.
-- `[lib.rs:FakeCalendar]`: lookup from explicitly supplied sessions; absent sessions remain absent.
-- `[lib.rs:FakeBroker]`: validated paper snapshot reads/replacement and client-intent lookup.
-- `[lib.rs:FakeQuotes]`: fixture quote lookup by instrument.
-- `[trading212/mod.rs:Trading212Reader]` and `Trading212Executor`: typed broker
-  information and executor-only HTTP operations; see the [provider contract](./trading212/README.md).
+- `[lib.rs:FakeClock]`: `new` and shared time with checked `advance`;
+  `[lib.rs:SystemClock]`: UTC wall time. Both implement the application `Clock` port.
+- `[lib.rs:FakeCalendar]`: public `sessions` and `ExchangeCalendar` lookup from
+  explicitly supplied sessions; absent sessions remain absent.
+- `[lib.rs:FakeBroker]`: `new`, `set_snapshot`, validated paper snapshot reads
+  and client-intent lookup through the application broker ports.
+- `[lib.rs:FakeQuotes]`: public `quotes` map and `QuotePort` lookup by instrument.
+- `[trading212/mod.rs:Trading212Reader]`, `Trading212Executor` and reexported
+  `AutonomousTrading212`: typed broker information, guarded execution and paced
+  execution observations; see the [provider contract](./trading212/README.md).
 - `[lib.rs:MemoryExecutionRepository]`: account registration, leases, reconciliation,
-  paper reservations and outbox-count inspection. Clones share process memory.
+  paper reservations and outbox-count inspection. Public methods are `new`,
+  `register_paper_account` and `outbox_count`; `ExecutionRepository` supplies
+  `acquire`, `renew`, `unresolved_intents`, `save_reconciliation`,
+  `latest_reconciliation` and `reserve_paper_intent`. Clones share process memory.
+  The port traits, session types and domain values are imported contracts, not
+  locally defined or reexported types.
 
 ## Invariants
+
+- `[weekly_lab/mod.rs:HelperLab]` accepts candidate parameters as data;
+  `[weekly_lab/runner.rs:HelperCommand::run_linux]` clears inherited environment.
+  `[weekly_lab/mod.rs:HelperLab::verify_candidate]` distinguishes full formula
+  verification from arithmetic-only scope.
+- `[shadow.rs:validate_observation]` requires valid Shadow snapshots, `shadow_`
+  accounts and nonfuture observations. Real sources require a valid market-data
+  hash; fixture descriptions have 1–200 bytes. `ShadowBroker::update` preserves
+  account identity and nondecreasing observation time.
+- `[shadow.rs:ShadowBroker::record_proposal]` preserves the complete immutable
+  envelope, including source, snapshot and time, across retries/restart.
+  `[shadow.rs:BrokerExecutionPort for ShadowBroker]` returns `Unsupported` after
+  successful suppression recording; recording failures return their own errors.
+  These operations create no broker acknowledgement or fill.
+- `[shadow.rs:ShadowBroker::new]` requires a nonsymlink private recording directory.
+  `write_once` checks existing records for regular nonsymlink/private files,
+  exact bytes and a 4 MiB ceiling; that size ceiling does not guard initial writes.
+
+- `[credentials.rs:CredentialStore::read_file]` requires a regular UTF-8 file,
+  private Unix group/other permission bits, at most 262,144 bytes and strict
+  configuration version 1. Only an absent default file is tolerated; an explicit
+  path must exist. Loading does not reject symlinks or verify ownership.
+- `[credentials.rs:CredentialStore::resolve]` gives environment values precedence;
+  a blank environment value masks file fallback. Names allow 1–96 uppercase ASCII
+  letters, digits or `_`; values allow at most 65,536 bytes and no NUL.
+  `KNOWN_CREDENTIALS` is a status catalog, not a name allowlist.
+  `[credentials.rs:CredentialStore::status]` reports known and file-defined names,
+  rather than discovering arbitrary environment-variable names.
+- `[sessions.rs:MemorySessionRepository::create]` validates scope/limits and
+  requires version 1, revision 0 and a globally unique valid session ID.
+  `acquire` requires a valid worker, expired lease and TTL 1–300 seconds, then
+  increments generation. `save` checks scope, worker, generation, unexpired lease
+  and revision before incrementing revision. `release` checks worker/generation
+  only. `save` does not revalidate session schema/limits. These session leases
+  use UTC wall time rather than `FakeClock`.
+- `[autonomous/mod.rs:AutomaticInputs::candidate]` requires scoped provider inputs,
+  active authoritative limits and validated native advice before returning a
+  candidate. `[perpetual/mod.rs:NativePerpetualAdvisor::from_approved_artifacts]`
+  consumes deployment-supplied artifacts; an empty registry provides no usable model.
 
 - `[finbert/mod.rs:FinBertConfig::validate]` requires config v1, a 40-character model
   revision, a 1–60 second timeout, and root HTTPS or loopback/`finbert` HTTP without
@@ -44,16 +137,23 @@
   valid catalog/frontmatter/taxonomy and safe local paths.
 - `[lib.rs:FakeBroker::set_snapshot]` preserves account identity and paper mode;
   ambiguous order lookup fails and capabilities remain unknown.
+- `[lib.rs:FakeClock::advance]` permits negative advances and checks duration/time
+  overflow. `[lib.rs:FakeCalendar::session]` selects the first
+  `opens_at <= now < closes_at` session; `[lib.rs:FakeQuotes::quote]` does not
+  independently validate quote freshness.
 - `[lib.rs:ttl]` bounds leases to 1–300 seconds. Acquisition increments the fencing
   generation, rejects time overflow and requires reconciliation after takeover.
   `[lib.rs:check]` rejects stale/expired fences for writes.
-- `[lib.rs:MemoryExecutionRepository::save_reconciliation]` rejects stale/future or
+- `[lib.rs:MemoryExecutionRepository::save_reconciliation]` requires nonfuture
+  snapshots no older than 60 seconds through `trady_policy_fresh`. It rejects
   regressing snapshots, currency changes, reused snapshot IDs with different content,
   and unknown resolution IDs before mutating intents. Outbox keys deduplicate snapshots.
 - `[lib.rs:MemoryExecutionRepository::reserve_paper_intent]` supports prepared buy
   fixtures only, requires fresh flat reconciliation in the current generation, and
   blocks a consumed session or unresolved intent. Replays with the same immutable
-  intent fields return false; changed fields fail.
+  intent fields return false; changed fields fail. Replay comparison precedes
+  current recovery, flatness and consumed-session checks. Every successful new
+  reservation clears recovery, requiring reconciliation before another reservation.
 - Memory persistence ends when all repository handles are dropped. It is not durable storage.
 - `[trading212/http.rs:Http::build]` fixes authenticated production requests to
   HTTPS origins with redirects, proxies and automatic retries disabled.
@@ -61,6 +161,19 @@
   binding and stock metadata before sending; ambiguous outcomes require recovery.
 
 ## Side Effects
+
+`[weekly_lab/runner.rs:HelperCommand::run_linux]` spawns resource-bounded local
+processes and persists hashed tool artifacts, including fixed `prlimit`/`kill`
+programs as documented by the child contract. `[shadow.rs:ShadowBroker::write_once]`
+exclusively creates and fsyncs local records; retries validate exact envelopes and
+reject changed or tampered content. Construction does not record the initial
+observation; `update` records before replacing memory. Failed writes/syncs can
+leave artifacts without rollback.
+
+`[credentials.rs:CredentialStore::load]` reads environment and configured files;
+free `required`/`optional` reload per call. `[credentials.rs:initialize]` exclusively
+creates a template file with Unix mode `0600`, requiring an existing parent and
+refusing overwrite; a failed write can leave the newly created file.
 
 Explicit `[finbert/mod.rs:FinBertClient::predict]` posts supplied text to the configured
 model service and reads a bounded response; it performs no database or broker writes.
@@ -70,9 +183,19 @@ and memory tools read local instruction files or scoped session records.
 
 Clocks, fixture snapshots, account leases, intent state, reconciliation and outbox
 entries can change in shared process memory. `SystemClock` reads real UTC time.
-The explicitly constructed Trading 212 clients make broker network calls; only
-the executor client exposes order mutation.
+`[sessions.rs:MemorySessionRepository::acquire]` updates worker/generation/expiry;
+`save` replaces shared session state, increments the caller's revision and renews
+expiry; `release` expires the lease. Clones share process memory and use real UTC.
+The explicitly constructed Trading 212 clients make broker network calls;
+`Trading212Executor` and `AutonomousTrading212` expose guarded order mutation,
+and explicit pacing may sleep. `[autonomous/mod.rs:AutomaticInputs::candidate]`
+writes bound calculations and research records through its repository before
+final validation, without an enclosing rollback. `[telegram/spool.rs:StateStore]` locks and writes private
+plaintext delivery state. Native Perpetual inference computes in memory.
 
 ## Verification
 
+Targeted checks: `cargo test -p trady-adapters --test weekly_helpers --test shadow_recording --locked`.
+
 Run `cargo test -p trady-adapters --locked` from the repository root.
+Workspace verification is `cargo test --workspace --locked`.

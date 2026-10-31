@@ -5,16 +5,17 @@
 //! calling the port. A transport acknowledgment does not establish a fill or protection.
 
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use trady_domain::{AccountId, BrokerOrder, Currency, InstrumentId, IntentId, Side};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TimeInForce {
     Day,
     GoodTillCancel,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OrderKind {
     Market {
         extended_hours: bool,
@@ -36,7 +37,8 @@ pub enum OrderKind {
 
 /// Prices use the instrument's currency; quantity is positive for either side.
 /// `intent_id` is local correlation, not a claim of broker-side idempotency.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BrokerOrderRequest {
     pub intent_id: IntentId,
     pub account_id: AccountId,

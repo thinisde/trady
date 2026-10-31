@@ -12,7 +12,10 @@ Repeatable asset and database checks for the offline milestone.
   links, heading anchors and fences.
 - [test-postgres.py](./test-postgres.py): `main`; provisions a new disposable
   PostgreSQL 18.3 container and runs ignored storage integration tests plus the
-  CLI `opencode` integration target and service probes/demo.
+  CLI `opencode`, `autonomous_cli` and `telegram_jobs_cli` integration targets
+  and service probes/demo.
+  The latter verifies the actual analyst child with restricted PostgreSQL access,
+  no inherited credentials and absent formula authority; it performs no broker calls.
   `[test-postgres.py:run]` runs checked text subprocesses; `[test-postgres.py:sql]`
   executes SQL through `docker exec -i ... psql -v ON_ERROR_STOP=1`, defaulting to
   database `postgres` and discarding command stdout.
@@ -30,8 +33,8 @@ catalog traversal/symlinks; it does not approve a bundle for runtime use.
 
 `[verify-assets.py:verify_schemas]` compares parsed JSON with the normative fenced
 examples and fixtures. `[verify-assets.py:verify_markdown]` checks root README/index
-plus Markdown under docs, skills, crates, schemas, migrations, scripts and config;
-it skips URI-scheme links and fenced examples, checks local targets exist and
+plus Markdown under docs, skills, crates, schemas, migrations, scripts, config,
+lab and services. It skips URI-scheme links and fenced examples, checks local targets exist and
 checks Markdown fragments with `[verify-assets.py:heading_anchors]`. These are
 equality and regex/assertion checks, without a complete schema or Markdown parser.
 
@@ -40,9 +43,12 @@ development authentication config. It mounts that config read-only, uses tmpfs
 for PostgreSQL data and allocates an ephemeral loopback port. It polls local and
 TCP readiness at most 150 times, sleeping 0.2 seconds after unsuccessful polls;
 the subprocesses themselves have no timeout. The runner executes role provisioning
-and creates `trady` plus a separate `paperless_fixture` database. It sets
-`TRADY_TEST_ISOLATED=1`, `TRADY_TEST_PORT` and the migrator/executor/analyst/gateway
-DSNs to the new container's Trady database.
+and creates `trady` plus a separate `paperless_fixture` database. It provisions
+roles through `migrations/0000_roles.sql` and `migrations/0000_lab_roles.sql`.
+It sets `TRADY_TEST_ISOLATED=1`, `TRADY_TEST_PORT` and the
+migrator/executor/analyst/gateway DSNs to the new container's Trady database,
+plus `TRADY_LAB_DSN`, `TRADY_VERIFIER_DSN`, `TRADY_SHADOW_DSN`,
+`TRADY_RELEASE_DSN` (the `trady_releaser` role) and `TRADY_RELEASE_OWNER_DSN`.
 
 `[verify-assets.py:ROOT]` and `[test-postgres.py:ROOT]` resolve the repository root
 from the script location. `[test-postgres.py:NAME]` includes the runner process ID
@@ -71,6 +77,8 @@ its disposable-database environment:
 
 - `cargo test --locked -p trady-storage --tests -- --ignored --nocapture`
 - `cargo test --locked -p trady-cli --test opencode -- --ignored --nocapture`
+- `cargo test --locked -p trady-cli --test autonomous_cli -- --ignored --nocapture`
+- `cargo test --locked -p trady-cli --test telegram_jobs_cli -- --ignored --nocapture`
 - `cargo run --locked --quiet --bin trady -- analyst --once`
 - `cargo run --locked --quiet --bin trady -- executor --once`
 - `cargo run --locked --quiet --bin trady -- gateway --once`

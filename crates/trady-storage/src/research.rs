@@ -13,6 +13,54 @@ pub struct PgResearchRepository {
 }
 
 impl PgResearchRepository {
+    /// A local inference/evaluation export; no training permission or network access is implied.
+    pub fn export_x_evidence(
+        &mut self,
+        source_id: Option<&str>,
+        as_of: DateTime<Utc>,
+        now: DateTime<Utc>,
+        limit: usize,
+    ) -> Result<Vec<Value>> {
+        require(
+            source_id.is_none_or(valid_key) && as_of <= now && (1..=100).contains(&limit),
+            "invalid X export scope",
+        )?;
+        self.purge_content(now)?;
+        let rows = self
+            .client
+            .query(
+                "SELECT i.document,s.document,i.ingested_at,i.registry_hash,i.coverage
+            FROM research.source_items i JOIN research.source_states s USING(source_id)
+            WHERE ($1::text IS NULL OR i.source_id=$1) AND i.ingested_at <= $2
+            AND i.fetched_at <= $2 AND i.first_seen_at <= $2
+            AND i.document->'social' <> 'null'::jsonb AND i.coverage IS NOT NULL
+            ORDER BY i.ingested_at,i.item_id LIMIT $3",
+                &[&source_id, &as_of, &(limit as i64)],
+            )
+            .map_err(db)?;
+        let mut output = vec![];
+        for row in rows {
+            let ingested_at: DateTime<Utc> = row.get(2);
+            let registry_hash: Option<String> = row.get(3);
+            let coverage: Value = row.get(4);
+            let item = read_row(row, now, true)?;
+            if !item.rights.store_content
+                || !item.rights.llm_processing
+                || item.expires_at <= now
+                || matches!(
+                    item.content_status,
+                    ContentStatus::Unavailable | ContentStatus::Superseded
+                )
+            {
+                continue;
+            }
+            output.push(serde_json::json!({"observation":item,"ingested_at":ingested_at,
+                "verified_at":null,"feature_ready_at":null,"registry_hash":registry_hash,"coverage":coverage,
+                "training_permitted":false,"issuer_mapping_verified":false}));
+        }
+        Ok(output)
+    }
+
     pub fn connect(dsn: &str) -> Result<Self> {
         let mut client = connect_local(dsn)?;
         verify_role(&mut client, "trady_analyst")?;
@@ -186,6 +234,53 @@ fn validate_item(item: &SourceItem, source_id: &str, at: DateTime<Utc>) -> Resul
 }
 
 impl ResearchRepository for PgResearchRepository {
+    fn reserve_shared_requests(
+        &mut self,
+        source: &trady_application::research::SourceConfig,
+        at: DateTime<Utc>,
+        requests: u32,
+    ) -> Result<bool> {
+        use trady_application::financial::{BudgetLimits, ProviderAccount};
+        use trady_domain::financial::Provider;
+        let (provider, minute, daily) = match source.kind {
+            SourceKind::AlphaVantage => (Provider::AlphaVantage, 5, 25),
+            SourceKind::Finnhub => (Provider::Finnhub, 20, 200),
+            SourceKind::Gdelt => (Provider::Gdelt, 5, 200),
+            _ => return Ok(true),
+        };
+        let daily = daily.min(source.daily_request_limit);
+        let mut limits = BudgetLimits {
+            per_minute: minute.min(daily),
+            per_day: daily,
+            per_month: daily * 31,
+        };
+        let mut tx = self.client.transaction().map_err(db)?;
+        if let Some(row) = tx
+            .query_opt(
+                "SELECT document FROM research.financial_accounts WHERE budget_key=$1",
+                &[&provider.budget_key()],
+            )
+            .map_err(db)?
+        {
+            let account: ProviderAccount = serde_json::from_value(row.get(0))
+                .map_err(|_| Error("invalid provider account".into()))?;
+            if !account.enabled {
+                return Ok(false);
+            }
+            limits.per_minute = limits.per_minute.min(account.limits.per_minute);
+            limits.per_day = limits.per_day.min(account.limits.per_day);
+            limits.per_month = limits.per_month.min(account.limits.per_month);
+        }
+        let allowed = crate::financial::reserve_credits(
+            &mut tx,
+            &provider.budget_key(),
+            &limits,
+            requests,
+            at,
+        )?;
+        tx.commit().map_err(db)?;
+        Ok(allowed)
+    }
     fn state(&mut self, source_id: &str) -> Result<SourceState> {
         require(valid_key(source_id), "invalid research source ID")?;
         self.client.execute("INSERT INTO research.source_states(source_id,document) VALUES($1,$2) ON CONFLICT DO NOTHING",
@@ -314,12 +409,12 @@ impl ResearchRepository for PgResearchRepository {
                 changed += 1;
             }
             item.redact(at, false);
-            tx.execute("INSERT INTO research.source_items(item_id,source_id,external_id,lineage_id,content_hash,document,first_seen_at,fetched_at,expires_at)
-                VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(item_id) DO UPDATE SET
+            tx.execute("INSERT INTO research.source_items(item_id,source_id,external_id,lineage_id,content_hash,document,first_seen_at,fetched_at,expires_at,registry_hash,coverage,ingestion_revision)
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(item_id) DO UPDATE SET
                 lineage_id=EXCLUDED.lineage_id,content_hash=EXCLUDED.content_hash,document=EXCLUDED.document,
-                fetched_at=EXCLUDED.fetched_at,expires_at=EXCLUDED.expires_at",
+                fetched_at=EXCLUDED.fetched_at,expires_at=EXCLUDED.expires_at,registry_hash=EXCLUDED.registry_hash,coverage=EXCLUDED.coverage,ingestion_revision=EXCLUDED.ingestion_revision",
                 &[&item.item_id,&source_id,&item.external_id,&item.lineage_id,&item.content_hash,&json(&item)?,
-                    &item.first_seen_at,&item.fetched_at,&item.expires_at]).map_err(db)?;
+                    &item.first_seen_at,&item.fetched_at,&item.expires_at,&state.registry_hash,&state.coverage.as_ref().map(json).transpose()?,&next_revision]).map_err(db)?;
             if matches!(
                 item.content_status,
                 ContentStatus::Unavailable | ContentStatus::Superseded
@@ -355,7 +450,32 @@ impl ResearchRepository for PgResearchRepository {
         tx.execute("INSERT INTO research.collection_events(source_id,revision,status,document) VALUES($1,$2,$3,$4)",
             &[&source_id,&next_revision,&status,&json(&next_state)?]).map_err(db)?;
         purge(&mut tx, at)?;
+        if state.last_status == Some(CollectionStatus::RateLimited)
+            && let (Some(retry), Some(coverage)) = (state.retry_at, state.coverage.as_ref())
+        {
+            use trady_domain::financial::Provider;
+            let provider = match coverage.transport {
+                SourceKind::AlphaVantage => Some(Provider::AlphaVantage),
+                SourceKind::Finnhub => Some(Provider::Finnhub),
+                SourceKind::Gdelt => Some(Provider::Gdelt),
+                _ => None,
+            };
+            if let Some(provider) = provider {
+                tx.execute("INSERT INTO research.provider_retry_deadlines(budget_key,retry_at) VALUES($1,$2) ON CONFLICT(budget_key) DO UPDATE SET retry_at=GREATEST(research.provider_retry_deadlines.retry_at,EXCLUDED.retry_at)",&[&provider.budget_key(),&retry]).map_err(db)?;
+            }
+        }
         tx.commit().map_err(db)?;
+        if !items.is_empty() {
+            // Content/cursor are durable before recording an availability time. A crash here leaves
+            // NULL availability, which exports exclude. The revision guard cannot mark a newer page.
+            self.client
+                .execute(
+                    "UPDATE research.source_items SET ingested_at=clock_timestamp()
+                WHERE source_id=$1 AND ingestion_revision=$2 AND ingested_at IS NULL",
+                    &[&source_id, &next_revision],
+                )
+                .map_err(db)?;
+        }
         Ok(changed)
     }
 

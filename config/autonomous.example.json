@@ -1,0 +1,86 @@
+{
+  "config_version": 1,
+  "enabled": false,
+  "interval_seconds": 5,
+  "trading": {
+    "config_version": 1,
+    "account_id": "paper_autonomous_demo",
+    "mode": "paper",
+    "base_currency": "EUR",
+    "owner_id": "configured_owner",
+    "policy": {
+      "version": 1,
+      "entry_cash_fraction": "0.98",
+      "confidence_entry_min": 90,
+      "max_target_fraction": "0.10",
+      "exceptional_targets_enabled": false,
+      "max_initial_loss_fraction": "0.02",
+      "min_reward_to_risk": "1.50",
+      "max_holding_sessions": 5,
+      "leverage": false,
+      "add_to_position": false,
+      "rotation_enabled": false
+    },
+    "capabilities": {
+      "cash_account": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+      "instrument": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+      "fractional_orders": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+      "protective_orders": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+      "quotes": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null}
+    },
+    "approved_skills": {},
+    "limits_authority": null,
+    "live_release": null
+  },
+  "broker": {
+    "config_version": 1,
+    "environment": "demo",
+    "account_id": "paper_autonomous_demo",
+    "broker_account_id": 12345,
+    "base_currency": "EUR",
+    "timeout_seconds": 10
+  },
+  "inputs": {
+    "config_version": 1,
+    "base_url": "https://approved-inputs.example.invalid/v1/",
+    "allowed_hosts": ["approved-inputs.example.invalid"],
+    "screening": {
+      "owner_id": "configured_owner",
+      "run_id": "runtime_replaces_this_id",
+      "owner_allowlist": [],
+      "policy": {
+        "max_membership_age_seconds": 86400,
+        "max_broker_age_seconds": 600,
+        "max_quote_age_seconds": 10,
+        "max_priority_age_seconds": 3600,
+        "max_timing_age_seconds": 60,
+        "minimum_seconds_to_close": 1800,
+        "max_spread_bps": "20",
+        "max_round_trip_cost_bps": "50",
+        "minimum_daily_notional": "1000000",
+        "max_order_participation_bps": "10",
+        "candidate_limit": 5,
+        "peer_limit": 2
+      }
+    }
+  },
+  "universe": {
+    "config_version": 1,
+    "enabled": false,
+    "source_id": "sp500_universe",
+    "url": "https://approved-universe.example.invalid/sp500.json",
+    "allowed_hosts": ["approved-universe.example.invalid"],
+    "expected_provider": "REPLACE_WITH_APPROVED_PROVIDER",
+    "expected_taxonomy_edition": "REPLACE_WITH_EFFECTIVE_GICS_EDITION",
+    "rights": {
+      "store_content": false,
+      "llm_processing": false,
+      "retention_hours": 24,
+      "terms_reference": ""
+    },
+    "minimum_interval_seconds": 60,
+    "daily_request_limit": 96
+  },
+  "models": [],
+  "controls": {"pause_entries": true, "close_position": false}
+}

@@ -2,9 +2,12 @@
 
 All Rust credential readers use
 [`CredentialStore`](../crates/trady-adapters/src/credentials.rs): Trading 212,
-Telegram, OpenCode Go, X/news and the four database roles. Provider configuration
+Telegram, OpenCode Go, X/news, financial data and the database roles. Provider configuration
 files contain settings and credential names; secret values belong here or in the
 process environment.
+
+The [credential setup READMEs](../config/credentials/README.md) explain how to
+obtain every entry, with official provider links and separate demo/live T212 steps.
 
 ## Setup
 
@@ -33,24 +36,52 @@ with a provider or report trading readiness.
 
 ## Names and resolution
 
-The template covers `OPENCODE_API_KEY`, `TRADY_TELEGRAM_BOT_TOKEN`, separate
-Trading 212 demo/live read pairs,
-`TRADY_X_BEARER_TOKEN`, `TRADY_ALPHA_VANTAGE_API_KEY`, and
+Financial adapters register `TRADY_SEC_USER_AGENT`, `TRADY_FRED_API_KEY`,
+`TRADY_TWELVE_DATA_API_KEY`, `TRADY_FINNHUB_API_KEY`, `TRADY_FMP_API_KEY`,
+`TRADY_COINGECKO_API_KEY`, `TRADY_TIINGO_API_KEY` and
+`TRADY_MASSIVE_API_KEY` in the central template/status
+controller. SEC requires the operator's actual contact-bearing User-Agent.
+GDELT and offline yfinance need no new secret; Alpha Vantage keeps its existing
+entry. See [setup](../config/credentials/financial-data/README.md) and
+[the integration guide](./financial-data.md). Existing files are preserved;
+add required names to their `credentials` object instead of reinitializing them.
+
+The template covers `OPENCODE_API_KEY`, `TRADY_TELEGRAM_BOT_TOKEN`,
+`TRADY_TELEGRAM_WHITELIST_USER_ID`, separate Trading 212 demo/live API key/secret pairs,
+`TRADY_TRADING_INPUTS_TOKEN`, `TRADY_X_BEARER_TOKEN`, `TRADY_X_CONSUMER_KEY`,
+`TRADY_X_CONSUMER_SECRET`, `TRADY_ALPHA_VANTAGE_API_KEY`, and
 `TRADY_ANALYST_DSN`, `TRADY_EXECUTOR_DSN`, `TRADY_GATEWAY_DSN`,
-`TRADY_MIGRATOR_DSN`.
+`TRADY_MIGRATOR_DSN`, `TRADY_LAB_DSN`, `TRADY_VERIFIER_DSN`, `TRADY_SHADOW_DSN`,
+`TRADY_RELEASE_OWNER_DSN` and `TRADY_RELEASE_DSN`. The private input server uses
+`TRADY_INPUTS_SERVICE_TOKEN`; its authorized client uses the same bearer value
+under `TRADY_TRADING_INPUTS_TOKEN`. Keep each deployment identity's file limited
+to its own secret set; the example lists names for setup, not shared authority.
+
+`TRADY_TELEGRAM_WHITELIST_USER_ID` optionally stores one verified private
+Telegram user ID as a decimal string. When set, Telegram configuration loading
+uses that ID for both user/chat allowlists before validation. When absent or
+empty, the configuration's explicit allowlists apply. Invalid configured IDs
+fail without echoing their value. The
+[Telegram setup README](../config/credentials/telegram/README.md) explains ID
+discovery and access-list precedence.
 
 Trading 212's `environment` field selects the endpoint and credential pair for
-both `t212 snapshot` and Telegram broker monitoring:
+T212 clients, including snapshots and Telegram broker monitoring:
 
-- `"demo"`: `TRADY_T212_DEMO_READ_API_KEY` and `TRADY_T212_DEMO_READ_API_SECRET`.
-- `"live"`: `TRADY_T212_LIVE_READ_API_KEY` and `TRADY_T212_LIVE_READ_API_SECRET`.
+- `"demo"`: `TRADY_T212_DEMO_API_KEY` and `TRADY_T212_DEMO_API_SECRET`.
+- `"live"`: `TRADY_T212_LIVE_API_KEY` and `TRADY_T212_LIVE_API_SECRET`.
 
+These are the four T212 entries: one API key and one API secret per environment.
 Both pairs can be stored in the same private file. The selected pair must be
-complete; credentials from the other mode are never used as a fallback. The former
-shared `TRADY_T212_READ_API_KEY` / `TRADY_T212_READ_API_SECRET` names are no longer
-used by broker readers. Move any existing values into the entries for the account's
-environment. See the [T212 setup](./trading212.md) for selecting the account-bound
-demo/live configuration.
+complete; credentials from the other mode are never used as a fallback.
+See the [T212 setup](./trading212.md) for selecting the account-bound demo/live
+configuration.
+
+The X app's consumer key and consumer secret are stored as
+`TRADY_X_CONSUMER_KEY` and `TRADY_X_CONSUMER_SECRET`. The current X lookup and
+timeline readers use `TRADY_X_BEARER_TOKEN`; the consumer pair is available in
+the store for integrations that need it. See the
+[X setup README](../config/credentials/x/README.md) for all three entries.
 
 `TRADY_HASHING_SECRET_KEY` and `TRADY_SIGNING_SECRET_KEY` provide storage names
 for future keyed hashing/signing consumers. They are optional and are not used
@@ -102,7 +133,7 @@ applies when constructing clients.
 
 For rotation, replace the relevant file entry or injected environment value and
 restart clients using it. Keep demo/live broker stores separate and preserve the
-existing account bindings and read-only key permissions.
+existing account bindings and API key permissions.
 
 ## Verification
 

@@ -3,6 +3,14 @@
 debug
 target
 
+# Local Lean build outputs
+**/.lake/
+**/lake-manifest.json
+
+# Local Python helper caches
+__pycache__/
+*.py[cod]
+
 # Private Telegram inbox/outbox state
 /var/
 /config/telegram.local.json

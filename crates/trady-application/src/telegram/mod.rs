@@ -6,6 +6,8 @@ use trady_domain::{AccountId, AccountSnapshot, Currency, Mode, Result, require};
 
 use crate::FoundationConfig;
 
+pub mod gateway;
+
 const MAX_ID: i64 = (1_i64 << 52) - 1;
 const MAX_COMMAND_BYTES: usize = 4096;
 const MAX_COMMAND_AGE_SECONDS: i64 = 300;
@@ -125,6 +127,7 @@ pub struct Monitor {
     degraded: bool,
     stale_after_seconds: i64,
     started_at: DateTime<Utc>,
+    expanded_information: bool,
 }
 
 impl Monitor {
@@ -149,6 +152,50 @@ impl Monitor {
             degraded: false,
             stale_after_seconds,
             started_at: now,
+            expanded_information: false,
+        })
+    }
+
+    /// Deployment metadata only; this path validates no execution capability and
+    /// has no broker mutation port. Namespaces keep the information scopes apart.
+    pub fn new_for_gateway(
+        access: OwnerAccess,
+        foundation: FoundationConfig,
+        stale_after_seconds: i64,
+        now: DateTime<Utc>,
+    ) -> Result<Self> {
+        access.validate()?;
+        foundation.policy.validate()?;
+        require(
+            foundation.config_version == 1 && (60..=3600).contains(&stale_after_seconds),
+            "invalid gateway foundation metadata or freshness",
+        )?;
+        crate::harness::Scope {
+            owner_id: "gateway_validation".into(),
+            account_id: foundation.account_id.as_str().into(),
+            policy_version: foundation.policy.version,
+        }
+        .validate()?;
+        require(
+            foundation
+                .account_id
+                .as_str()
+                .starts_with(match foundation.mode {
+                    Mode::Paper => "paper_",
+                    Mode::Shadow => "shadow_",
+                    Mode::Live => "live_",
+                }),
+            "gateway mode/account namespace mismatch",
+        )?;
+        Ok(Self {
+            access,
+            foundation,
+            scope: None,
+            snapshot: None,
+            degraded: false,
+            stale_after_seconds,
+            started_at: now,
+            expanded_information: true,
         })
     }
 
@@ -256,7 +303,7 @@ impl Monitor {
         }
         if command == MonitorCommand::Mode {
             text.push_str(
-                "Execution is not enabled. Mode changes require deployment configuration.",
+                if self.expanded_information { "Mode is deployment metadata. Execution authority belongs to the separate executor. Mode changes require deployment configuration." } else { "Execution is not enabled. Mode changes require deployment configuration." },
             );
             return text;
         }
@@ -267,8 +314,16 @@ impl Monitor {
                 self.foundation.policy.version,
                 now.signed_duration_since(self.started_at).num_seconds().max(0)
             ));
-            for blocker in self.foundation.entry_blockers(now) {
-                text.push_str(&format!("Entry blocked: {blocker}\n"));
+            if self.expanded_information {
+                text = text.replace(
+                    "Execution: not enabled",
+                    "Execution: consult synchronized executor observation below",
+                );
+            }
+            if !self.expanded_information {
+                for blocker in self.foundation.entry_blockers(now) {
+                    text.push_str(&format!("Entry blocked: {blocker}\n"));
+                }
             }
         }
         let Some(snapshot) = &self.snapshot else {

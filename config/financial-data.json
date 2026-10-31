@@ -1,0 +1,83 @@
+{
+  "config_version": 1,
+  "research_only": true,
+  "automatic_paid_fallback": false,
+  "accounts": [
+    {"provider":"SEC","enabled":false,"limits":{"per_minute":30,"per_day":200,"per_month":1000}},
+    {"provider":"FRED","enabled":false,"limits":{"per_minute":20,"per_day":200,"per_month":1000}},
+    {"provider":"TWELVE_DATA","enabled":false,"limits":{"per_minute":5,"per_day":200,"per_month":1000}},
+    {"provider":"FINNHUB","enabled":false,"limits":{"per_minute":20,"per_day":200,"per_month":1000}},
+    {"provider":"ALPHA_VANTAGE","enabled":false,"limits":{"per_minute":5,"per_day":25,"per_month":200}},
+    {"provider":"FMP","enabled":false,"limits":{"per_minute":5,"per_day":20,"per_month":100}},
+    {"provider":"GDELT","enabled":false,"limits":{"per_minute":5,"per_day":200,"per_month":1000}},
+    {"provider":"COIN_GECKO","enabled":false,"limits":{"per_minute":5,"per_day":100,"per_month":500}},
+    {"provider":"TIINGO","enabled":false,"limits":{"per_minute":5,"per_day":20,"per_month":100}},
+    {"provider":"MASSIVE","enabled":false,"limits":{"per_minute":5,"per_day":20,"per_month":100}},
+    {"provider":"YFINANCE","enabled":false,"limits":{"per_minute":1,"per_day":5,"per_month":20}}
+  ],
+  "sources": [
+    {
+      "id":"sec_revenue","enabled":false,"entity_id":"issuer_320193","mapping_reference":"","lineage_id":"sec_edgar",
+      "request":{"endpoint":"SEC_CONCEPT","cik":"0000320193","taxonomy":"us-gaap","concept":"Revenues"},
+      "unit":"USD","currency":"USD","adjustment":"UNADJUSTED","max_records":100,"interval_seconds":86400,"freshness_seconds":31536000,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":168,"terms_reference":""}
+    },
+    {
+      "id":"sec_filings","enabled":false,"entity_id":"issuer_320193","mapping_reference":"","lineage_id":"sec_edgar",
+      "request":{"endpoint":"SEC_SUBMISSIONS","cik":"0000320193"},
+      "unit":"filing","currency":null,"adjustment":"UNADJUSTED","max_records":100,"interval_seconds":3600,"freshness_seconds":31536000,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":168,"terms_reference":""}
+    },
+    {
+      "id":"fred_treasury_10y","enabled":false,"entity_id":"macro_us","mapping_reference":"","lineage_id":"fred_federal_reserve",
+      "request":{"endpoint":"FRED_OBSERVATIONS","series_id":"DGS10","vintage":null},
+      "unit":"percent","currency":null,"adjustment":"UNADJUSTED","max_records":500,"interval_seconds":86400,"freshness_seconds":604800,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":168,"terms_reference":""}
+    },
+    {
+      "id":"twelve_daily","enabled":false,"entity_id":"example_stock","mapping_reference":"","lineage_id":"twelve_us_prices",
+      "request":{"endpoint":"TWELVE_DAILY","symbol":"AAPL","exchange":"NASDAQ"},
+      "unit":"price","currency":"USD","adjustment":"UNADJUSTED","max_records":500,"interval_seconds":86400,"freshness_seconds":345600,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":168,"terms_reference":""}
+    },
+    {
+      "id":"fmp_revenue","enabled":false,"entity_id":"example_stock","mapping_reference":"","lineage_id":"issuer_statements",
+      "request":{"endpoint":"FMP_INCOME","symbol":"AAPL","metric":"revenue"},
+      "unit":"USD","currency":"USD","adjustment":"UNADJUSTED","max_records":10,"interval_seconds":86400,"freshness_seconds":31536000,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":168,"terms_reference":""}
+    },
+    {
+      "id":"crypto_context","enabled":false,"entity_id":"crypto_bitcoin_context","mapping_reference":"","lineage_id":"coingecko_bitcoin",
+      "request":{"endpoint":"COIN_GECKO_MARKETS","coin_id":"bitcoin"},
+      "unit":"price","currency":"USD","adjustment":"UNADJUSTED","max_records":1,"interval_seconds":3600,"freshness_seconds":7200,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":24,"terms_reference":""}
+    },
+    {
+      "id":"tiingo_daily","enabled":false,"entity_id":"example_stock","mapping_reference":"","lineage_id":"tiingo_us_prices",
+      "request":{"endpoint":"TIINGO_DAILY","symbol":"AAPL"},
+      "unit":"price","currency":"USD","adjustment":"UNADJUSTED","max_records":500,"interval_seconds":86400,"freshness_seconds":345600,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":168,"terms_reference":""}
+    },
+    {
+      "id":"massive_daily","enabled":false,"entity_id":"example_stock","mapping_reference":"","lineage_id":"massive_us_prices",
+      "request":{"endpoint":"MASSIVE_DAILY","symbol":"AAPL"},
+      "unit":"price","currency":"USD","adjustment":"UNADJUSTED","max_records":500,"interval_seconds":86400,"freshness_seconds":345600,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":168,"terms_reference":""}
+    },
+    {
+      "id":"yfinance_offline","enabled":false,"entity_id":"example_stock","mapping_reference":"","lineage_id":"yahoo_unofficial",
+      "request":{"endpoint":"YFINANCE_IMPORT"},
+      "unit":"price","currency":"USD","adjustment":"UNADJUSTED","max_records":500,"interval_seconds":86400,"freshness_seconds":345600,
+      "capability":{"status":"UNKNOWN","revision":"","evidence_reference":"","reviewed_at":null,"valid_until":null,"credit_cost":1},
+      "rights":{"normalized_storage":false,"retention_hours":24,"terms_reference":""}
+    }
+  ]
+}

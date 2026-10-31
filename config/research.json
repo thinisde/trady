@@ -6,6 +6,32 @@
   "overlap_seconds": 120,
   "sources": [
     {
+      "id": "finnhub_company_news",
+      "kind": "FINNHUB",
+      "enabled": false,
+      "url": "https://api.finnhub.io/api/v1/company-news",
+      "allowed_hosts": ["api.finnhub.io"],
+      "credential_env": "TRADY_FINNHUB_API_KEY",
+      "interval_seconds": 3600,
+      "daily_request_limit": 100,
+      "query": "AAPL",
+      "x_account": null,
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+    },
+    {
+      "id": "gdelt_company_news",
+      "kind": "GDELT",
+      "enabled": false,
+      "url": "https://api.gdeltproject.org/api/v2/doc/doc",
+      "allowed_hosts": ["api.gdeltproject.org"],
+      "credential_env": null,
+      "interval_seconds": 3600,
+      "daily_request_limit": 100,
+      "query": "\"Apple Inc\"",
+      "x_account": null,
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+    },
+    {
       "id": "google_market",
       "kind": "GOOGLE_NEWS_RSS",
       "enabled": false,

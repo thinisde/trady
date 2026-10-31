@@ -46,9 +46,13 @@ impl Scope {
         require(
             valid_id(&self.owner_id)
                 && valid_id(&self.account_id)
-                && self.account_id.starts_with("paper_")
+                && ["paper_", "shadow_", "live_"].iter().any(|prefix| {
+                    self.account_id
+                        .strip_prefix(prefix)
+                        .is_some_and(|id| !id.is_empty())
+                })
                 && self.policy_version > 0,
-            "invalid owner, paper account or policy binding",
+            "invalid owner, namespaced information account or policy binding",
         )
     }
 }
@@ -223,6 +227,8 @@ pub struct ProviderError {
     pub retryable: bool,
 }
 pub struct ModelRequest {
+    /// Stable conversation identity for provider routing, including resumed runs.
+    pub session_id: String,
     pub messages: Vec<ChatMessage>,
     pub tools: Vec<ToolSpec>,
     pub max_output_tokens: u64,
@@ -991,6 +997,7 @@ impl AgentHarness {
             )));
             let response = provider.complete(
                 &ModelRequest {
+                    session_id: lease.session.id.clone(),
                     messages,
                     tools: specs.clone(),
                     max_output_tokens: limits.max_output_tokens,

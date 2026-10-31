@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Trady is a planned Rust trading bot that narrows S&P 500 stocks by sector and
+Trady is a Rust trading bot that narrows S&P 500 stocks by sector and
 subsector and researches companies and public statements. Its
 [hybrid prediction design](./docs/v1/prediction-fusion.md) combines LLM research,
 FinBERT, calibrated Perpetual forecasts and quantitative signals. Approved
@@ -11,7 +11,7 @@ independently enforces risk and controls orders. The [52 runtime skills](./skill
 guide research; Telegram provides conversations and monitoring. Missing predictive
 support can produce `NO_TRADE`; no model invents an outcome probability or return.
 
-**Current repository status:** the six-crate Rust workspace includes strict JSON contracts, checked policy calculations, fake providers, paper demonstrations, PostgreSQL recovery, and an [OpenCode Go conversation harness](./docs/opencode/README.md) with durable sessions, approved skill loading and bounded tool execution. The three service commands remain bounded startup probes. Complete research readiness, Perpetual, Telegram and validated order/protection orchestration remain incomplete. Automated paper, shadow and live execution are not enabled.
+**Current repository status:** the six-crate workspace includes the [autonomous runtime](./docs/autonomous.md), [reviewed input service](./services/inputs/README.md), offline model fitting/evaluation, durable research jobs and Telegram owner controls. The [weekly lab](./lab/README.md) supplies bounded experiments, pinned proof/backtest helpers and a persisted release lifecycle. Separate OS identities, verified holding reviews, TLS database connections and read-only shadow recording are implemented. Shipped configurations remain disabled; real data rights, fitted and approved financial artifacts, prospective shadow sessions and owner release approval are deployment inputs. The three service probes and original paper demonstrations remain separate.
 
 The [ten proposed market intelligence extensions](./docs/v1/features/README.md) are optional, separately documented research designs; they are not part of the current v1 trading requirements and are not implemented or activated.
 
@@ -19,13 +19,20 @@ Start with the [Trady v1 specification](./docs/v1/README.md), [daily selection w
 
 ## Interface
 
+The [financial-data guide](./docs/financial-data.md) documents SEC/FRED facts,
+historical prices, catalog enrichments, shared research signals, bounded LLM tools
+and the central credential path. Sources ship disabled; runtime capabilities and
+consumer rights require deployment review. Historical bars grant no quote or
+order authority.
+
 The [weekly optimization specification](./docs/v1/weekly-optimization.md) and
 [local Codex skill](./.agents/skills/trady-weekly-optimization/SKILL.md) define
 cumulative forecast calibration, offline QuantConnect LEAN experiments, Lean 4
-proof obligations and independent promotion. They do not install a schedule,
-provide trained models or certify a live release.
+proof obligations and independent promotion. Executable helpers and an opt-in
+systemd timer are supplied in the [lab](./lab/README.md); installation, financial
+model approval and live release require deployment evidence.
 The [prediction implementation record](./docs/v1/prediction-implementation.md)
-identifies tested Rust calculations and the remaining proof/backtest services.
+identifies tested Rust calculations and the independent financial validation requirements.
 
 The [central credentials guide](./docs/credentials.md) covers API keys, shared
 secrets, hashing/signing keys and database credentials. Run
@@ -56,14 +63,18 @@ The [X and news reading guide](./docs/news.md) documents the implemented read-on
 X polling/lookup, Google/publisher RSS, optional news API and PostgreSQL item/cursor
 path. Start with `cargo run --locked --bin trady -- news status`; sources require
 operator review and remain disabled in the shipped registry.
+The separate [X pilot](./docs/news.md#x-pilot-and-resource-budget) adds versioned
+recent search, preflight counts, a shared resource budget and local evidence export.
+Its [five-account example](./config/x-pilot.example.json) also ships disabled.
 
 Start with the [implementation record](./docs/foundation.md) for working commands,
 validation evidence and remaining requirements. The [v1 specification](./docs/v1/README.md)
 remains authoritative for the complete product.
 
 The [Trading 212 implementation](./docs/trading212.md) adds demo/live information
-reads and an executor-only order transport. It does not enable automated live trading;
-the durable execution/protection workflow and release gates remain required.
+reads and an executor-only order transport. The [autonomous operator guide](./docs/autonomous.md)
+documents execution, exact-ID recovery and deployment prerequisites. Inspect the
+disabled configuration with `cargo run --locked --bin trady -- autonomous check --config config/autonomous.example.json`.
 
 Run the offline demonstration from the repository root:
 
@@ -77,6 +88,7 @@ with `cargo run --locked --bin trady -- analyst --once` (also `executor` or `gat
 
 ## Subdirectories & System Boundaries
 
+- [Offline lab](./lab/README.md): dataset, helper, evidence and release workflows.
 - [Inference services](./services/README.md): optional model-serving components;
   [FinBERT](./services/finbert/README.md) exposes bounded sentiment HTTP inference.
 
@@ -94,7 +106,7 @@ with `cargo run --locked --bin trady -- analyst --once` (also `executor` or `gat
 
 - Planned behavior is explicitly distinguished from implemented behavior.
 - [The v1 specification](./docs/v1/README.md) is the current design entry point; the original v1.1 text is historical.
-- `[crates/trady-application/src/lib.rs:FoundationConfig::validate]` accepts paper configuration only; entry authority remains blocked.
+- `[crates/trady-application/src/lib.rs:FoundationConfig::validate]` accepts paper configuration only. Separate `[crates/trady-application/src/autonomous/mod.rs:AutonomousTrader]` validates deployment authority and persists fenced attempts before broker mutations.
 - `[crates/trady-application/src/contracts.rs:Contracts::validate]` checks JSON syntax/shape; validated model output cannot authorize orders.
 - `[migrations/0001_foundation.sql:execution.assert_fence]` guards financial writes with an active database-time lease and generation.
 
@@ -102,16 +114,30 @@ The planned runtime invariants are defined in the [architecture](./docs/v1/archi
 
 ## Global Side Effects
 
-Explicit Telegram monitoring polls the fixed Telegram HTTPS API, reads optional
-broker information and persists a private local inbox/offset/outbox. It sends
-messages only to configured private owner chats and exposes no execution control.
+Explicit financial collection reserves shared provider credits, performs bounded
+HTTPS requests and persists observations. Financial reads can purge expired data
+and store snapshot manifests; registry synchronization disables omitted sources
+and accounts. See the [financial-data guide](./docs/financial-data.md).
+
+Explicit Telegram monitoring polls the fixed Telegram HTTPS API and persists a
+private local inbox/offset/outbox. The optional expanded gateway queues scoped
+research/dialogue and durable owner pause/resume/close requests. Sensitive
+requests need a current, single-use confirmation and executor revalidation;
+Telegram never receives broker mutation credentials.
 
 Explicit OpenCode chat commands call the configured model endpoint and persist
 scoped transcripts, tool results, usage and context manifests with the analyst role.
 
 The explicit `t212 snapshot` command makes authenticated broker information GETs.
-Separately constructed `Trading212Executor` clients can submit/cancel real orders
-with live credentials. They do not provide the live execution/protection workflow.
+The explicit `autonomous run` command submits/cancels real demo/live orders under
+reviewed configuration and persists execution, audit, outbox and research state.
+Its approved input service receives frozen account/scenario data for prediction.
+Low-level `Trading212Executor` clients expose broker mutations only to executor code.
+Shadow mode constructs a read-only broker reader and writes immutable observations
+and proposals. Explicit input imports, model fitting, weekly jobs and release
+commands write their scoped files or database records. Helpers execute pinned
+offline commands; the deployed lab identity enforces network isolation. Helpers
+cannot activate a release themselves.
 
 The memory demo mutates process memory and writes JSON to stdout. Explicit database
 commands apply migrations or persist paper fixture state in a local Trady database.
@@ -133,3 +159,10 @@ The asset script requires the pinned [Python development dependency](./scripts/r
 The PostgreSQL script requires Docker and runs a separate ignored integration test
 against a disposable server. See the [implementation record](./docs/foundation.md)
 for results and limits; the full [acceptance plan](./docs/v1/implementation.md) remains open.
+
+The [2026-10-31 demo verification](./docs/demo-verification-2026-10-31.md) records
+537 passing automated tests, real demo-account GET responses, production formula
+examples and actual OpenCode Go replies. The `deepseek-v4.1-flash` pin is stored
+in the adapter and configuration and passed real model requests, including a
+streamed two-turn conversation. The report also records a separate `glm-5.2`
+diagnostic request.

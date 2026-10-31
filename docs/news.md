@@ -3,10 +3,21 @@
 This slice implements read-only X timeline polling and post lookup, Google News
 RSS searches, publisher RSS/Atom and optional Alpha Vantage news. It stores bounded
 observations, cursors, collection events and correction invalidations in PostgreSQL.
+The [five-account pilot](./v1/x-api-monitoring.md) adds a separate disabled
+recent-search configuration, shared resource-cost ledger, preflight counts and
+local evidence export, described below.
 The [research specification](./v1/research.md) and [X requirements](./v1/watchdogs-and-x.md)
 remain authoritative for the complete research system.
 
 ## Commands and configuration
+
+Finnhub company news and GDELT discovery are implemented as disabled sources in
+the existing registry. They produce ordinary `SourceItem` records with the same
+rights, lineage, corrections and verified-packet/FinBERT boundaries. GDELT's seen
+time does not become publication time; saturated windows remain incomplete.
+Finnhub uses the central `TRADY_FINNHUB_API_KEY`; GDELT needs no key. Alpha Vantage,
+Finnhub and GDELT share migration 9's account credit ledger across sources.
+See [financial data](./financial-data.md) for synchronized account limits and reviews.
 
 ```sh
 cargo run --locked --bin trady -- news status
@@ -55,13 +66,108 @@ activity; set its `user_id`, `ownership_reference` and UTC `verified_at`. Review
 expire after seven days. Each timeline page checks that current handle resolution
 still matches the approved stable ID; a mismatch blocks that fetch.
 
+## X pilot and resource budget
+
+The [pilot example](../config/x-pilot.example.json) contains only
+Ackman/Musk/Bessent/Burry/Altman. It does not replace or combine with the owner's
+original registry. Sources, billing, content storage and model processing ship
+disabled; identities and approval references are unset. Use one reviewed registry
+for overlapping author coverage. Configuration rejects duplicate primary handles
+or stable IDs within that registry.
+
+Inspect the proposal offline with `news status --config config/x-pilot.example.json`.
+After migration and explicit operator review, these bounded commands are available:
+
+```sh
+cargo run --locked --bin trady -- news counts-x --source x_pilot_ackman --config config/x-pilot.example.json
+cargo run --locked --bin trady -- news collect --once --source x_pilot_ackman --config config/x-pilot.example.json --force
+cargo run --locked --bin trady -- news budget-x --config config/x-pilot.example.json
+cargo run --locked --bin trady -- news reconcile-x /path/to/provider-usage.json --config config/x-pilot.example.json
+cargo run --locked --bin trady -- news export-x --as-of 2026-11-02T12:00:00Z --config config/x-pilot.example.json
+```
+
+Do not enable the example unchanged. Verify current pricing/entitlement and the
+provider spending limit, set the actual UTC billing-cycle boundaries, and record
+the owner's watchlist/coverage decision in `x_budget.approval_reference` and each
+rule's `approval_reference`/`approved_at`. Review rights and stable identities as
+above. `entitlement_reference` and `provider_limit_reference` record deployment
+reviews; software does not set the provider's limit or auto-recharge policy.
+Both source and budget require explicit enablement. Existing timeline, lookup
+and handle-resolution commands also require a reviewed `x_budget`; the original
+shipped registry has none and therefore authorizes no paid X reads.
+
+Amounts use integer USD microdollars: `10000000` is $10, split into at most $8
+ordinary posts and $2 support resources. Rates are versioned configuration.
+`MeteredHttp` reserves each request's conservative post, user and Recent Counts
+resource bounds before HTTP. Identity, context/edit/user resources, retries and
+repeated results count. Successful responses record observed resources; failures,
+malformed responses and crashes retain the upper bound. A page-persistence failure
+cannot refund network cost. Resource overruns block reads pending reconciliation.
+
+PostgreSQL serializes reservations for a shared `billing_scope`; use the same
+scope for all consumers of one provider billing account. Policy/rate changes in
+a used cycle and overlapping cycle resets are rejected. Query changes do not
+reset spending. `budget-x` reports resources, estimated charges and uncertain
+requests per source/rule. A provider usage file has this shape:
+
+```json
+{
+  "provider_total_microusd": 125000,
+  "as_of": "2026-11-02T12:00:00Z",
+  "evidence_reference": "reviewed Developer Console usage report"
+}
+```
+
+Reconciliation records a monotonic provider total/timestamp. Effective debit is
+the greater of the local ledger and provider usage plus later, in-flight or
+uncertain reads. Unknown charges remain conservative; this cannot promise an
+exact invoice. Exhaustion records a durable gap and stops optional X reads,
+independently of quote monitoring, reconciliation and protected broker exits.
+
+`XRule` builds one `from:handle` query with literal OR terms, quoted phrases and
+an optional explicitly approved `-is:retweet`. Replies remain eligible. A changed
+approved rule requires a higher version and starts a coverage revision with fresh
+counts. Every page re-resolves the stable identity. Search expands authors only;
+it does not routinely fetch referenced post/edit bodies or media. Missing action
+metadata stays `UNKNOWN`; missing context/edit lineage remains a recorded gap.
+
+Preflight uses daily buckets over a recorded interval within the prior seven
+days, with bounded resumable pagination. Missing, gapped, repeated or partial
+counts remain unknown. Pending pages can resume before normal cadence, preserving
+provider backoff and request/resource limits. Collection requires complete counts
+for the current rule, at most seven days old, whose projected cycle post cost with
+burst margin fits the ordinary allocation. This projection is per rule: sum all
+rules and separately assess support costs before enabling the pilot. Counts are
+planning evidence, not a volume forecast or a completeness guarantee.
+
+Search requires page sizes 10–100 and UTC second-aligned intervals ending at
+least ten seconds before request time (the collector uses thirty seconds).
+Observation and counts pagination retain independent original intervals.
+Unsupported history outside seven days stays a gap; the collector does not skip
+to newer history or start another transport. Daily search is a pilot trade-off.
+
+`export-x` makes zero X requests. It selects current versions ingested/fetched by
+`--as-of`, intersects current source rights, and excludes expired, storage/model-denied,
+unavailable and superseded observations. PostgreSQL records ingestion and the
+original registry/coverage revision. Availability is recorded after the content
+transaction commits; a crash before this marker leaves unknown availability and
+excludes the item. Content changes clear the marker until recorded again. These
+exports select current versions, and cannot reconstruct a historical dataset.
+Later edits cannot appear in earlier exports.
+Verification and feature-ready times remain unknown, and `training_permitted` is
+false. Inference permission does not authorize model fitting. Trusted offline
+evaluation still must resolve eligible issuers, deduplicate lineage, preserve
+no-action samples and establish feature availability before held-out comparisons.
+No profitability evidence, semantic clustering, promotion, scheduler, stream or
+webhook is installed.
+
 ## Collection and reading contracts
 
 - `collect --once` performs bounded work. Use an operator scheduler for recurring
   invocation. The source cadence is enforced; `--force` skips cadence only, retaining
   provider retry deadlines and durable daily request caps.
 - Request reservations commit before network access and remain spent after a crash.
-  Reserve two requests per X timeline page, one per lookup/resolve/API page and four
+  Reserve two requests per X timeline/search/counts page, one per lookup/resolve/API page and four
   per RSS fetch (including three possible redirects). These are conservative request
   caps, not a monetary estimate or proof of current provider entitlements.
 - Source windows and continuation tokens survive bounded runs. Every page commits
@@ -116,8 +222,9 @@ There is no browser, script execution, attachment download or arbitrary website 
 ## Verification and remaining scope
 
 ```sh
-cargo test -p trady-adapters news::tests --locked
+cargo test -p trady-adapters news:: --locked
 cargo test -p trady-application --test research --locked
+cargo test -p trady-application --test x_monitoring --locked
 cargo test -p trady-cli --test news --locked
 python3 scripts/test-postgres.py
 cargo fmt --all -- --check
@@ -133,6 +240,9 @@ and CLI behavior. The isolated database scenario additionally verifies migration
 replay, cursor durability, correction revisions, invalidations, shortened retention,
 expired refetches, unavailable quotation removal, concurrent X edits and role
 boundaries. The shared runner uses a fresh disposable PostgreSQL server.
+Monitoring checks additionally cover query scope, unknown action metadata,
+counts restart, cost-before-HTTP ordering, uncertain consumption, simultaneous
+budget reservations, policy/cycle reset rejection and provider reconciliation.
 
 This implements parts of SRC-01/02/03/04/06/07 and X-01/02/03/05. It does not complete
 phase 3: live entitlement/identity verification, streams/webhooks/deletion delivery,
@@ -150,3 +260,8 @@ and [quick-xml 0.38.4](https://docs.rs/quick-xml/0.38.4/quick_xml/reader/struct.
 Current X requests use `post.fields` with author/reference/edit IDs in `expansions`;
 response parsing also accepts legacy tweet-named aliases. Documentation availability
 does not establish this deployment's access or content-processing rights.
+The pilot was checked against official
+[recent search](https://docs.x.com/x-api/posts/search-recent-posts),
+[Recent Counts](https://docs.x.com/x-api/posts/get-count-of-recent-posts) and
+[resource pricing](https://docs.x.com/x-api/getting-started/pricing) on 2026-10-31.
+Search expands authors only; timeline/lookup retain bounded context expansion.

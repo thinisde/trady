@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 trady-domain.workspace = true
 trady-application.workspace = true
+trady-policy.workspace = true
 chrono.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
@@ -16,6 +17,7 @@ serde_yaml.workspace = true
 reqwest.workspace = true
 sha2.workspace = true
 quick-xml.workspace = true
+perpetual = "=3.0.0-rc.2"
 
 [lints]
 workspace = true

@@ -1,0 +1,11 @@
+[Unit]
+Description=Review the reconciled Trady week
+
+[Timer]
+OnCalendar=Sat *-*-* 08:00:00 Europe/Berlin
+Persistent=yes
+AccuracySec=1min
+Unit=trady-weekly.service
+
+[Install]
+WantedBy=timers.target

@@ -15,11 +15,15 @@ serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.154", features = ["raw_value"] }
 jsonschema = { version = "=0.60.2", default-features = false }
 postgres = { version = "=0.19.14", features = ["with-serde_json-1", "with-chrono-0_4"] }
+native-tls = "=0.2.18"
+postgres-native-tls = "=0.5.3"
 reqwest = { version = "=0.12.28", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 sha2 = "=0.11.1"
 serde_yaml = "=0.9.34"
 uuid = { version = "=1.29.0", features = ["v4"] }
 ctrlc = "=3.5.2"
+socket2 = "=0.6.5"
+nix = { version = "=0.31.3", features = ["socket", "user"] }
 quick-xml = "=0.38.4"
 trady-domain = { path = "crates/trady-domain" }
 trady-policy = { path = "crates/trady-policy" }

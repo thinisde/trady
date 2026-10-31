@@ -3,6 +3,7 @@
 ## Overview
 
 Non-secret configuration for the OpenCode Go conversation runtime.
+The supplied configuration and adapter default select `deepseek-v4.1-flash`.
 
 ## Interface
 

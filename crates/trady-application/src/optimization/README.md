@@ -20,7 +20,8 @@ trusted-lab ports. Research decisions carry no entry or live activation authorit
   `UtilityConfig`. `ScenarioPredictionInput` carries the frozen fusion context,
   typed predictions and approved conditional net payoff estimates.
 - `[mod.rs:BoundCalculation]`, `calculate_authoritative_limits(authority, policy,
-  input, now)`: schema/calculation/formula/policy/input identities and calculated
+  input, now)`: schema/calculation/formula/policy/input identities, an
+  `authority_hash` binding the complete approved authority, and calculated
   limits. `[mod.rs:FormulaProposal::validate]` replays the stored input and checks
   the current quote, returning `&CalculatedLimits`.
 - `[weekly.rs:SessionInterval]`, `RunManifest`: account/mode, source commit and
@@ -39,7 +40,8 @@ trusted-lab ports. Research decisions carry no entry or live activation authorit
   evidence supplied by the lab.
 - `[weekly.rs:TrialRecord]`, `WeeklyState`, `WeeklyDecision`: persisted trials,
   inputs/results and reasons/limitations. `[weekly.rs:WeeklyDecisionKind]` has
-  `Keep`, `ShadowCandidate`, `ApprovalRequired`, `Blocked`.
+  `Keep`, `ShadowCandidate`, `ApprovalRequired`, `Blocked`, serialized as
+  `SCREAMING_SNAKE_CASE`.
 - `[weekly.rs:WeeklyStore]`: mutable `freeze`, `load`, `reserve_trial`,
   `checkpoint` ports. `[weekly.rs:WeeklyLab]`: mutable `reconcile`, `develop`,
   `verify`, `evaluate` ports. This module supplies no concrete store or lab.
@@ -81,7 +83,10 @@ trusted-lab ports. Research decisions carry no entry or live activation authorit
   trades, four shadow weeks and a positive shadow-trade count.
 - `[weekly.rs:development_objective]` uses median mean log return minus maximum
   drawdown, interquartile instability and fixed seven-parameter complexity
-  penalties. Pass validated nonempty folds; the helper indexes fold quantiles.
+  penalties. It rejects empty/count-mismatched reports, differing fold intervals,
+  incomplete folds and drawdowns outside `[0,1]` before indexing fold quantiles.
+- `[weekly.rs:new_weekly_state]` matches objective/splits/gates/policy hashes
+  against the manifest and requires every development fold to close by cutoff.
 - `[weekly.rs:run_weekly]` reserves each trial before development. A reserved
   trial lacking a completed result becomes failed on resume. Selection must
   strictly exceed the better champion/cash objective plus minimum improvement.
@@ -92,11 +97,14 @@ trusted-lab ports. Research decisions carry no entry or live activation authorit
   cumulative campaign counts and fencing. `[weekly.rs:WeeklyLab]` implementations
   must invoke deployment-configured trusted helpers with idempotent sealed
   evaluation; those properties are port requirements, not local implementations.
-- `[weekly.rs:run_weekly]` requires a nondecreasing clock, elapsed time strictly
-  below budget from the original persisted `started_at`, and time before
-  activation deadline. Helper calls must enforce their own deadlines; synchronous
-  port calls cannot be interrupted by this runner. Resumed development reports
-  are revalidated, and cached decisions cannot carry authorization. Generated decisions set
+- `[weekly.rs:within_budget]` checks each clock reading against the original
+  persisted `started_at`, elapsed whole seconds strictly below budget and time
+  before activation deadline. A nondecreasing clock remains a supplied-clock
+  requirement; consecutive readings are not compared. Helper calls must enforce
+  their own deadlines; synchronous port calls cannot be interrupted by this runner.
+  Resumed development reports
+  are revalidated, and cached decisions require the matching `run_id` and cannot
+  carry authorization. Generated decisions set
   `entry_authorized` and `live_activation_authorized` to `false`.
 - `[weekly.rs:time_weighted_return]` requires 1–10000 contiguous, continuously
   valued periods with positive opening and cash-adjusted closing equity. It
@@ -112,13 +120,16 @@ on the supplied ports. Formula validation and arithmetic perform no I/O.
 
 Report validation checks metadata, input binding, success and timestamp only.
 It does not authenticate tool identity, verify signatures, recompute report
-contents or execute Lean/LEAN. Initial prepopulated evidence, immutable completed
-results, first-start preservation and cumulative/fenced reservations must be
-enforced by a future durable store. The runner optimizes formula parameters;
-structural model/fusion search remains a documented future workflow.
+contents or execute Lean/LEAN. The concrete
+[PostgreSQL store](../../../trady-storage/src/weekly.rs) enforces frozen inputs,
+immutable completed results, first-start preservation and cumulative/fenced
+reservations. The [pinned lab adapter](../../../trady-adapters/src/weekly_lab/README.md)
+executes configured trusted helpers. This runner optimizes formula parameters;
+offline model fitting and calibration have their own
+[model-lab contract](../model_lab/README.md).
 
 ## Verification
 
 Run `cargo test --workspace --locked` from the repository root. This contract
-documents current source; deployment must supply the trusted lab and persistence
-implementations before running weekly experiments.
+documents current source; deployment must configure the concrete store, trusted
+helpers and reviewed data before running weekly experiments.

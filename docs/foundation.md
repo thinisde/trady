@@ -1,11 +1,15 @@
 # Offline foundation implementation
 
+The later [autonomous implementation](./autonomous.md) supplies separate prediction,
+screening and durable execution commands. This file records the historical foundation;
+its paper fixtures and bounded service probes remain separate from the new runtime.
+
 The later [prediction-fusion](./v1/prediction-fusion.md) and
-[weekly optimization](./v1/weekly-optimization.md) contracts supersede LLM-selected
-final numerical limits. The [implementation record](./v1/prediction-implementation.md)
-identifies tested pure Rust calculations and remaining integration work. This
-historical foundation evidence does not certify trained forecasts, LEAN backtests,
-Lean 4 proofs or deployment.
+[weekly optimization](./v1/weekly-optimization.md) contracts define the next hybrid
+prediction/mathematical slice. They supersede LLM-selected final numerical limits
+in the target architecture. The [implementation record](./v1/prediction-implementation.md)
+reports the tested pure Rust subset and remaining integration work; this historical foundation evidence
+does not certify trained forecasts, LEAN backtests, Lean 4 proofs or deployment.
 
 The later [X and news reading slice](./news.md) adds bounded source collection,
 PostgreSQL observations/cursors and read-only CLI commands. The evidence in this
@@ -13,7 +17,8 @@ file describes the original foundation, rather than full research readiness.
 
 The later [Trading 212 adapter slice](./trading212.md) adds real HTTP information
 reads and low-level executor order calls. The evidence below describes the offline
-foundation; that adapter does not complete its execution/protection or live release gates.
+foundation; the separate autonomous runtime owns execution/protection and requires
+deployment-owned live release evidence.
 
 This is the implementation record for the first milestone in [index.md](../index.md).
 The v1 specifications remain the requirements. This milestone does not enable trading.

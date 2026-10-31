@@ -7,21 +7,30 @@ not replace the explicit observation validation methods.
 
 [research.rs](./research.rs), exported as `[lib.rs:research]`, adds provider-neutral
 research observations, collection state and an explicit content-redaction method.
+[perpetual.rs](./perpetual.rs) defines advisory model/scenario provenance;
+[screening.rs](./screening.rs) defines and evaluates research-only universe screens.
+[prediction.rs](./prediction.rs) keeps research confidence, text sentiment,
+target-hit/scenario probabilities and quantitative indicators as distinct payloads.
 
 ## Interface
 
-- `[prediction.rs:PredictionSource]`, `PredictionTarget`, `CalibrationStatus`,
-  `ForecastHorizon`, `PredictionUncertainty`, `UncertaintyUnit`, `CalibrationRecord`,
-  `PredictionMetadata`, `PredictionPayload`, `Prediction`: typed versioned input
-  records with explicit `validate(now)` and closed source/payload meanings.
-- `[prediction.rs:OutcomeProbabilities::{values, validate}]`, `QuantitativeIndicators`,
-  `ScenarioOutcome::index`, `MaturedOutcome`: four-way probabilities, indicator
-  missingness and original-scenario labels bound to their convention version.
-- `[prediction.rs:valid_prediction_id]`, `valid_prediction_hash`, `probability`:
-  identifier/hash/probability checks. Metadata validation requires causal
-  observation/availability/generation times, current expiry, bounded lineages,
-  exact probability partitions and chronological out-of-sample calibration claims.
-  These checks do not authenticate provenance or establish forecast accuracy.
+- `[financial.rs:Provider]`, `DataRights`, `Capability`, `FinancialPayload`,
+  `FinancialObservation`, `FinancialSnapshot` and `FinancialSignals` define
+  attributed research context, consumer permissions, version/receipt metadata
+  and quality-aware numerical signals.
+  `[financial.rs:Consumer]`, `AccessStatus`, `Adjustment`, `DataStatus` and
+  `FinancialCoverage` provide consumer/availability/adjustment/coverage metadata.
+  `[financial.rs:Provider::credential_name]`, `Provider::budget_key`,
+  `Capability::current` and `valid_currency` expose credential-key, provider-wide
+  allowance, current-rights and currency-syntax helpers.
+
+- `[research.rs:SourceCoverage]`, `XCountBucket` and `XCountsMeasurement` preserve
+  versioned coverage and preflight intervals/buckets/completeness. `SourceKind`
+  includes `XRecentSearch`; `SocialAction::Unknown` represents absent action metadata.
+  `SourceState` carries optional coverage/counts and a coverage revision.
+  `[research.rs:XCountBucket]` accepts legacy `tweet_count` as an alias for
+  `post_count`. `[research.rs:SourceState]` requires callers to retain the original
+  collection interval while continuing pagination.
 
 - `[sentiment/mod.rs:SentimentProbabilities]`, `SentimentDocument`, `SentimentPrediction`,
   `SentimentBatch`, `SentimentEvidence`, `SentimentAssessment`: provider-neutral
@@ -49,8 +58,74 @@ research observations, collection state and an explicit content-redaction method
   `[research.rs:SourceItem::redact]` takes caller-supplied time and a `for_model` flag.
   `[research.rs:SourceState]` includes revision/registry/rights metadata, daily request
   date/count, collection windows, continuation/HTTP-cache metadata and retry/status gaps.
+- `[perpetual.rs:TARGET_DEFINITION]`, `valid_reference`, `AssessArguments::validate`:
+  target label and scenario reference syntax. `ScenarioBinding`, `MarketObservation`,
+  `ScenarioSnapshot`, `FeatureLineage`, `FeatureValue`, `FeatureSnapshot`,
+  `AssessmentContext` bind scenario prices/costs/deadline, market and feature lineage.
+  Market/scenario/context records expose explicit `validate(now)` methods.
+- `[perpetual.rs:FeatureSpec]`, `FeatureSchema`, `TrainingLineage`,
+  `ProbabilityCalibration`, `ScenarioSupport`, `ModelManifest`: model artifact,
+  schema/order, training/calibration/support and approval provenance.
+  `ModelManifest::{validate, supports, check_features}` validate current approval,
+  scenario support and ordered feature drift.
+- `[perpetual.rs:ModelApproval]`, `AssessmentStatus`, `CalibrationStatus`,
+  `DriftStatus`, `LimitsAuthority`, `AssessmentInfluence`: closed advisory enums.
+  `Contribution`, `ReturnInterval`, `Assessment`, `AssessmentRecord`,
+  `PerpetualReview` carry predictions, input/model provenance and review reasons.
+  `Assessment::{unavailable, validate}` constructs unavailability or validates shape.
+- `[screening.rs:MAX_UNIVERSE_ROWS]`, `MAX_CANDIDATES`, `MAX_PEER_CONTROLS`,
+  `SCREENING_METHOD`: `2048`, `5`, `2`, `sp500-research-screen-v1`.
+- `[screening.rs:EffectiveInterval]` exposes `valid` and `contains`;
+  `Classification`, `UniverseMember`, `UniverseProvenance`, `UniverseSnapshot`
+  describe effective membership/classification and source rights/times.
+- `[screening.rs:SupportStatus]`, `BrokerStockSupport`, `TimingObservation`,
+  `MarketObservation`, `PriorityObservation`, `ScreeningObservations` carry
+  broker identity/support, market/session facts and five optional priority scores.
+  `[screening.rs:PriorityObservation]` names the rubric: catalyst, breadth,
+  economic transmission, tradability and counterevidence/coverage. Broker minimum
+  notionals and market notionals use instrument currency; market notionals require
+  a common provider basis (`[screening.rs:BrokerStockSupport]`, `MarketObservation`).
+- `[screening.rs:ScreeningPolicy::validate]`, `RejectionReason`, `RejectedMember`,
+  `ScreenedCandidate`, `ScreeningPurpose`, `ScreeningResult`: policy, auditable
+  exclusions, candidate/peer/finalist output. Purpose has only `ResearchOnly`.
+- `[screening.rs:valid_reference]`, `valid_isin`, `valid_gics_pair` validate syntax/
+  checksum/classification pairs; `screen_universe(universe, owner_allowlist,
+  observations, policy, now) -> Result<ScreeningResult>` evaluates supplied data.
+- `[prediction.rs:PredictionSource]`, `PredictionTarget`, `CalibrationStatus`,
+  `UncertaintyUnit`: source, semantic target, calibration state and uncertainty
+  units. `ForecastHorizon::validate` covers decision/deadline/exchange sessions;
+  `PredictionUncertainty`, `CalibrationRecord`, `PredictionMetadata` carry
+  model/instrument/market/scenario, causal timestamps, lineage and regime metadata.
+- `[prediction.rs:PredictionPayload]`: `Research { subjective_confidence,
+  material_conflict }`, `Sentiment { positive, negative, neutral }`,
+  `BinaryTargetHit { probability }`, `ScenarioOutcomes { probabilities }`,
+  `Quantitative { indicators }`. `OutcomeProbabilities::{values, validate}`
+  covers target-first/stop-first/expiry/non-fill; `QuantitativeIndicators` exposes
+  optional momentum/ATR/volatility/volume/VWAP/strength/spread observations.
+- `[prediction.rs:Prediction::validate]` takes `now` and validates metadata/payload together;
+  `valid_prediction_id`, `valid_prediction_hash`, `probability` are public helpers.
+  `ScenarioOutcome::{TargetFirst, StopFirst, Expiry, NonFill}` maps to indices
+  `0..=3` through `index`; `MaturedOutcome` stores prediction/scenario identities,
+  label convention version, horizon/availability times and optional outcome.
 
 ## Invariants
+
+- `[financial.rs:FinancialObservation::validate]` checks digest/identity shapes,
+  prior-day bars and temporal ordering. Provenance requires an `https://` prefix
+  without `?`, `#` or `@`; these syntax checks do not comprehensively validate URLs
+  or guarantee absence of credentials.
+  `[financial.rs:FinancialPayload::validate]` preserves null metrics and validates
+  OHLCV/currency. `[financial.rs:DataRights::permits]` requires normalized-storage
+  permission and the requested consumer permission. These records carry no order
+  authority and perform no I/O.
+  `[financial.rs:DataRights]` defaults omitted permission flags to false, while
+  retention and terms remain required. `[financial.rs:Capability::current]`
+  additionally checks review/effective times, revision, evidence and positive
+  account-reviewed credit cost. These checks do not authenticate terms or accounts.
+  `[financial.rs:FinancialObservation]` describes next-UTC-midnight bar publication
+  as a producer convention. `[financial.rs:FinancialSnapshot]`, `FinancialCoverage`
+  and `FinancialSignals` have no validators; `entry_authorized` is unconstrained
+  metadata, and signal records do not compute indicators.
 
 - `[sentiment/mod.rs:SentimentAssessment]` supports serialization only, with public
   fields; DTO shape alone grants no authority. Other sentiment DTOs deny unknown
@@ -89,10 +164,12 @@ research observations, collection state and an explicit content-redaction method
   and `SourceState` deny unknown fields during deserialization; research enums use
   `SCREAMING_SNAKE_CASE`. Their public metadata fields have no general validation
   method (`[research.rs:SourceRights]`, `[research.rs:SourceState]`).
-  `SourceState` derives Rust `Default` without declaring `serde(default)`; rights,
+  `SourceState` derives Rust `Default`; its added coverage/count fields have field-level
+  deserialization defaults for existing stored records. The other fields do not.
+  Rights,
   retention, URL/hash/ID syntax and collection-state consistency are not authenticated
   or generally validated here.
-- `[research.rs:SourceItem::redact]` clears title, summary, text and expanded social
+- `[research.rs:SourceItem::redact]` clears title, feed title, summary, text and expanded social
   context text when storage is forbidden, expiry is at or before `now`, model use
   is forbidden for a model read, or content is superseded/unavailable. It preserves
   superseded/unavailable status and otherwise sets `MetadataOnly`. This explicit
@@ -100,14 +177,93 @@ research observations, collection state and an explicit content-redaction method
   deserialization does not invoke it.
   `MetadataOnly` or `Snippet` status alone does not trigger redaction; the method
   leaves fields other than the named content/status fields unchanged.
+- `[perpetual.rs:valid_reference]` permits 1–128 bytes, with an ASCII alphanumeric
+  first character and only ASCII alphanumerics or `_.:-` thereafter. This differs
+  from screening's 1–96-character alphanumeric/underscore/hyphen references.
+- `[perpetual.rs:ScenarioSnapshot::validate]` requires current matching market/
+  scenario identities, positive entry/stop below target, cost in `[0,1)`, horizon
+  1–31536000 seconds and deadline exactly calculation time plus horizon. Entry
+  scenarios also require `stop < entry`; explicit position references allow a
+  break-even or profitable holding stop after changes in cost-derived entry/FX.
+  `[perpetual.rs:AssessmentContext::validate]` requires matching feature/scenario
+  times, 1–256 unique finite features and 1–32 lineage entries per feature with
+  `observed_at <= available_at <= as_of`.
+- `[perpetual.rs:ModelManifest::validate]` requires current `Approved` provenance,
+  a lowercase SHA-256 artifact hash, exact target definition, chronological
+  training/calibration/validation with sufficient purge and calibration quality,
+  bounded support/tolerances and valid ordered feature schema/drift thresholds.
+  It does not validate runtime-version/source-revision/model-format strings.
+  `supports` and `check_features` do not call manifest validation themselves.
+  `ScenarioSupport` stop bounds are signed `(entry - stop) / entry` distances.
+  Zero/negative bounds require explicit `supports_positions`; existing positive
+  ranges never acquire profitable-stop support by taking an absolute value.
+  Holding scenarios must fall within the manifest's actual declared signed range.
+- `[perpetual.rs:ModelManifest::check_features]` requires exact feature count/order
+  and current lineage; range/rejection thresholds yield `OutOfRange`, warning
+  thresholds yield `Warning`. `[perpetual.rs:Assessment::validate]` requires
+  version 1 and `AdvisoryOnly`, prediction shape, bounded contribution count and
+  limitations;
+  OK requires provenance, validated calibration and in-range drift. Non-OK advice
+  prohibits predictions/contributions and requires limitations. It takes no
+  current clock argument, so shape validation alone establishes no freshness.
+  Contribution fields and expected-return magnitude are unchecked; interval
+  endpoints require ordering. `[perpetual.rs:Assessment::unavailable]` does not
+  validate supplied IDs/reasons, so its result can still fail `validate`.
+- `[screening.rs:ScreeningPolicy::validate]` bounds ages/liquidity/cost/spread/
+  participation, 1–5 candidates and 0–2 peers. `screen_universe` bounds membership
+  and allowlist to 2048 and each observation vector to 4096. Universe failures
+  produce blockers/member rejection reasons; invalid policy or size bounds error.
+- `[screening.rs:screen_universe]` requires complete current `SP500` membership,
+  effective classifications, declared storage permission/retention/provenance,
+  valid ISIN checksum/MIC/currency and no duplicate active share class. It joins
+  verified broker `STOCK` support by ISIN, MIC and currency rather than ticker,
+  and requires explicit owner allowlisting. Metadata checks do not authenticate
+  provider data or broker evidence.
+  Broker instrument IDs must also be globally unique. `[screening.rs:EffectiveInterval::contains]`
+  includes `from` and excludes `until`; invalid intervals contain no time.
+- `[screening.rs:evaluate_member]` requires one current market/priority observation,
+  positive bid/ask and notionals, bounded spread/cost/participation, sufficient
+  liquidity, a current clear exchange window and five known priority components
+  in `0..=4`. Zero is an observed score; missing is rejected. Notional checks do
+  not establish account cash affordability or whole-share quantity feasibility.
+- `[screening.rs:screen_universe]` ranks by total score descending, fifth component
+  descending, spread ascending, daily notional descending and instrument ID.
+  Peers are remaining eligible members in the leader's industry group; the first
+  candidate is the finalist. Screening nominates research only and grants no
+  execution authority. Public construction/deserialization does not run it.
+- `[prediction.rs:Prediction::validate]` requires version 1, valid IDs, bounded
+  unique evidence/regime lists and causal current timestamps:
+  `observed <= available <= generated <= decision <= now < deadline` and
+  `generated <= now < valid_until`. Horizons have 1–5 exchange sessions and
+  increasing decision/deadline. Optional hashes are lowercase SHA-256; uncertainty
+  radius is nonnegative and at most one for class-probability units.
+  `[prediction.rs:valid_prediction_id]` permits 1–160 ASCII alphanumerics or
+  `_.:-`. Research confidence is at most 100; supplied quantitative ATR is positive,
+  volatility/volume are nonnegative and spread fraction is in `[0,1]`.
+- `[prediction.rs:Prediction::validate]` binds LLM research to `ResearchEvidence`,
+  FinBERT to `FinancialTextSentiment`, Perpetual binary/scenario predictions to
+  `TargetBeforeStop`/`ScenarioOutcomes` with a scenario hash, and quantitative
+  data to `MarketIndicators`. Sentiment/outcome distributions sum exactly to one.
+  Validated calibration requires positive out-of-sample counts, valid report/
+  calibrator IDs and training < validation start < validation end < generation.
+  It checks supplied metadata without retrieving reports or granting authority.
+- `[prediction.rs:Prediction]` requires explicit validation after construction/
+  deserialization. `[prediction.rs:MaturedOutcome]` has no validator; its `None`
+  outcome denotes censored/ambiguous evidence by documented convention, rather
+  than an enforced winning/losing classification.
 
 ## Side Effects
 
 None for the execution constructors and validators. `[research.rs:SourceItem::redact]`
-mutates caller-owned content and status in memory. Neither source file performs I/O.
+mutates caller-owned content and status in memory. Domain source performs no I/O.
+Perpetual validation and screening also perform no I/O; screening borrows supplied
+observations and constructs result records without fetching or persisting data.
+Prediction records and validation perform no I/O or caller-owned mutation.
 
 ## Verification
 
-Run `cargo test --workspace` from the repository root for workspace verification.
+Run `cargo test --workspace --locked` from the repository root for workspace verification.
 
 Run `cargo test -p trady-domain --locked` from the repository root.
+`perpetual::tests::only_position_scenarios_admit_break_even_or_profitable_stops`
+covers holding geometry while retaining strict entry and stop/target ordering.

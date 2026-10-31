@@ -27,6 +27,7 @@ fn source(kind: SourceKind) -> SourceConfig {
         interval_seconds: 60,
         daily_request_limit: 100,
         query: None,
+        x_rule: None,
         x_account: if kind == SourceKind::XTimeline {
             Some(XAccount {
                 person: "Fixture actor".into(),
@@ -64,6 +65,9 @@ struct FakeHttp {
     requests: Vec<HttpRequest>,
 }
 impl HttpTransport for FakeHttp {
+    fn x_budget_enforced(&self) -> bool {
+        true
+    }
     fn get(&mut self, request: HttpRequest) -> std::result::Result<HttpResponse, SourceFailure> {
         self.requests.push(request);
         self.responses
@@ -86,6 +90,192 @@ fn client(responses: Vec<HttpResponse>) -> SourceClient<FakeHttp> {
         },
         |_| Ok(Some("fixture-token".into())),
     )
+}
+
+fn search_source() -> SourceConfig {
+    let mut source = source(SourceKind::XTimeline);
+    source.kind = SourceKind::XRecentSearch;
+    source.x_rule = Some(trady_application::x_monitoring::XRule {
+        version: 1,
+        terms: vec!["Tesla".into(), "data center".into()],
+        exclude_reposts: false,
+        approved_at: Some(now()),
+        approval_reference: "fixture owner coverage decision".into(),
+    });
+    source
+}
+
+fn search_window() -> CollectionRequest {
+    CollectionRequest {
+        limit: 10,
+        end_at: now() - Duration::seconds(30),
+        ..window()
+    }
+}
+
+#[test]
+fn recent_search_sends_one_author_rule_and_keeps_replies_without_routine_context_reads() {
+    let source = search_source();
+    let mut client = client(vec![
+        user("42"),
+        response(
+            json!({"data":[post("500",json!([{"type":"replied_to","id":"400"}]))],"meta":{"next_token":"next-page","result_count":1}}),
+        ),
+    ]);
+    let page = client.fetch(&source, &search_window(), now()).unwrap();
+    assert_eq!(page.next_token.as_deref(), Some("next-page"));
+    assert!(page.complete);
+    assert_eq!(
+        page.items[0].social.as_ref().unwrap().action,
+        SocialAction::Reply
+    );
+    assert!(page.items[0].social.as_ref().unwrap().missing_context);
+    assert!(
+        page.gaps
+            .iter()
+            .any(|g| g == "query_selected_coverage_not_full_timeline")
+    );
+    let request = &client.transport.requests[1];
+    assert_eq!(request.url.path(), "/2/tweets/search/recent");
+    let pairs: std::collections::BTreeMap<_, _> = request.url.query_pairs().collect();
+    assert_eq!(
+        pairs["query"],
+        "from:fixture_actor (Tesla OR \"data center\")"
+    );
+    assert_eq!(pairs["expansions"], "author_id");
+    assert_eq!(pairs["next_token"], "cursor-one");
+    assert!(!request.url.as_str().contains("is%3Areply"));
+}
+
+#[test]
+fn recent_search_blocks_identity_reuse_incoming_reactions_and_unsupported_history() {
+    let source = search_source();
+    let mut reused = client(vec![user("84")]);
+    assert_eq!(
+        reused
+            .fetch(&source, &search_window(), now())
+            .unwrap_err()
+            .reason,
+        "x_stable_identity_mismatch"
+    );
+    assert_eq!(reused.transport.requests.len(), 1);
+    let mut incoming = post("500", json!([]));
+    incoming["author_id"] = json!("84");
+    let mut incoming = client(vec![
+        user("42"),
+        response(json!({"data":[incoming],"meta":{"result_count":1}})),
+    ]);
+    assert!(incoming.fetch(&source, &search_window(), now()).is_err());
+    let mut old = search_window();
+    old.start_at = now() - Duration::days(8);
+    let mut no_network = client(vec![]);
+    assert_eq!(
+        no_network.fetch(&source, &old, now()).unwrap_err().reason,
+        "x_recent_history_or_request_bounds_unsupported"
+    );
+    assert!(no_network.transport.requests.is_empty());
+}
+
+#[test]
+fn missing_action_metadata_stays_unknown_and_repost_exclusion_requires_evidence() {
+    let mut no_references = post("500", json!([]));
+    no_references
+        .as_object_mut()
+        .unwrap()
+        .remove("referenced_posts");
+    let mut source = search_source();
+    let mut unknown = client(vec![
+        user("42"),
+        response(json!({"data":[no_references.clone()],"meta":{"result_count":1}})),
+    ]);
+    let page = unknown.fetch(&source, &search_window(), now()).unwrap();
+    assert_eq!(
+        page.items[0].social.as_ref().unwrap().action,
+        SocialAction::Unknown
+    );
+    assert!(
+        page.items[0]
+            .social
+            .as_ref()
+            .unwrap()
+            .original_author_id
+            .is_none()
+    );
+    source.x_rule.as_mut().unwrap().exclude_reposts = true;
+    for candidate in [
+        no_references,
+        post("500", json!([{"type":"retweeted","id":"400"}])),
+    ] {
+        let mut client = client(vec![
+            user("42"),
+            response(json!({"data":[candidate],"meta":{"result_count":1}})),
+        ]);
+        assert_eq!(
+            client
+                .fetch(&source, &search_window(), now())
+                .unwrap_err()
+                .reason,
+            "x_repost_exclusion_not_verified"
+        );
+    }
+}
+
+#[test]
+fn counts_require_contiguous_complete_buckets_and_accept_legacy_names() {
+    let source = search_source();
+    let mut window = search_window();
+    window.next_token = None;
+    let start = window.start_at;
+    let end = window.end_at;
+    let mut valid = client(vec![
+        user("42"),
+        response(
+            json!({"data":[{"start":start,"end":end,"tweet_count":4}],"meta":{"total_tweet_count":4}}),
+        ),
+    ]);
+    let count = valid.recent_x_counts(&source, &window, now()).unwrap();
+    assert!(count.complete);
+    assert_eq!(count.total_posts, 4);
+    assert_eq!(
+        valid.transport.requests[1].url.path(),
+        "/2/tweets/counts/recent"
+    );
+    for value in [
+        json!({"data":[{"start":start,"end":end,"post_count":4}],"meta":{"total_post_count":4,"next_token":"pending"}}),
+        json!({"data":[{"start":start+Duration::minutes(1),"end":end,"post_count":4}],"meta":{"total_post_count":4}}),
+        json!({"data":[{"start":start,"end":end,"post_count":3}],"meta":{"total_post_count":4}}),
+    ] {
+        let mut partial = client(vec![user("42"), response(value)]);
+        assert!(
+            !partial
+                .recent_x_counts(&source, &window, now())
+                .unwrap()
+                .complete
+        );
+    }
+    let mut missing = client(vec![
+        user("42"),
+        response(json!({"meta":{"total_post_count":0}})),
+    ]);
+    assert!(missing.recent_x_counts(&source, &window, now()).is_err());
+}
+
+#[test]
+fn default_unmetered_transport_is_not_authorized_to_perform_x_reads() {
+    struct Unmetered;
+    impl HttpTransport for Unmetered {
+        fn get(&mut self, _: HttpRequest) -> std::result::Result<HttpResponse, SourceFailure> {
+            panic!("network must remain blocked")
+        }
+    }
+    let mut client = SourceClient::with_transport(Unmetered, |_| Ok(Some("fixture-token".into())));
+    assert_eq!(
+        client
+            .resolve_x(&source(SourceKind::XLookup), "fixture_actor", now())
+            .unwrap_err()
+            .reason,
+        "x_durable_cost_gate_required"
+    );
 }
 
 #[test]
@@ -290,6 +480,47 @@ fn rate_limits_and_api_error_notices_do_not_look_like_empty_news() {
 }
 
 const RSS: &str = "<rss version=\"2.0\"><channel><title>Fixture feed</title><item><guid>story-1</guid><title>Result &amp; outlook</title><link>https://example.com/story?utm_source=copy</link><source>Original publisher</source><pubDate>Fri, 30 Oct 2026 12:00:00 GMT</pubDate><description><![CDATA[<p>Permitted snippet.</p>]]></description></item></channel></rss>";
+
+#[test]
+fn finnhub_and_gdelt_share_news_lineage_and_preserve_incomplete_coverage() {
+    let mut s = source(SourceKind::Finnhub);
+    s.url = "https://api.finnhub.io/api/v1/company-news".into();
+    s.allowed_hosts = vec!["api.finnhub.io".into()];
+    s.credential_env = Some("TRADY_FINNHUB_API_KEY".into());
+    s.query = Some("AAPL".into());
+    let mut w = window();
+    w.next_token = None;
+    w.limit = 1;
+    let mut c = client(vec![response(
+        json!([{"id":42,"url":"https://example.com/story?utm_source=vendor","source":"Publisher","headline":"Result","summary":"Permitted snippet","datetime":now().timestamp()-10}]),
+    )]);
+    let page = c.fetch(&s, &w, now()).unwrap();
+    assert!(!page.complete);
+    assert_eq!(page.items.len(), 1);
+    let finnhub_lineage = page.items[0].lineage_id.clone();
+    assert_eq!(page.items[0].canonical_url, "https://example.com/story");
+    assert!(page.items[0].text.is_none());
+    let mut s = source(SourceKind::Gdelt);
+    s.url = "https://api.gdeltproject.org/api/v2/doc/doc".into();
+    s.allowed_hosts = vec!["api.gdeltproject.org".into()];
+    s.credential_env = None;
+    s.query = Some("\"Apple Inc\"".into());
+    let mut c = client(vec![response(
+        json!({"articles":[{"url":"https://example.com/story","domain":"example.com","title":"Result","seendate":now().format("%Y%m%dT%H%M%SZ").to_string(),"language":"English"}]}),
+    )]);
+    let page = c.fetch(&s, &w, now()).unwrap();
+    assert!(!page.complete);
+    assert_eq!(page.items[0].lineage_id, finnhub_lineage);
+    assert_eq!(page.items[0].published_at, None);
+    assert!(
+        page.items[0]
+            .gaps
+            .iter()
+            .any(|g| g == "discovery_time_is_not_publication_time")
+    );
+    let mut c = client(vec![response(json!({"error":"private provider message"}))]);
+    assert!(c.fetch(&s, &w, now()).is_err());
+}
 
 #[test]
 fn rss_keeps_attribution_publication_time_and_conditional_requests() {

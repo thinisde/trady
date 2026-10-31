@@ -1,7 +1,13 @@
+mod autonomous;
+mod financial;
 mod finbert;
+mod inputs_service;
+mod model_lab;
 mod news;
 mod opencode;
+mod release;
 mod telegram;
+mod weekly;
 
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -15,7 +21,23 @@ use trady_application::{Clock, ExecutionRepository, FoundationConfig, reconcile_
 use trady_domain::*;
 use trady_storage::PgExecutionRepository;
 
-const HELP: &str = "Trady foundation\n\n  trady analyst|executor|gateway --once [--config FILE]\n  trady demo\n  trady demo-postgres\n  trady migrate\n  trady credentials init|status\n  trady t212 snapshot --config FILE\n  trady validate-json model|results|envelope|artifact|artifact-result FILE\n\nService probes validate configuration and optional service-specific database roles.\nThey do not start provider listeners or submit orders. Automated live/shadow execution is unavailable.\nThe t212 configuration environment selects demo/live endpoints and the matching TRADY_T212_DEMO_READ_API_KEY / TRADY_T212_DEMO_READ_API_SECRET or TRADY_T212_LIVE_READ_API_KEY / TRADY_T212_LIVE_READ_API_SECRET pair.\nDatabase commands use TRADY_EXECUTOR_DSN or TRADY_MIGRATOR_DSN; secrets are never arguments.\nCredentials use environment overrides or config/credentials.local.json; TRADY_CREDENTIALS_FILE selects another private file.\nCredential status prints names and availability, never values.";
+const HELP: &str = "Trady\n\n  trady analyst|executor|gateway --once [--config FILE]\n  trady demo\n  trady demo-postgres\n  trady migrate\n  trady credentials init|status\n  trady t212 snapshot --config FILE\n  trady validate-json model|results|envelope|artifact|artifact-result FILE\n\nService probes validate configuration and service-specific database roles.\nThe autonomous command runs enabled demo/live execution or records real-data shadow proposals.\nLive execution requires independently reviewed release evidence and a separately managed analyst.\nBroker environment selects matching demo/live API credentials; shadow uses only the read-only broker interface.\nCredentials use environment overrides or config/credentials.local.json; TRADY_CREDENTIALS_FILE selects another private file.\nCredential status prints names and availability, never values.\n";
+
+fn print_help() {
+    println!(
+        "{HELP}{}{}{}{}{}{}{}{}{}",
+        opencode::HELP,
+        news::HELP,
+        telegram::HELP,
+        finbert::HELP,
+        autonomous::HELP,
+        inputs_service::HELP,
+        model_lab::HELP,
+        weekly::HELP,
+        release::HELP
+    );
+    print!("{}", financial::HELP);
+}
 
 fn main() -> std::process::ExitCode {
     match run() {
@@ -40,13 +62,7 @@ fn secret(name: &str) -> Result<String> {
 fn run() -> Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
     let Some(command) = args.first().map(String::as_str) else {
-        println!(
-            "{HELP}{}{}{}{}",
-            opencode::HELP,
-            news::HELP,
-            telegram::HELP,
-            finbert::HELP
-        );
+        print_help();
         return Ok(());
     };
     match command {
@@ -58,26 +74,26 @@ fn run() -> Result<()> {
             output(json!({"credentials":CredentialStore::load()?.status()?}))
         }
         "telegram" => output(telegram::run(&args[1..])?),
+        "autonomous" => output(autonomous::run(&args[1..])?),
+        "weekly" => output(weekly::run(&args[1..])?),
+        "release" => output(release::run(&args[1..])?),
+        "inputs-service" => output(inputs_service::run(&args[1..])?),
+        "model-lab" => output(model_lab::run(&args[1..])?),
         "news" => output(news::run(&args[1..])?),
+        "financial" => output(financial::run(&args[1..])?),
         "sentiment" => output(finbert::run(&args[1..])?),
         "t212" if args.len() == 4 && args[1] == "snapshot" && args[2] == "--config" => {
             trading212_snapshot(&args[3])
         }
         "--help" | "help" | "-h" => {
-            println!(
-                "{HELP}{}{}{}{}",
-                opencode::HELP,
-                news::HELP,
-                telegram::HELP,
-                finbert::HELP
-            );
+            print_help();
             Ok(())
         }
         "chat" | "sessions" | "skill-manifest" => output(opencode::run(command, &args[1..])?),
         "analyst" | "executor" | "gateway" => service(command, &args[1..]),
         "migrate" if args.len() == 1 => {
             trady_storage::migrate(&secret("TRADY_MIGRATOR_DSN")?)?;
-            output(json!({"migration":3,"status":"applied_or_verified"}))
+            output(json!({"migration":9,"status":"applied_or_verified"}))
         }
         "demo" if args.len() == 1 => demo_memory(),
         "demo-postgres" if args.len() == 1 => demo_postgres(),
@@ -109,7 +125,7 @@ fn trading212_snapshot(path: &str) -> Result<()> {
     let config: Trading212Config = serde_json::from_str(&input)
         .map_err(|_| Error("invalid or unsupported Trading 212 configuration fields".into()))?;
     config.validate().map_err(|e| Error(e.to_string()))?;
-    let credentials = Credentials::read_from_store(config.environment, &CredentialStore::load()?)?;
+    let credentials = Credentials::from_store(config.environment, &CredentialStore::load()?)?;
     let mut reader =
         Trading212Reader::new(config.clone(), credentials).map_err(|e| Error(e.to_string()))?;
     let snapshot = reader

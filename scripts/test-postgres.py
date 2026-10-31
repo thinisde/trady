@@ -38,6 +38,7 @@ def main():
             raise RuntimeError("disposable PostgreSQL did not become ready")
         port = run("docker", "port", NAME, "5432/tcp", capture_output=True).stdout.strip().rsplit(":", 1)[1]
         sql((ROOT / "migrations/0000_roles.sql").read_text())
+        sql((ROOT / "migrations/0000_lab_roles.sql").read_text())
         sql("CREATE DATABASE trady OWNER trady_owner TEMPLATE template0;")
         sql("CREATE ROLE paperless_fixture_owner LOGIN;" )
         sql("CREATE DATABASE paperless_fixture OWNER paperless_fixture_owner TEMPLATE template0;")
@@ -46,9 +47,16 @@ def main():
                          TRADY_MIGRATOR_DSN=f"host=127.0.0.1 port={port} user=trady_migrator dbname=trady",
                          TRADY_EXECUTOR_DSN=f"host=127.0.0.1 port={port} user=trady_executor dbname=trady",
                          TRADY_ANALYST_DSN=f"host=127.0.0.1 port={port} user=trady_analyst dbname=trady",
-                         TRADY_GATEWAY_DSN=f"host=127.0.0.1 port={port} user=trady_gateway dbname=trady")
+                          TRADY_GATEWAY_DSN=f"host=127.0.0.1 port={port} user=trady_gateway dbname=trady",
+                          TRADY_LAB_DSN=f"host=127.0.0.1 port={port} user=trady_lab dbname=trady",
+                          TRADY_VERIFIER_DSN=f"host=127.0.0.1 port={port} user=trady_verifier dbname=trady",
+                          TRADY_SHADOW_DSN=f"host=127.0.0.1 port={port} user=trady_shadow dbname=trady",
+                          TRADY_RELEASE_DSN=f"host=127.0.0.1 port={port} user=trady_releaser dbname=trady",
+                          TRADY_RELEASE_OWNER_DSN=f"host=127.0.0.1 port={port} user=trady_release_owner dbname=trady")
         run("cargo", "test", "--locked", "-p", "trady-storage", "--tests", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
         run("cargo", "test", "--locked", "-p", "trady-cli", "--test", "opencode", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
+        run("cargo", "test", "--locked", "-p", "trady-cli", "--test", "autonomous_cli", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
+        run("cargo", "test", "--locked", "-p", "trady-cli", "--test", "telegram_jobs_cli", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
         for service in ["analyst", "executor", "gateway"]:
             run("cargo", "run", "--locked", "--quiet", "--bin", "trady", "--", service, "--once", cwd=ROOT, env=child_env)
         run("cargo", "run", "--locked", "--quiet", "--bin", "trady", "--", "demo-postgres", cwd=ROOT, env=child_env)

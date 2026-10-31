@@ -68,6 +68,8 @@ pub struct UniverseSnapshot {
     pub snapshot_id: String,
     pub classification_snapshot_id: String,
     pub index_id: String,
+    /// False for a partial page, degraded response, or incomplete provider export.
+    pub complete: bool,
     pub taxonomy_edition: String,
     /// Effective provider snapshot time, separate from when it became available.
     pub as_of: DateTime<Utc>,
@@ -298,6 +300,7 @@ pub fn valid_reference(value: &str) -> bool {
 
 pub fn valid_isin(value: &str) -> bool {
     if value.len() != 12
+        || !value.is_ascii()
         || !value[..2].bytes().all(|b| b.is_ascii_uppercase())
         || !value
             .bytes()
@@ -389,6 +392,7 @@ pub fn screen_universe(
     };
     let lineage = &universe.provenance;
     if universe.index_id != "SP500"
+        || !universe.complete
         || !valid_reference(&universe.snapshot_id)
         || !valid_reference(&universe.classification_snapshot_id)
         || !valid_reference(&universe.taxonomy_edition)
@@ -566,15 +570,16 @@ pub fn screen_universe(
         {
             result.peer_controls.push(candidate);
         } else {
+            let symbol = universe
+                .members
+                .iter()
+                .find(|m| m.share_class_isin == candidate.share_class_isin)
+                .map(|m| m.symbol.clone())
+                .unwrap_or_default();
             result.rejections.push(RejectedMember {
                 issuer_id: candidate.issuer_id,
-                share_class_isin: candidate.share_class_isin.clone(),
-                symbol: universe
-                    .members
-                    .iter()
-                    .find(|m| m.share_class_isin == candidate.share_class_isin)
-                    .map(|m| m.symbol.clone())
-                    .unwrap_or_default(),
+                share_class_isin: candidate.share_class_isin,
+                symbol,
                 instrument_id: Some(candidate.instrument_id),
                 reasons: vec![RejectionReason::ShortlistLimit],
             });

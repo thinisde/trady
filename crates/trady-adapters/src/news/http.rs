@@ -31,6 +31,34 @@ pub struct HttpResponse {
 
 pub trait HttpTransport {
     fn get(&mut self, request: HttpRequest) -> std::result::Result<HttpResponse, SourceFailure>;
+    fn get_with_headers(
+        &mut self,
+        request: HttpRequest,
+        headers: &[(String, String)],
+    ) -> std::result::Result<HttpResponse, SourceFailure> {
+        if headers.is_empty() {
+            self.get(request)
+        } else {
+            Err(SourceFailure::unavailable("custom_headers_unsupported"))
+        }
+    }
+    fn x_budget_enforced(&self) -> bool {
+        false
+    }
+    fn set_x_scope(
+        &mut self,
+        _source: &trady_application::research::SourceConfig,
+    ) -> std::result::Result<(), SourceFailure> {
+        Ok(())
+    }
+    /// Analysis requests only. This port has no broker order endpoint or credentials.
+    fn post_json(
+        &mut self,
+        _request: HttpRequest,
+        _body: Vec<u8>,
+    ) -> std::result::Result<HttpResponse, SourceFailure> {
+        Err(SourceFailure::unavailable("analysis_post_unsupported"))
+    }
 }
 pub struct SafeHttp;
 
@@ -108,6 +136,36 @@ fn resolve(host: &str) -> std::result::Result<Vec<SocketAddr>, SourceFailure> {
 
 impl HttpTransport for SafeHttp {
     fn get(&mut self, request: HttpRequest) -> std::result::Result<HttpResponse, SourceFailure> {
+        self.send(request, None, &[])
+    }
+    fn get_with_headers(
+        &mut self,
+        mut request: HttpRequest,
+        headers: &[(String, String)],
+    ) -> std::result::Result<HttpResponse, SourceFailure> {
+        request.redirects = 0;
+        self.send(request, None, headers)
+    }
+    fn post_json(
+        &mut self,
+        mut request: HttpRequest,
+        body: Vec<u8>,
+    ) -> std::result::Result<HttpResponse, SourceFailure> {
+        if body.len() > MAX_BODY_BYTES {
+            return Err(SourceFailure::unavailable("analysis_request_too_large"));
+        }
+        request.redirects = 0;
+        self.send(request, Some(body), &[])
+    }
+}
+
+impl SafeHttp {
+    fn send(
+        &mut self,
+        request: HttpRequest,
+        body: Option<Vec<u8>>,
+        headers: &[(String, String)],
+    ) -> std::result::Result<HttpResponse, SourceFailure> {
         let mut url = request.url;
         for hop in 0..=request.redirects.min(3) {
             validate_destination(&url, &request.allowed_hosts)?;
@@ -119,6 +177,7 @@ impl HttpTransport for SafeHttp {
                 .no_proxy()
                 .https_only(true)
                 .redirect(Policy::none())
+                .retry(reqwest::retry::never())
                 .no_gzip()
                 .no_brotli()
                 .no_deflate()
@@ -129,9 +188,26 @@ impl HttpTransport for SafeHttp {
                 .user_agent("Trady/0.1 research-reader")
                 .build()
                 .map_err(|_| SourceFailure::unavailable("http_client_initialization_failed"))?;
-            let mut builder = client
-                .get(url.clone())
-                .header("Accept-Encoding", "identity");
+            let mut builder = if let Some(body) = &body {
+                client
+                    .post(url.clone())
+                    .header("Content-Type", "application/json")
+                    .body(body.clone())
+            } else {
+                client.get(url.clone())
+            }
+            .header("Accept-Encoding", "identity");
+            for (name, value) in headers {
+                if !matches!(
+                    name.as_str(),
+                    "User-Agent" | "x-cg-demo-api-key" | "Authorization"
+                ) || value.len() > 4096
+                    || value.chars().any(char::is_control)
+                {
+                    return Err(SourceFailure::unavailable("invalid_financial_auth_header"));
+                }
+                builder = builder.header(name, value);
+            }
             if let Some(token) = &request.bearer {
                 builder = builder.bearer_auth(token);
             }

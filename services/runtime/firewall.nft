@@ -1,0 +1,45 @@
+#!/usr/sbin/nft -f
+# New isolated-host table; does not flush or change any existing firewall table.
+# Administrator fills these sets from approved provider IP routes. Empty sets
+# intentionally block all internet traffic for Trady identities.
+table inet trady_runtime {
+    set analyst_https4 { type ipv4_addr; flags interval; }
+    set analyst_https6 { type ipv6_addr; flags interval; }
+    set broker_https4 { type ipv4_addr; flags interval; }
+    set broker_https6 { type ipv6_addr; flags interval; }
+    set telegram_https4 { type ipv4_addr; flags interval; }
+    set telegram_https6 { type ipv6_addr; flags interval; }
+    set database4 { type ipv4_addr; flags interval; }
+    set database6 { type ipv6_addr; flags interval; }
+    chain output {
+        type filter hook output priority 10; policy accept;
+        meta skuid 13001 jump analyst
+        meta skuid 13002 jump executor
+        meta skuid 13003 jump gateway
+        meta skuid 13004 reject
+        meta skuid 13005 reject
+    }
+    chain database {
+        ip daddr @database4 tcp dport 5432 accept
+        ip6 daddr @database6 tcp dport 5432 accept
+        return
+    }
+    chain analyst {
+        jump database
+        ip daddr @analyst_https4 tcp dport 443 accept
+        ip6 daddr @analyst_https6 tcp dport 443 accept
+        reject
+    }
+    chain executor {
+        jump database
+        ip daddr @broker_https4 tcp dport 443 accept
+        ip6 daddr @broker_https6 tcp dport 443 accept
+        reject
+    }
+    chain gateway {
+        jump database
+        ip daddr @telegram_https4 tcp dport 443 accept
+        ip6 daddr @telegram_https6 tcp dport 443 accept
+        reject
+    }
+}

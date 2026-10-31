@@ -261,6 +261,19 @@ impl SkillBundle {
 pub struct RuntimeTools {
     pub bundle: SkillBundle,
 }
+impl RuntimeTools {
+    pub fn with_research<R: trady_application::research_jobs::ResearchInformation>(
+        self,
+        repository: R,
+        sentiment_enabled: bool,
+    ) -> crate::research_jobs::ResearchTools<R> {
+        crate::research_jobs::ResearchTools {
+            base: self,
+            repository,
+            sentiment_enabled,
+        }
+    }
+}
 fn object(properties: Value, required: &[&str]) -> Value {
     json!({"type":"object","additionalProperties":false,"properties":properties,"required":required})
 }

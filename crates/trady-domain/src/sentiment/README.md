@@ -12,21 +12,29 @@ The public module remains `trady_domain::sentiment`; see the
   `SentimentBatch`: request and response records with decimal probabilities.
 - `[mod.rs:SentimentEvidence]`, `SentimentAssessment`: correlated observations
   and caller-supplied scoring time.
+  `[mod.rs:SentimentPrediction]` carries `truncated`; evidence carries `lineage_id`,
+  `observed_at` and `expires_at` alongside item/text identity and probabilities.
 - `[mod.rs:SENTIMENT_VERSION]`, `FINBERT_MODEL`, `FINBERT_REVISION`,
   `MAX_SENTIMENT_ITEMS`, `MAX_SENTIMENT_CHARS`: schema/model identity and bounds.
+  Values are version `1`, model `ProsusAI/finbert`, revision
+  `0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031`, at most `16` items and `4096`
+  characters. These constants do not validate record construction.
 
 ## Invariants
 
-Deserializable records deny unknown fields. `SentimentAssessment` supports
+`[mod.rs:SentimentProbabilities]`, `SentimentDocument`, `SentimentPrediction`,
+`SentimentBatch` and `SentimentEvidence` deny unknown deserialized fields.
+`[mod.rs:SentimentAssessment]` supports
 serialization only, with public fields. Record construction alone does not
 validate permissions, correlation, probability bounds, freshness or authority;
 the application and policy enforce those checks.
 
 ## Side Effects
 
-None. This module defines records and constants only.
+None. `[mod.rs:SentimentAssessment]` and the other DTOs/constants define data only.
 
 ## Verification
 
 Run `cargo test -p trady-policy -p trady-application --test sentiment --locked`
 from the repository root for application and policy contract coverage.
+Run `cargo test --workspace --locked` for workspace verification.

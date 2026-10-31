@@ -2,15 +2,67 @@
 
 ## Overview
 
-Administrator role provisioning and the first transactionally applied Trady migration.
+Administrator role provisioning and nine transactionally applied Trady migrations.
 Use the [disposable test runner](../scripts/test-postgres.py) for local verification.
 
-Subsequent migrations add model-session state and research-source persistence.
+Subsequent migrations add model-session state, research-source persistence and
+a separate autonomous execution/research ledger.
 
 ## Interface
 
+- [0009_financial_data.sql](./0009_financial_data.sql): research-only provider
+  accounts, source/registry revisions, shared credit windows/retry deadlines,
+  financial collection leases, observation revisions, invalidations and manifests.
+  Direct payload access is granted only to `trady_analyst`.
+  Tables are `research.financial_accounts`, `research.financial_sources`,
+  `research.provider_budget_windows`, `research.financial_registry_revisions`,
+  `research.provider_retry_deadlines`, `research.financial_collections`,
+  `research.financial_observations`, `research.financial_invalidations` and
+  `research.financial_manifests` (`[0009_financial_data.sql:CREATE TABLE]`).
+
+- [0000_lab_roles.sql](./0000_lab_roles.sql): separate lab, verifier, shadow,
+  release-owner and releaser roles, provisioned by the administrator.
+- [0006_weekly_lab.sql](./0006_weekly_lab.sql): fenced weekly freezes, campaigns,
+  trial/holdout budgets, forecast/label/reconciliation ledgers and immutable
+  release evidence; `release.current_active` is executor-read-only.
+  Tables are `weekly.budgets`, `weekly.campaigns`, `weekly.runs`, `weekly.trials`,
+  `weekly.holdouts`, `weekly.forecasts`, `weekly.labels`, `weekly.reconciliations`,
+  `release.candidates`, `release.evidence`, `release.events` and `release.active`
+  (`[0006_weekly_lab.sql:CREATE TABLE]`).
+- [0007_research_jobs.sql](./0007_research_jobs.sql): bounded research work,
+  verified packets, sentiment references, gateway receipts/outbox, sessions,
+  reconciled control contexts and confirmed owner requests.
+  Tables are `research.job_policies`, `control.research_work`,
+  `research.verified_packets`, `research.sentiment_assessments`,
+  `research.dependency_invalidations`, `control.gateway_receipts`,
+  `control.gateway_outbox`, `control.gateway_sessions`, `research.gateway_reports`,
+  `control.owner_control_context` and `control.owner_controls`; the health view is
+  `control.research_source_health` (`[0007_research_jobs.sql:CREATE TABLE]`,
+  `[0007_research_jobs.sql:CREATE VIEW]`).
+- [0008_verified_holdings.sql](./0008_verified_holdings.sql):
+  `execution.holding_observations`, `execution.control_latches`,
+  `research.holding_updates`, hash-only `research.holding_update_identities`; `research.verified_holding`,
+  `research.queue_holding_update`, `execution.record_holding_observation`,
+  `execution.pending_holding_update`, `execution.synchronize_owner_controls`.
+  It replaces `research.purge_trading_records` to delete expired queued research
+  copies and wraps `execution.save_trader` with transactional sentiment checks.
+  Queue validation locks its source rows; a trigger propagates later retention
+  reductions and removes queued copies when their source records are deleted.
+  Queue publication versions those rows without renewing retention, forcing
+  stale repeatable-read writers to retry before they could miss a queued copy.
+- [0005_x_api_monitoring.sql](./0005_x_api_monitoring.sql):
+  `research.x_budget_cycles`, `research.x_cost_reservations` and
+  `research.x_cost_reconciliations`; `source_items` gains `ingested_at`,
+  `ingestion_revision`, `registry_hash` and `coverage`.
+  `research.touch_source_ingestion` clears availability when content changes.
+
 - [0000_roles.sql](./0000_roles.sql): server-wide `trady_owner`, `trady_migrator`,
   `trady_analyst`, `trady_executor` and `trady_gateway` roles for a fresh installation.
+- [0004_autonomous_execution.sql](./0004_autonomous_execution.sql):
+  `execution.autonomous_accounts`, `research.trading_records`;
+  `execution.acquire_trader`, `assert_trader`, `renew_trader`, `load_trader`,
+  `save_trader`, `release_trader`; `research.put_trading_record` and
+  `purge_trading_records`. This ledger is separate from paper fixture tables.
 - [0001_foundation.sql](./0001_foundation.sql): schemas `policy`, `research`,
   `execution`, `control`, `audit`; tables `policy.versions`, `research.runs`,
   `execution.accounts`, `execution.account_leases`, `execution.order_intents`,
@@ -52,7 +104,14 @@ The function call shapes below are declared by `[0001_foundation.sql:CREATE FUNC
 
 ## Invariants
 
-- Accounts are paper-only. `[0001_foundation.sql:execution.order_intents]` has a
+- `[0005_x_api_monitoring.sql:GRANT]` grants cost-table operations and sequences
+  only to the analyst, with no broker/execution authority. Monetary counters have
+  nonnegative checks; `resource_bound` and `actual_resources` JSON do not have
+  equivalent resource-shape/value checks in the migration. Per-scope
+  serialization/policy enforcement belongs to
+  `[../crates/trady-storage/src/x_monitoring.rs:PgXCostRepository]`.
+
+- Foundation accounts are paper-only. `[0001_foundation.sql:execution.order_intents]` has a
   unique account/session slot; reservations accept prepared buy fixtures only.
 - `[0001_foundation.sql:execution.assert_fence]` locks the lease and uses database
   time and null-safe ownership/generation checks. Takeover requires reconciliation.
@@ -66,12 +125,18 @@ The function call shapes below are declared by `[0001_foundation.sql:CREATE FUNC
   Matching existing intents return false before the new-reservation checks; their
   comparison ignores state and broker order ID. IDs and session values use text
   extraction without an explicit JSON-string check; creation time is not age-checked.
-- On a fresh installation, runtime roles receive exact grants, no direct financial
-  mutation/deletion, no DDL,
+- On a fresh installation, runtime roles receive exact grants, no direct execution
+  table mutation/deletion, no DDL,
   and no owner membership. Shared command/job producers derive from `session_user`.
   Security-definer functions use fixed paths and default public execution is revoked.
   These files do not audit or remove pre-existing explicit grants or memberships
   (`[0000_roles.sql:CREATE ROLE]`, `[0001_foundation.sql:ALTER DEFAULT PRIVILEGES]`).
+  Financial research storage is distinct: `[0009_financial_data.sql:GRANT]`
+  permits analyst mutations, including observation/manifest deletion and updates
+  to observation `recorded_at`. Observation payload-update restrictions do not
+  make complete rows immutable. Expiry cleanup requires an explicit purge unless
+  a source deletion removes dependent queued copies
+  (`[0008_verified_holdings.sql:research.purge_trading_records]`).
 - Notification claims use `SKIP LOCKED`, expiry and increasing generations;
   acknowledgement requires the current unexpired worker/generation.
 - Cross-database authentication requires a separate host/proxy rule. The disposable
@@ -91,7 +156,7 @@ The function call shapes below are declared by `[0001_foundation.sql:CREATE FUNC
   it contains no repeat-creation guards. `[0001_foundation.sql:REVOKE]` targets
   database `trady`. Neither SQL file creates that database or wraps itself in a
   transaction. `[../crates/trady-storage/src/lib.rs:migrate]` supplies the transaction,
-  owner role and advisory lock; it applies/compares compiled migrations 1, 2 and 3
+  owner role and advisory lock; it applies/compares compiled migrations 1 through 9
   in order. It does not apply the role-provisioning file or inspect catalog drift.
 - `[0002_model_sessions.sql:research.model_sessions]` constrains session/owner/account
   ID syntax, positive policy version, nonnegative revision/lease generation, a JSON
@@ -101,6 +166,8 @@ The function call shapes below are declared by `[0001_foundation.sql:CREATE FUNC
   JSON null values can make comparison checks evaluate to SQL NULL, and scope's
   JSON type is unchecked. There are no scope foreign keys, row-level authorization
   or lease-transition checks; `updated_at` has a default without an update trigger.
+  `[0007_research_jobs.sql:model_sessions_account_id_check]` later expands valid
+  session account namespaces to paper, shadow and live.
 - `[0003_research_sources.sql:research.source_states]` requires a nonnegative
   revision. Source items have a unique `(source_id, external_id)` and a source-state
   foreign key; revisions reference items with `(item_id, content_hash)` identity.
@@ -112,6 +179,41 @@ The function call shapes below are declared by `[0001_foundation.sql:CREATE FUNC
   usage and redaction execution; it grants no execution authority over financial state.
 
 ## Side Effects
+
+`[0006_weekly_lab.sql:weekly.reserve_trial]` reserves cumulative budgets.
+`[0006_weekly_lab.sql:weekly.claim_holdout]` records transactional consumption;
+a persisted unfinished consumption prevents replay. Helper invocation order is
+owned by the caller. Release evidence is content-addressed, role-separated and
+scope-bound. `[0006_weekly_lab.sql:release.advance]` requires independent evidence, twenty
+prospective real calendar sessions, scoped owner approval and fresh readiness.
+`[0008_verified_holdings.sql:execution.synchronize_owner_controls]` requires the current executor fence and
+fresh reconciled snapshot, persists latches and reports results through the
+gateway outbox. Sensitive requests must still match their confirmed context.
+Its close-completion predicate checks a null context instrument, a JSON-null
+stored plan and terminal outstanding orders; it does not directly inspect the
+snapshot position array. Queued holding-update payloads expire with their earliest underlying
+record retention or update validity; only immutable identity hashes remain.
+The `execution.save_trader` wrapper checks persisted sentiment dependencies for
+new plans, target revisions and new entry attempts in the acceptance transaction.
+Protective management remains available when those dependencies expire.
+`research.verified_holding` grants no analyst write access to execution economics.
+
+`[0005_x_api_monitoring.sql:research.touch_source_ingestion]` clears availability
+when any other current-item field changes. Existing rows have unknown availability until refreshed; the collector
+records a revision-guarded timestamp after the content transaction commits.
+The migration adds cost tables, an index, sequences and analyst grants.
+
+`[0004_autonomous_execution.sql:execution.save_trader]` performs fenced revision
+transitions and atomically appends audit/outbox records. Existing order requests,
+attempted flags and consumed/loss-paused session sets cannot regress; the same
+proposal's exit latch cannot change. New entry reservation independently checks
+the daily session slot. Shadow attempts are rejected. Only the executor receives
+the narrow execution function grants; no runtime role can directly mutate the table.
+`[0004_autonomous_execution.sql:research.put_trading_record]` permits immutable
+owner/account/kind/ID-scoped records and retention shortening on identical retries.
+The analyst may call research write/purge functions and read those records; it
+receives no autonomous financial-write grant. Owner/account scope within this
+shared analyst role is enforced by the application adapter, without row-level SQL policies.
 
 Role provisioning changes server-wide roles. Migration creates database objects
 and grants. Runtime functions mutate account, queue, audit and notification records.

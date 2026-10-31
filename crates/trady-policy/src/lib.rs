@@ -1,6 +1,8 @@
 //! Pure, checked financial calculations. Inputs must be verified observations.
 
+pub mod capital;
 pub mod economics;
+pub mod holding;
 pub mod limits;
 pub mod prediction;
 pub mod sentiment;
@@ -121,7 +123,8 @@ pub enum Catalyst {
     Direct,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "ConfidenceComponents")]
 pub struct ConfidenceScore {
     primary: u8,
     catalyst: u8,
@@ -131,7 +134,7 @@ pub struct ConfidenceScore {
     freshness: u8,
 }
 impl ConfidenceScore {
-    /// Components can only be constructed by `confidence`, whose maxima sum to 100.
+    /// Components come from `confidence` or a checked journal snapshot, never a raw total.
     pub fn total(&self) -> u8 {
         self.primary
             + self.catalyst
@@ -139,6 +142,41 @@ impl ConfidenceScore {
             + self.price
             + self.economics
             + self.freshness
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConfidenceComponents {
+    primary: u8,
+    catalyst: u8,
+    independent: u8,
+    price: u8,
+    economics: u8,
+    freshness: u8,
+}
+
+impl TryFrom<ConfidenceComponents> for ConfidenceScore {
+    type Error = Error;
+
+    fn try_from(value: ConfidenceComponents) -> Result<Self> {
+        require(
+            [0, 25].contains(&value.primary)
+                && [0, 10, 20].contains(&value.catalyst)
+                && [0, 8, 15].contains(&value.independent)
+                && [0, 10, 20].contains(&value.price)
+                && [0, 5, 10].contains(&value.economics)
+                && [0, 5, 10].contains(&value.freshness),
+            "invalid confidence components",
+        )?;
+        Ok(Self {
+            primary: value.primary,
+            catalyst: value.catalyst,
+            independent: value.independent,
+            price: value.price,
+            economics: value.economics,
+            freshness: value.freshness,
+        })
     }
 }
 pub fn confidence(inputs: &ConfidenceInputs) -> ConfidenceScore {
@@ -442,7 +480,8 @@ pub fn validate_account_entry(
     )
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SessionLossGuard {
     pub session_id: String,
     pub paused: bool,
@@ -454,15 +493,39 @@ impl SessionLossGuard {
         current_equity: Decimal,
         net_deposits: Decimal,
     ) -> Result<()> {
-        require(
-            opening_equity > Decimal::ZERO,
-            "opening equity must be positive",
-        )?;
-        let adjusted_pnl = sub(sub(current_equity, net_deposits)?, opening_equity)?;
-        if div(adjusted_pnl, opening_equity)? <= Decimal::new(-2, 2) {
-            self.paused = true;
+        // Compatibility for a single net flow. Use observe_cash_flows when both
+        // deposits and withdrawals occurred; netting them loses the denominator.
+        let deposits = net_deposits.max(Decimal::ZERO);
+        let withdrawals = sub(Decimal::ZERO, net_deposits.min(Decimal::ZERO))?;
+        self.observe_cash_flows(opening_equity, current_equity, deposits, withdrawals)
+            .map(|_| ())
+    }
+
+    /// Cumulative confirmed flows, not pending transfers. Never clears the latch.
+    pub fn observe_cash_flows(
+        &mut self,
+        opening_equity: Decimal,
+        current_equity: Decimal,
+        deposits: Decimal,
+        withdrawals: Decimal,
+    ) -> Result<capital::SessionPerformance> {
+        let result =
+            capital::session_performance(opening_equity, current_equity, deposits, withdrawals);
+        match result {
+            Ok(performance) => {
+                if performance
+                    .loss_guard_fraction
+                    .is_none_or(|fraction| fraction <= Decimal::new(-2, 2))
+                {
+                    self.paused = true;
+                }
+                Ok(performance)
+            }
+            Err(error) => {
+                self.paused = true;
+                Err(error)
+            }
         }
-        Ok(())
     }
 }
 

@@ -1,6 +1,6 @@
 {
   "base_url": "https://opencode.ai/inference/go/openai/v1",
-  "model": "glm-5.2",
+  "model": "deepseek-v4.1-flash",
   "api_key_env": "OPENCODE_API_KEY",
   "stream": true,
   "limits": {

@@ -7,6 +7,18 @@ for the initial offline Rust foundation.
 
 ## Subdirectories & Boundaries
 
+- [Reviewed input service and model lab](../services/inputs/README.md): actual
+  data imports/reviews, bounded HTTP and offline four-outcome model workflows.
+- [Offline weekly lab](../lab/README.md): durable experiments, pinned helpers and
+  independent release evidence.
+- [Isolated runtime deployment](../services/runtime/README.md): separate service
+  identities, private analyst IPC and opt-in scheduler/network policy.
+- [Autonomous runtime](./autonomous.md): automatic universe screening, mathematical
+  limits, calibrated predictions, native advice, durable execution/protection,
+  exact-ID recovery and deployment prerequisites.
+- [Verification reports](./reports/README.md): dated README drift findings and
+  verification evidence.
+
 - [Central credentials](./credentials.md): private storage, environment overrides,
   API/shared/hashing/signing keys, database roles and setup/status commands.
 
@@ -20,6 +32,8 @@ for the initial offline Rust foundation.
 - [Original v1.1 input](./v1/v1.1.md): preserved historical design, superseded by the current v1 decisions where requirements differ.
 - [Offline foundation](./foundation.md): working commands, evidence, acceptance coverage and remaining work.
 - [X and news reading](./news.md): bounded source adapters, registry, durable observations, commands and remaining coverage gaps.
+- [Financial data](./financial-data.md): reviewed provider collection, shared
+  budgets, normalized observations and rights-aware historical snapshots.
 - [Trading 212 adapter](./trading212.md): demo/live information reads, executor order transport and verification limits.
 
 ## Interface
@@ -27,9 +41,7 @@ for the initial offline Rust foundation.
 The [prediction-fusion design](./v1/prediction-fusion.md) owns model semantics,
 calibrated baseline, scenario utility and mathematical limit authority. The
 [weekly workflow](./v1/weekly-optimization.md) owns cumulative evaluation, offline
-tools and release gates. The [implementation record](./v1/prediction-implementation.md)
-identifies the tested Rust subset; the local developer skill is separate from
-runtime skills.
+tools and release gates; its developer skill is separate from runtime skills.
 
 The [v1 reading map](./v1/README.md#reading-map) is the requirements entry point.
 The [foundation record](./foundation.md) distinguishes implemented symbols from future contracts.

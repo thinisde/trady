@@ -1,0 +1,37 @@
+[Unit]
+Description=Trady owner Telegram gateway
+After=network-online.target
+
+[Service]
+User=trady-gateway
+Group=trady-gateway
+ExecStart=/opt/trady/bin/trady telegram run --config /etc/trady/runtime/telegram.json
+Environment=TRADY_CREDENTIALS_FILE=%d/credentials.json
+LoadCredential=credentials.json:/etc/trady/secrets/gateway.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/opt/trady /etc/trady/runtime
+StateDirectory=trady-gateway
+ReadWritePaths=/var/lib/trady-gateway
+UMask=0077
+MemoryMax=256M
+CPUQuota=25%
+TasksMax=24
+TimeoutStopSec=5
+KillMode=control-group
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -13,11 +13,14 @@ prepared; this change does not build the image, start the service or load weight
   item IDs/text SHA-256, positive/negative/neutral probability strings and truncation flags.
 - `[serve.py:Handler.do_GET]`: `GET /health`, readiness and loaded model identity.
 - `[serve.py:validate_documents]`, `probability_strings`: request validation and
-  finite, bounded, normalized decimal-string output.
+  finite, bounded decimal-string output. Probabilities must approximately sum to
+  one before nine-place formatting; output is not renormalized to an exact sum.
 - `[serve.py:FinBert]`, `FinBert.predict`, `main`: explicit model loading,
   CPU classification and listener startup.
 - `[serve.py:MODEL_ID]`, `MODEL_REVISION`, `MAX_ITEMS`, `MAX_CHARS`,
   `MAX_BODY_BYTES`, `MAX_TOKENS`, `LABELS`: model identity and wire/token limits.
+- `[serve.py:main]`: environment settings `FINBERT_MODEL_REVISION`,
+  `FINBERT_LOCAL_FILES_ONLY` (default false) and `FINBERT_THREADS` (default 2).
 - [Dockerfile](./Dockerfile): dependency installation, UID/GID 10001 and startup command.
 - [requirements.txt](./requirements.txt): CPU PyTorch and Transformers versions.
 - [Compose service](./compose.yaml) and
@@ -47,10 +50,19 @@ prepared; this change does not build the image, start the service or load weight
   uses a read-only root filesystem with writable cache/tmp, drops capabilities,
   limits resources and disables automatic restart. The profile is opt-in.
 - `[./compose.offline.yaml:services.finbert.environment]` requires
-  cached weights and disables Hub/model downloads. Cache ownership must match
+  cached weights and sets the local-files-only/Hub/Transformers offline flags.
+  It adds no network isolation and does not make image building offline.
+  Cache ownership must match
   UID/GID 10001; an incompatible existing volume is not repaired automatically.
-- `[serve.py:Handler.log_message]` suppresses access logs. The service stores no
-  source text or predictions and possesses no application or broker credentials.
+- `[serve.py:Handler.setup]` sets ten-second connection deadlines; the handler
+  uses HTTP/1.0 (`[serve.py:Handler.protocol_version]`). Invalid requests return
+  400, oversized bodies 413, and unavailable/busy/failed inference 503
+  (`[serve.py:Handler.do_POST]`).
+- `[serve.py:Handler.log_message]` suppresses access logs. Source text/predictions
+  are not persisted by the handler. The reviewed Compose/Docker templates declare
+  no credential variables, secret mounts or credential files; actual deployed
+  environment/cache contents require deployment review
+  (`[compose.yaml:services.finbert]`, `[Dockerfile:ENV]`).
 
 ## Side Effects
 

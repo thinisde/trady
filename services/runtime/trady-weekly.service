@@ -1,0 +1,35 @@
+[Unit]
+Description=Trady bounded offline weekly calibration
+
+[Service]
+Type=oneshot
+User=trady-lab
+Group=trady-lab
+SupplementaryGroups=trady-evaluation-ipc
+ExecStart=/opt/trady/bin/trady weekly run --config /etc/trady/lab/run.json
+Environment=TRADY_CREDENTIALS_FILE=%d/credentials.json
+LoadCredential=credentials.json:/etc/trady/secrets/lab.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/opt/trady /etc/trady/lab /var/lib/trady/datasets
+InaccessiblePaths=/var/lib/trady/sealed /etc/trady/evaluator /var/lib/trady-evaluator
+StateDirectory=trady-lab
+ReadWritePaths=/var/lib/trady-lab
+UMask=0077
+MemoryMax=4G
+CPUQuota=200%
+TasksMax=96
+TimeoutStartSec=3600
+TimeoutStopSec=5
+KillMode=control-group

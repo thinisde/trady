@@ -12,9 +12,15 @@ the [session repository](../../crates/trady-storage/src/sessions.rs) owns Postgr
 
 The current [official OpenCode Go documentation](https://github.com/anomalyco/opencode/blob/dev/services/www/src/docs/content/console/go.mdx)
 lists OpenAI-compatible Chat Completions for the open models. The default base URL
-is `https://opencode.ai/inference/go/openai/v1`, with model `glm-5.2`. Both are
-configurable. Select a Chat Completions model and verify its context capacity when
+is `https://opencode.ai/inference/go/openai/v1`, with model pinned to
+`deepseek-v4.1-flash` in both the adapter default and supplied configuration. Explicit
+configuration can select another model; there is no automatic model fallback.
+Select a Chat Completions model and verify its context capacity when
 deploying; Responses-, Anthropic- and Google-native endpoints need separate adapters.
+
+Requests identify Trady with its user agent and send the persisted conversation ID
+in `x-opencode-session`, as required by Go for routing and prompt caching. The ID
+stays the same across tool rounds and resumed conversation runs.
 
 ## Interface
 
@@ -149,4 +155,8 @@ Tests cover real local HTTP, split SSE calls, native/JSON continuations, malform
 output, retries, limits, cancellation, idempotent recovery, finalization and
 compaction. The disposable database runner verifies reconnection, racing workers,
 revision/generation fencing, roles and CLI dialogue across separate processes.
-No paid OpenCode Go request or external account was used for these checks.
+These automated suites use local model fixtures. The separate
+[2026-10-31 demo verification](../demo-verification-2026-10-31.md) records actual
+OpenCode Go requests and GET-only Trading 212 demo observations. The pinned
+`deepseek-v4.1-flash` returned correct calculations and completed a streamed,
+persisted two-turn conversation. A separate `glm-5.2` diagnostic also succeeded.

@@ -1,9 +1,16 @@
 //! PostgreSQL persistence through fenced, narrowly granted database functions.
 
+pub mod autonomous;
+pub mod financial;
 pub mod research;
+pub mod research_jobs;
 pub mod sessions;
+pub mod trading_research;
+pub mod transport;
+pub mod weekly;
+pub mod x_monitoring;
 
-use postgres::{Client, NoTls};
+use postgres::Client;
 use serde_json::Value;
 use trady_application::ExecutionRepository;
 use trady_domain::*;
@@ -13,6 +20,14 @@ pub const FOUNDATION_SQL: &str = include_str!("../../../migrations/0001_foundati
 pub const SESSIONS_SQL: &str = include_str!("../../../migrations/0002_model_sessions.sql");
 pub const RESEARCH_SOURCES_SQL: &str =
     include_str!("../../../migrations/0003_research_sources.sql");
+pub const AUTONOMOUS_SQL: &str = include_str!("../../../migrations/0004_autonomous_execution.sql");
+pub const X_API_MONITORING_SQL: &str =
+    include_str!("../../../migrations/0005_x_api_monitoring.sql");
+pub const VERIFIED_HOLDINGS_SQL: &str =
+    include_str!("../../../migrations/0008_verified_holdings.sql");
+pub const WEEKLY_LAB_SQL: &str = include_str!("../../../migrations/0006_weekly_lab.sql");
+pub const RESEARCH_JOBS_SQL: &str = include_str!("../../../migrations/0007_research_jobs.sql");
+pub const FINANCIAL_DATA_SQL: &str = include_str!("../../../migrations/0009_financial_data.sql");
 
 fn db(error: postgres::Error) -> Error {
     // Deliberately exclude connection strings and provider error detail from service output.
@@ -22,31 +37,9 @@ fn db(error: postgres::Error) -> Error {
     })
 }
 
-/// NoTls is allowed only for loopback/Unix development connections. Remote TLS is not implemented.
+/// All repositories share verified remote TLS and explicit local development transport.
 fn connect_local(dsn: &str) -> Result<Client> {
-    let config: postgres::Config = dsn
-        .parse()
-        .map_err(|_| Error("invalid PostgreSQL connection configuration".into()))?;
-    require(
-        !config.get_hosts().is_empty(),
-        "explicit local database host is required",
-    )?;
-    require(
-        config.get_hosts().iter().all(|host| match host {
-            postgres::config::Host::Tcp(name) => matches!(name.as_str(), "127.0.0.1" | "::1"),
-            #[cfg(unix)]
-            postgres::config::Host::Unix(_) => true,
-        }),
-        "foundation database transport permits loopback or Unix sockets only",
-    )?;
-    require(
-        config
-            .get_hostaddrs()
-            .iter()
-            .all(std::net::IpAddr::is_loopback),
-        "foundation database hostaddr must also be loopback",
-    )?;
-    Client::connect(dsn, NoTls).map_err(db)
+    transport::connect(dsn)
 }
 
 pub fn migrate(dsn: &str) -> Result<()> {
@@ -64,6 +57,12 @@ pub fn migrate(dsn: &str) -> Result<()> {
         (1, FOUNDATION_SQL),
         (2, SESSIONS_SQL),
         (3, RESEARCH_SOURCES_SQL),
+        (4, AUTONOMOUS_SQL),
+        (5, X_API_MONITORING_SQL),
+        (6, WEEKLY_LAB_SQL),
+        (7, RESEARCH_JOBS_SQL),
+        (8, VERIFIED_HOLDINGS_SQL),
+        (9, FINANCIAL_DATA_SQL),
     ] {
         if let Some(row) = tx
             .query_opt(

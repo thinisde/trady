@@ -31,7 +31,7 @@ impl Default for OpenCodeGoConfig {
     fn default() -> Self {
         Self {
             base_url: OPENCODE_GO_BASE_URL.into(),
-            model: "glm-5.2".into(),
+            model: "deepseek-v4.1-flash".into(),
             api_key_env: "OPENCODE_API_KEY".into(),
             stream: true,
             limits: RunLimits::default(),
@@ -348,6 +348,7 @@ impl LlmProvider for OpenCodeGoProvider {
             .bearer_auth(&self.api_key)
             .header("Content-Type", "application/json")
             .header("User-Agent", "trady/0.1")
+            .header("x-opencode-session", &request.session_id)
             .timeout(request.timeout.min(Duration::from_secs(30)))
             .json(&body)
             .send()

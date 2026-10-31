@@ -575,6 +575,11 @@ fn server(
             };
             let header = String::from_utf8_lossy(&bytes[..header_end]);
             assert!(header.contains("authorization: Bearer fixture-secret"));
+            let session_id = header
+                .lines()
+                .find_map(|line| line.strip_prefix("x-opencode-session: "))
+                .expect("OpenCode Go requires a stable conversation header")
+                .to_owned();
             let size: usize = header
                 .lines()
                 .find_map(|l| {
@@ -589,8 +594,10 @@ fn server(
                 assert!(n > 0);
                 bytes.extend_from_slice(&buf[..n]);
             }
-            tx.send(serde_json::from_slice(&bytes[header_end..header_end + size]).unwrap())
-                .unwrap();
+            let mut captured: Value =
+                serde_json::from_slice(&bytes[header_end..header_end + size]).unwrap();
+            captured["_test_session_header"] = json!(session_id);
+            tx.send(captured).unwrap();
             write!(socket,"HTTP/1.1 {status} OK\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
         }
     });
@@ -633,7 +640,9 @@ fn real_http_transport_accumulates_native_tool_deltas_and_preserves_correlation(
     assert_eq!(tools.calls, 1);
     let first = requests.recv().unwrap();
     let second = requests.recv().unwrap();
-    assert_eq!(first["model"], "glm-5.2");
+    assert_eq!(first["model"], "deepseek-v4.1-flash");
+    assert_eq!(first["_test_session_header"], s.id);
+    assert_eq!(second["_test_session_header"], s.id);
     assert_eq!(first["tools"][0]["function"]["name"], "memory_search_v1");
     assert!(
         second["messages"]
@@ -729,6 +738,7 @@ fn truncated_streams_and_authentication_errors_never_expose_response_bodies() {
         .unwrap();
         let result = provider.complete(
             &ModelRequest {
+                session_id: "fixture_session".into(),
                 messages: vec![ChatMessage::text("user", "test".into())],
                 tools: vec![],
                 max_output_tokens: 1000,

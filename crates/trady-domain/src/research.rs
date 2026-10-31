@@ -8,9 +8,12 @@ use serde::{Deserialize, Serialize};
 pub enum SourceKind {
     XTimeline,
     XLookup,
+    XRecentSearch,
     GoogleNewsRss,
     PublisherRss,
     AlphaVantage,
+    Finnhub,
+    Gdelt,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -35,6 +38,7 @@ pub enum ContentStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum SocialAction {
+    Unknown,
     Original,
     Reply,
     Quote,
@@ -151,5 +155,47 @@ pub struct SourceState {
     pub last_attempt_at: Option<DateTime<Utc>>,
     pub retry_at: Option<DateTime<Utc>>,
     pub last_status: Option<CollectionStatus>,
+    pub gaps: Vec<String>,
+    #[serde(default)]
+    pub coverage_revision: u32,
+    #[serde(default)]
+    pub x_counts: Option<XCountsMeasurement>,
+    #[serde(default)]
+    pub coverage: Option<SourceCoverage>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceCoverage {
+    pub transport: SourceKind,
+    pub revision: u32,
+    pub rule_version: Option<u32>,
+    pub rule_hash: Option<String>,
+    pub query: Option<String>,
+    pub approved_at: Option<DateTime<Utc>>,
+    pub approval_reference: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct XCountBucket {
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    #[serde(alias = "tweet_count")]
+    pub post_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct XCountsMeasurement {
+    pub rule_hash: String,
+    pub query: String,
+    pub start_at: DateTime<Utc>,
+    pub end_at: DateTime<Utc>,
+    pub measured_at: DateTime<Utc>,
+    pub complete: bool,
+    pub total_posts: u64,
+    pub buckets: Vec<XCountBucket>,
+    pub next_token: Option<String>,
     pub gaps: Vec<String>,
 }

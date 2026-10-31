@@ -1,13 +1,21 @@
 //! Fixtures, scoped model/skill adapters and explicitly configured provider clients.
 
+pub mod autonomous;
 pub mod credentials;
+pub mod financial;
 pub mod finbert;
+pub mod inputs_service;
 pub mod news;
+pub mod perpetual;
+pub mod research_jobs;
+pub mod screening;
 pub mod telegram;
 pub mod trading212;
 
 pub mod opencode;
 pub mod sessions;
+pub mod shadow;
+pub mod weekly_lab;
 
 use chrono::{DateTime, Duration, Utc};
 use std::{

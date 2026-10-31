@@ -10,8 +10,27 @@ from provider configuration. `credentials init` creates the ignored private
 
 ## Interface
 
+- [financial-data.json](./financial-data.json): version-1 `FinancialConfig`,
+  disabled provider accounts, typed endpoint requests, per-consumer rights and
+  local credit limits. `[../crates/trady-application/src/financial.rs:FinancialConfig::validate]`
+  validates it. See the [financial guide](../docs/financial-data.md).
+
+- [x-pilot.example.json](./x-pilot.example.json): separate disabled five-author
+  recent-search pilot and $10 cycle ceiling ($8 ordinary/$2 support), consumed by
+  `[../crates/trady-application/src/research.rs:ResearchConfig]`. Rule approvals,
+  stable identities, rights and provider-limit reviews require operator input;
+  the [operator guide](../docs/news.md#x-pilot-and-resource-budget) describes the gates.
+
+- [Autonomous runtime](./autonomous.example.json): disabled deployment template;
+  `trady autonomous check --config config/autonomous.example.json` inspects it
+  without credentials or network. [Operator contract](../docs/autonomous.md)
+  describes required approvals, providers, artifacts and execution/recovery commands.
+
+- [Credential setup READMEs](./credentials/README.md): how to obtain every API
+  key/token, database connection string and locally generated secret.
+
 - [credentials.example.json](./credentials.example.json): blank named entries for
-  API keys, separate T212 demo/live read pairs, shared secrets, hashing/signing keys
+  API keys, separate T212 demo/live API key/secret pairs, shared secrets, hashing/signing keys
   and service database credentials.
   Keep the committed example blank; edit only the private initialized copy.
 
@@ -37,6 +56,10 @@ from provider configuration. `credentials init` creates the ignored private
   example broker account number/currency before use; see the [guide](../docs/trading212.md).
 
 ## Invariants
+
+`[x-pilot.example.json:x_budget.enabled]` and every pilot source are false.
+The example supplies no identity IDs, ownership/coverage approvals or content/model
+rights. Its billing dates and rates require deployment review before enablement.
 
 `[finbert/config.example.json:enabled]` is false.
 `[../crates/trady-adapters/src/finbert/mod.rs:FinBertConfig::validate]` rejects unsafe

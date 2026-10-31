@@ -1,8 +1,10 @@
 # Trady v1 free financial data integration
 
-Status: implementation specification, researched 2026-10-31. This document adds
-an integration design, not running collectors, credentials, migrations, registered
-LLM tools, trained models or permission to trade. Provider details and primary
+Status: implementation specification, researched 2026-10-31. The bounded
+[Rust integration](../financial-data.md) now supplies catalog adapters, shared
+observations/signals, migration 9, scoped read tools and central credential names.
+Sources remain disabled; this broader design includes future work and supplies
+neither trained models nor permission to trade. Provider details and primary
 references are in the [API catalog](./free-financial-api-catalog.md).
 
 ## Purpose and existing implementation
@@ -45,7 +47,7 @@ lineages and price definitions really differ.
 | Primary context | SEC EDGAR and FRED/ALFRED | Attributed financial facts, disclosures and revision-aware macro context |
 | Price history | Twelve Data, or reviewed Tiingo/Massive alternative | Completed OHLCV bars and corporate-action-aware features; not live execution certification |
 | News | Finnhub and GDELT, plus existing permitted RSS/Alpha Vantage | Issuer/event discovery, corroboration and coverage diagnostics |
-| Optional enrichments | FMP, selected Nasdaq Data Link tables, CoinGecko | Statement cross-checks, dataset-specific context and crypto market context |
+| Optional enrichments | FMP and CoinGecko | Statement cross-checks and crypto market context |
 | Offline-only exploration | yfinance | Explicitly labeled research imports; no production fallback dependency |
 
 An adapter being implemented is different from an endpoint being entitled, a
@@ -88,7 +90,7 @@ while an executor serialization lock or a collection commit transaction is held.
 | `trady-adapters` | FRED, SEC, Finnhub, GDELT and selected price/fundamental adapters | Reuse hardened transport; vendor names/fields stay here |
 | `trady-storage` | Durable quotas, append-only revisions, lineage, invalidation and dataset manifests | Restricted analyst writes; no access to order intents or active policy |
 | `trady-policy` | Pure indicator/quality/risk calculations and compatible feature validation | No HTTP, hidden fallbacks or model-authored arithmetic |
-| `trady-cli` | Explicit diagnostics, collection wiring and offline export commands | New commands require implementation; examples here do not make them exist |
+| `trady-cli` | Explicit diagnostics, collection wiring and offline export commands | The [operator guide](../financial-data.md) lists implemented commands; broader examples here remain design proposals |
 
 Keep source items on the existing `NewsSource` path where appropriate. Introduce
 separate conceptual `HistoricalDataSource`, `FundamentalDataSource` and
@@ -319,13 +321,13 @@ before using it. It grants no rights and enables no source.
 ```
 
 Resolve credentials through the [existing central credential mechanism](../credentials.md).
-Proposed names are `TRADY_FRED_API_KEY`, `TRADY_FINNHUB_API_KEY`,
+Registered names are `TRADY_FRED_API_KEY`, `TRADY_FINNHUB_API_KEY`,
 `TRADY_TWELVE_DATA_API_KEY`, `TRADY_FMP_API_KEY`, `TRADY_COINGECKO_API_KEY`,
-`TRADY_NASDAQ_DATA_LINK_API_KEY`, `TRADY_TIINGO_API_KEY` and
-`TRADY_MASSIVE_API_KEY`. Existing Alpha Vantage uses
+`TRADY_TIINGO_API_KEY` and `TRADY_MASSIVE_API_KEY`. Existing Alpha Vantage uses
 `TRADY_ALPHA_VANTAGE_API_KEY`. SEC needs a truthful contact-bearing user agent,
-proposed as `TRADY_SEC_USER_AGENT`, not a fabricated contact or secret token.
-These new names need explicit loader/adapter support before use.
+configured as `TRADY_SEC_USER_AGENT`, not a fabricated contact or secret token.
+The [implemented adapters](../financial-data.md) resolve these names through the
+central controller; endpoint capabilities and consumer rights still require review.
 
 Use provider-supported authentication headers where verified; otherwise inject
 query credentials only inside the adapter. Redact query strings, auth headers,
@@ -348,9 +350,14 @@ application chooses reviewed sources, binds the account/universe/cutoff and
 constructs the result. No arbitrary URL, SQL, Python, shell, provider key or source
 configuration is accepted as a tool argument.
 
-Reuse planned `news.search`, `news.read_item`, `market.bars`, `market.fx`,
-`sources.health`, `profiles.get` and `evidence.compare` where their semantics fit.
-The following are proposed additions, not currently registered tools:
+Reuse existing `news.search`, `news.read_item`, `sources.health`, `profiles.get`
+and `evidence.compare` where their semantics fit. `market.bars` and `market.fx`
+remain planned interfaces.
+The table below describes the broader proposed interfaces. Bounded
+`fundamentals.snapshot`, `filings.search` and `macro.snapshot` reads are now
+registered with `source_id` and a 1–3 result limit, alongside `financial.snapshot`
+and `prices.features`; see the [implemented tool contracts](../financial-data.md).
+The fuller arguments below and the other listed tools remain proposed:
 
 | Proposed tool | Bounded arguments | Result/use |
 |---|---|---|

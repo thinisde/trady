@@ -46,6 +46,23 @@ pub(super) struct Http {
 }
 
 impl Http {
+    /// Pace a NEW operation before its single send. Never replay a dispatched mutation.
+    pub(super) fn pace(&self, bucket: Bucket) -> BrokerResult<()> {
+        if let Some(until) = self
+            .not_before
+            .get(&bucket)
+            .filter(|v| **v > Instant::now())
+        {
+            let delay = until.saturating_duration_since(Instant::now());
+            if delay > Duration::from_secs(30) {
+                let mut error = BrokerFailure::new(BrokerFailureKind::RateLimited);
+                error.retry_after_seconds = Some(delay.as_secs().saturating_add(1));
+                return Err(error);
+            }
+            std::thread::sleep(delay);
+        }
+        Ok(())
+    }
     pub(super) fn new(config: &Trading212Config, credentials: Credentials) -> BrokerResult<Self> {
         Self::build(
             config.environment.base_url().into(),

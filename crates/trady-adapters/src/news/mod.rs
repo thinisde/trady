@@ -1,9 +1,11 @@
 //! Explicitly configured, read-only source adapters. Remote text is never executable.
 
 mod alpha;
+mod financial_news;
 pub mod http;
 mod rss;
 mod x;
+mod x_meter;
 
 use chrono::{DateTime, Duration, Utc};
 use reqwest::Url;
@@ -13,6 +15,7 @@ use trady_domain::{Error, Result, require, research::*};
 
 pub use http::{HttpRequest, HttpResponse, HttpTransport, SafeHttp};
 pub use x::XUser;
+pub use x_meter::MeteredHttp;
 
 pub const MAX_BODY_BYTES: usize = 2 * 1024 * 1024;
 pub const PARSER_VERSION: &str = "trady-news-1";
@@ -55,6 +58,9 @@ impl<T: HttpTransport> SourceClient<T> {
         request: HttpRequest,
         now: DateTime<Utc>,
     ) -> std::result::Result<HttpResponse, SourceFailure> {
+        if request.url.host_str() == Some("api.x.com") && !self.transport.x_budget_enforced() {
+            return Err(SourceFailure::unavailable("x_durable_cost_gate_required"));
+        }
         let response = self.transport.get(request)?;
         if response.status == 429 || response.status == 503 {
             let retry_at = response
@@ -88,6 +94,7 @@ impl<T: HttpTransport> SourceClient<T> {
             return Err(SourceFailure::unavailable(match response.status {
                 401 | 403 => "provider_access_denied",
                 404 | 410 => "content_unavailable",
+                402 => "provider_credits_exhausted",
                 _ => "provider_http_failure",
             }));
         }
@@ -101,6 +108,7 @@ impl<T: HttpTransport> SourceClient<T> {
         now: DateTime<Utc>,
     ) -> std::result::Result<XUser, SourceFailure> {
         check_source(source)?;
+        self.transport.set_x_scope(source)?;
         x::resolve(self, source, handle, now)
     }
 
@@ -111,12 +119,27 @@ impl<T: HttpTransport> SourceClient<T> {
         now: DateTime<Utc>,
     ) -> std::result::Result<SourcePage, SourceFailure> {
         check_source(source)?;
+        self.transport.set_x_scope(source)?;
         if source.kind != SourceKind::XLookup {
             return Err(SourceFailure::unavailable(
                 "lookup_requires_x_lookup_source",
             ));
         }
         x::lookup(self, source, url, now)
+    }
+
+    pub fn recent_x_counts(
+        &mut self,
+        source: &SourceConfig,
+        window: &CollectionRequest,
+        now: DateTime<Utc>,
+    ) -> std::result::Result<XCountsMeasurement, SourceFailure> {
+        check_source(source)?;
+        if let Some(gap) = source.activation_gap(now) {
+            return Err(SourceFailure::unavailable(gap));
+        }
+        self.transport.set_x_scope(source)?;
+        x::counts(self, source, window, now)
     }
 }
 
@@ -131,16 +154,32 @@ impl<T: HttpTransport> NewsSource for SourceClient<T> {
         if let Some(gap) = source.activation_gap(now) {
             return Err(SourceFailure::unavailable(gap));
         }
+        self.transport.set_x_scope(source)?;
         match source.kind {
             SourceKind::XTimeline => x::timeline(self, source, request, now),
+            SourceKind::XRecentSearch => x::recent_search(self, source, request, now),
             SourceKind::GoogleNewsRss | SourceKind::PublisherRss => {
                 rss::fetch(self, source, request, now)
             }
             SourceKind::AlphaVantage => alpha::fetch(self, source, request, now),
+            SourceKind::Finnhub | SourceKind::Gdelt => {
+                financial_news::fetch(self, source, request, now)
+            }
             SourceKind::XLookup => Err(SourceFailure::unavailable(
                 "lookup_source_is_not_a_timeline",
             )),
         }
+    }
+}
+
+impl<T: HttpTransport> trady_application::x_monitoring::XCountsSource for SourceClient<T> {
+    fn counts(
+        &mut self,
+        source: &SourceConfig,
+        window: &CollectionRequest,
+        now: DateTime<Utc>,
+    ) -> std::result::Result<XCountsMeasurement, SourceFailure> {
+        self.recent_x_counts(source, window, now)
     }
 }
 

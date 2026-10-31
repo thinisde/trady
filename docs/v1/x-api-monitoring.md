@@ -1,10 +1,12 @@
 # Trady five-account X pilot and API cost controls
 
-Status: researched proposal and implementation specification, checked 2026-10-31.
+Status: proposed watchlist with an offline-tested recent-search implementation,
+checked 2026-10-31. The [implementation record](../news.md#x-pilot-and-resource-budget)
+describes the disabled example, preflight counts, resource ledger and local export.
 This document records a proposed cost-conscious watchlist and collection strategy;
 it does not activate accounts, subscriptions, API spending, model training or a
-scheduler. The [X/news reading implementation](../news.md) currently implements
-bounded timeline polling and post lookup, not the stream/search pilot below.
+scheduler. The [X/news reading implementation](../news.md) implements bounded timeline
+polling, post lookup and incremental recent search; streaming/webhooks remain future work.
 
 ## Purpose and decision status
 
@@ -104,7 +106,7 @@ statement; a repost is not automatically an endorsement.
 | Mode | Intended use | Boundary |
 |---|---|---|
 | Existing timeline polling | Bounded collection using the shipped X adapter | Implemented but disabled by default. Local keyword filtering does not prevent the initial resource charge. Preserve identity, pagination, rights and cursor safeguards. |
-| Proposed incremental recent search | Batch collection for a daily pilot where immediate reactions are unnecessary | Requires a new/reviewed adapter. Persist a cursor per query revision, finish bounded pagination and record incomplete intervals. It is polling, not real-time. |
+| Incremental recent search | Batch collection for a daily pilot where immediate reactions are unnecessary | Implemented and disabled in a separate example. Versioned author rules, identity checks, bounded durable pagination, explicit gaps and fresh counts gates are tested offline. It is polling, not real-time. |
 | Proposed standard Filtered Stream | Event-driven collection with server-side topic filters | X documents a persistent HTTP stream and pay-per-use access. Implement reconnect, budget control and supported gap recovery before activation. [Provider reference][stream] |
 | X Activity webhooks | Per-user outgoing post activity where full account coverage is required | A separate API: `post.create` is selected by user ID; keyword/Boolean filtering belongs to Filtered Stream. Local rejection does not avoid delivery charges. Verify access, payloads and signatures. [Provider reference][activity] |
 | Filtered Stream Webhooks | Enterprise delivery option | The dedicated provider page currently describes Enterprise access. Do not assume the standard stream entitlement includes this webhook product. [Provider reference][stream-webhooks] |
@@ -170,6 +172,10 @@ any necessary pagination and endpoint limits. Do not activate an unfiltered
 high-volume source merely because its average week looked affordable.
 
 ### Budget enforcement to implement
+
+The bounded request implementation now supplies the gate described here; see
+[the operator contract](../news.md#x-pilot-and-resource-budget). Continuous-delivery
+headroom/reconnect controls still require a separate stream implementation.
 
 The existing durable request reservations are not a dollar-denominated billing
 ledger. Add a reviewed collector-owned cost gate that reserves conservative
@@ -288,7 +294,7 @@ eligible baseline instead.
 | Milestone | Acceptance evidence |
 |---|---|
 | Owner decision and preflight | Explicit watchlist/coverage approval; verified identities, rights, entitlement and measured counts; disabled defaults preserved until approval |
-| Offline collector work | Query/version validation, resource-cost ledger, selected delivery adapter and deterministic fixtures; no production subscription required |
+| Offline collector work | Implemented: query/version validation, resource-cost ledger, incremental recent search, resumable counts and local inference/evaluation export with deterministic fixtures; no production subscription required |
 | Bounded shadow pilot | Owner-enabled budget and permitted data collection; measured delivery/cost/gaps; no execution authority or automatic watchlist changes |
 | Review and handoff | Longer held-out comparison, documented limits and owner-approved source configuration; retain current policy when evidence is insufficient |
 
@@ -307,11 +313,13 @@ checks for a later implementation include `python3 scripts/verify-assets.py` and
 
 ## Side Effects
 
-This change adds documentation and its reading-map entry only. It does not modify
-`config/research.json`, set user IDs, access paid X endpoints, create webhooks,
-train models, deploy services, place orders or install a weekend automation.
-No current posting volumes, API credentials, paid access or empirical profitability
-were validated by writing this specification.
+Explicit enabled collector commands can make paid read-only X requests after
+durable resource reservations and persist observations, coverage and cost records.
+The separate example ships disabled and does not modify `config/research.json`
+or populate user IDs. Export reads/purges permitted local research without X calls.
+No paid endpoints were accessed during implementation; no current volumes,
+entitlements or empirical profitability were validated. No webhook, training,
+deployment, order authority or weekend automation is installed.
 
 ## Sources and verification date
 

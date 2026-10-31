@@ -1,0 +1,27 @@
+{
+  "config_version": 1,
+  "access": {"allowed_user_ids": [0], "allowed_chat_ids": [0]},
+  "foundation_config": "../../../../config/paper.json",
+  "trading212_config": null,
+  "state_directory": "/var/lib/trady/telegram",
+  "poll_timeout_seconds": 20,
+  "refresh_interval_seconds": 60,
+  "stale_after_seconds": 120,
+  "notifications": true,
+  "expanded_gateway": {
+    "enabled": true,
+    "bot_id": 0,
+    "owners": [{"telegram_user_id": 0, "owner_id": "owner_replace_with_verified_mapping"}],
+    "research_config": "../../../../config/research.json",
+    "finbert_config": "../../../../config/finbert/config.example.json",
+    "llm_config": null,
+    "skill_approval": null,
+    "skills_root": "../../../../skills",
+    "approved_instrument_ids": [],
+    "daily_job_limit": 100,
+    "pending_job_limit": 64,
+    "daily_research_enabled": false,
+    "daily_research_hour_utc": 7,
+    "holding_watchdog_interval_seconds": 300
+  }
+}

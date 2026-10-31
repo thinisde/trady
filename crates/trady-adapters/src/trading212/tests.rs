@@ -216,6 +216,26 @@ fn limit() -> OrderKind {
 }
 
 #[test]
+fn expired_entry_authority_after_information_reads_never_sends_a_post() {
+    use trady_application::autonomous::ExecutionBroker;
+    let server = Server::new(vec![summary(), metadata()]);
+    let request = request(limit(), Side::Buy);
+    let error = server
+        .executor()
+        .submit_order_before(&request, now())
+        .unwrap_err();
+    assert_eq!(error.kind, BrokerFailureKind::InvalidRequest);
+    assert!(!error.outcome_unknown);
+    let requests = server.requests();
+    assert_eq!(requests.len(), 2);
+    assert!(
+        requests
+            .iter()
+            .all(|request| request.line.starts_with("GET "))
+    );
+}
+
+#[test]
 fn explicit_environments_and_redacted_credentials() {
     assert_eq!(Environment::Live.base_url(), "https://live.trading212.com");
     assert_eq!(Environment::Demo.base_url(), "https://demo.trading212.com");

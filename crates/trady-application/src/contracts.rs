@@ -139,7 +139,15 @@ impl Contracts {
 
 /// Parse a single bounded JSON document, rejecting duplicate keys at every depth.
 pub fn parse_json(input: &str) -> Result<Value> {
-    require(input.len() <= 262_144, "JSON document exceeds input limit")?;
+    parse_json_bounded(input, 262_144)
+}
+
+/// Trusted provider documents may need a larger bound; duplicate keys still fail.
+pub fn parse_json_bounded(input: &str, maximum_bytes: usize) -> Result<Value> {
+    require(
+        maximum_bytes <= 8 * 1024 * 1024 && input.len() <= maximum_bytes,
+        "JSON document exceeds input limit",
+    )?;
     let mut deserializer = serde_json::Deserializer::from_str(input);
     let value = StrictValue::deserialize(&mut deserializer)
         .map_err(|_| Error("invalid JSON or duplicate object key".into()))?

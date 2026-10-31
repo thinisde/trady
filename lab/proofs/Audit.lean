@@ -1,0 +1,25 @@
+import TradyProof
+#print axioms TradyProof.cap_le
+#print axioms TradyProof.cap_nonzero
+#print axioms TradyProof.floor_le_ceil
+#print axioms TradyProof.stop_before_target
+#print axioms TradyProof.non_vacuous
+#print axioms TradyProof.CheckedDecimal.representable
+#print axioms TradyProof.CheckedDecimal.floor_checked
+#print axioms TradyProof.CheckedDecimal.division_by_zero_rejects
+#print axioms TradyProof.CheckedDecimal.ties_to_even
+#print axioms TradyProof.CheckedDecimal.ties_from_odd
+#print axioms TradyProof.Formula.accepted_checks
+#print axioms TradyProof.Formula.total_calculation
+#print axioms TradyProof.Formula.accepted_stop_before_target
+#print axioms TradyProof.Formula.accepted_target_holding_caps
+#print axioms TradyProof.Formula.witness_accepted
+#print axioms TradyProof.Formula.model_non_vacuous
+#print axioms TradyProof.Formula.fx_witness_accepted
+#print axioms TradyProof.Formula.fx_model_non_vacuous
+#print axioms TradyProof.Holding.accepted_update_monotone
+#print axioms TradyProof.Holding.maximum_preserves_left
+#print axioms TradyProof.Holding.trailing_floor_monotone
+#print axioms TradyProof.Holding.latched_exit_preserved
+#print axioms TradyProof.Revision.accepted_revision_bound
+#print axioms TradyProof.Revision.mismatched_source_rejects

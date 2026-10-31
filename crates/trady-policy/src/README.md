@@ -7,29 +7,14 @@ Its feature inputs require verification by the application; they are not model a
 
 ## Interface
 
-- `[lib.rs:ceil_to]`: checked upward tick rounding. `[lib.rs:floor_to]` and
-  `ceil_to` recheck exact remainders and reject exhausted decimal precision.
-- `[economics.rs:AcquisitionFill]`, `CostBasis::{validate}`, `cost_basis`,
-  `ExitCosts`, `liquidation_proceeds`, `planned_loss_fraction`, `NetReturn`,
-  `validate_executable_quote`, `net_executable_return`, `target_price`,
-  `StopConstraints`, `StopProposal`, `ProtectiveStop`, `validate_protective_stop`:
-  checked linear account-currency acquisition/liquidation/stop economics.
-  Current cross-currency FX is positive, directed and at most 60 seconds old.
-  Actual fills require deduplication by the caller; a stop is a planned trigger,
-  rather than a guarantee of an executable fill price.
-- `[limits/mod.rs:calculate_limits]`: approved parameter envelope, checked
-  prices/lots and financial constraints; [component contract](./limits/README.md).
-- `[prediction/mod.rs:PredictionFusionEngine]`, `expected_utility`,
-  `select_scenario`, `score_matured_predictions`, `ChronologicalSplit`:
-  calibrated baseline, abstention/cash selection and original-outcome evaluation;
-  [component contract](./prediction/README.md). All of these boundaries are pure;
-  successful calculations grant no order or deployment authority.
+- [Prediction fusion and performance](./prediction/README.md): conservative typed
+  forecast fusion, uncertainty/cost-aware scenario utility and matured forecast scoring.
 
 - `[sentiment/mod.rs:sentiment_thresholds]`, `SentimentThresholds`,
   `validate_probabilities`: conservative FinBERT overlay with current-time checks;
   [component contract](./sentiment/README.md).
 
-- `[lib.rs:add]`, `sub`, `mul`, `div`, `floor_to`: checked decimal operations.
+- `[lib.rs:add]`, `sub`, `mul`, `div`, `floor_to`, `ceil_to`: checked decimal operations.
 - `[lib.rs:Policy]`: versioned defaults and hard-limit validation.
 - `[lib.rs:ConfidenceInputs]`, `Catalyst`, `ConfidenceScore`, `confidence`:
   reproducible score components and total. Score components are private.
@@ -38,10 +23,39 @@ Its feature inputs require verification by the application; they are not model a
   `SizedEntry`, `size_entry`, `fresh`: conservative linear-cost entry sizing.
 - `[lib.rs:validate_account_entry]`: partial account/capability readiness only.
 - `[lib.rs:SessionLossGuard]`: deposit-adjusted session pause latch.
+- `[economics.rs:AcquisitionFill]`, `CostBasis`, `cost_basis`: actual fills,
+  attributable charges and historical FX combined into a filled cost basis.
+  `[economics.rs:CostBasis::validate]` checks positive quantity and acquisition cost.
+- `[economics.rs:ExitCosts]`, `NetReturn`, `liquidation_proceeds`,
+  `planned_loss_fraction`, `net_executable_return`, `validate_executable_quote`,
+  `target_price`, `StopConstraints`, `StopProposal`, `ProtectiveStop`,
+  `validate_protective_stop`: linear liquidation math, trigger prices and initial
+  stop validation. Prices use instrument currency; amounts use account currency.
+- `[holding.rs:HoldingPlan]`, `HoldingState`, `HoldingContext`, `SessionWindow`,
+  `TrailingSettings`, `TrailingState`, `ExitReason`, `ExitLatch`, `HoldingAction`,
+  `HoldingDegradation`, `HoldingEvaluation`, `PlanUpdate`, `PlanActivation`,
+  `evaluate_holding`, `activate_plan`, `holding_target_ceiling`: pure transitions
+  and serde snapshots. `HoldingState::new`, `plan`, `trailing`, `exit_latch`,
+  `latest_quote`, `original_deadline` construct/read private holding state.
+  `[holding.rs:SessionWindow]` exposes `validate`, `permits_entry`,
+  `entry_expires_at` and `validate_entry_time`.
+- `[capital.rs:SessionPerformance]`, `session_performance`,
+  `account_return_contribution`: cash-flow-adjusted operational loss and separate
+  reporting denominators.
+- `[limits/mod.rs:calculate_limits]`: versioned formula calculator; its
+  [component contract](./limits/README.md) lists its supplied-input constraints.
+- `[prediction/mod.rs:PredictionFusionEngine]`, `expected_utility`,
+  `select_scenario`, `score_matured_predictions`, `ChronologicalSplit`: calibrated
+  baseline, explicit abstention/cash selection and original-outcome evaluation;
+  see the [prediction contract](./prediction/README.md).
 - `[lib.rs:Policy::default]` and `[lib.rs:Policy::validate]` provide initial values
   and explicit validation. `[lib.rs:ConfidenceInputs]` and `[lib.rs:Catalyst]` also
   have Rust defaults. `[lib.rs:ConfidenceScore::total]` sums the six private
-  components; scores support serialization without deserialization.
+  components. Deserialization goes through `[lib.rs:ConfidenceComponents]` and
+  `ConfidenceScore::try_from`, which reject unknown fields and component values
+  outside the exact scoring sets; a raw total is not a valid score snapshot.
+  This validates numeric shape, not evidence provenance or readiness authority.
+  `[lib.rs:Catalyst]` serializes variants as `SCREAMING_SNAKE_CASE`.
 
 ## Invariants
 
@@ -58,8 +72,9 @@ Its feature inputs require verification by the application; they are not model a
   target ceiling to 10%, initial loss to 2%, reward/risk to at least 1.5, and holding
   duration to 1–5 sessions. Leverage, additions and rotation are disabled.
   Version and decimal limits must be positive. Policy fields are public and
-  deserialization does not invoke validation; the holding-session bound does not
-  count elapsed sessions (`[lib.rs:Policy]`).
+  deserialization does not invoke validation. `[holding.rs:evaluate_holding]`
+  consumes a caller-verified exchange-session number; `[lib.rs:Policy]` itself
+  does not derive a calendar or count elapsed sessions.
 - `[lib.rs:confidence]` generates component maxima 25/20/15/20/10/10. Missing
   observations add no points; other available price signals can still score.
   `[lib.rs:target_ceiling]` enforces confidence bands
@@ -88,24 +103,120 @@ Its feature inputs require verification by the application; they are not model a
   `currency_unit` rounds the budget, without rounding estimated cost or remaining
   cash. All four instrument-rule values must be positive; costs follow the supplied
   fixed-plus-proportional model (`[lib.rs:InstrumentRules]`, `[lib.rs:EntryCosts]`).
+  `[lib.rs:floor_to]` and `ceil_to` use checked remainder and reject increments
+  that cannot be represented exactly at the result's magnitude. Successful
+  serialization/deserialization of these public records does not validate costs
+  or instrument rules; their calculation entry points perform those checks.
 - `[lib.rs:validate_account_entry]` requires a fresh flat account, terminal orders
   and usable cash-account/instrument/protection/quote capabilities. It grants no authority.
   It does not inspect `fractional_orders`. `[lib.rs:size_entry]` does not invoke
   confidence scoring, risk validation, account readiness or the session loss guard;
   these remain separate calls.
-- `[lib.rs:SessionLossGuard::observe]` uses opening equity as denominator and never
-  clears a pause after a deposit or rebound.
-  Opening equity must be positive; `(current_equity - net_deposits - opening_equity)
-  / opening_equity <= -0.02` sets `paused`, including exactly a 2% loss. The method
-  neither inspects nor resets `session_id`. Both fields remain caller-owned public
-  fields (`[lib.rs:SessionLossGuard]`).
+- `[economics.rs:cost_basis]` sums positive actual fill quantities and converted
+  purchase consideration plus nonnegative actual account-currency charges. Fills
+  must share instrument and currency pair; callers deduplicate fills. Historical
+  FX is checked at each fill time. `[economics.rs:net_executable_return]` uses
+  fresh executable bid and current FX; `[economics.rs:liquidation_proceeds]`
+  subtracts fixed, proportional and uncertainty charges once. Negative proceeds
+  are reported rather than replaced with zero. Nonlinear fee models are unsupported.
+  `[economics.rs:ExitCosts::validate]` requires nonnegative fixed/uncertainty
+  charges and a rate in `[0,1)`. `[economics.rs:validate_executable_quote]` also
+  binds the basis instrument and currency. `[economics.rs:planned_loss_fraction]`
+  can report negative loss for profitable stops.
+- `[economics.rs:target_price]` solves a positive net target up to 10%, rounds
+  upward to a valid tick and recomputes conservative proceeds. It does not check
+  confidence/readiness. `[economics.rs:validate_protective_stop]` rounds a long
+  stop upward, checks it below bid and outside supplied noise/minimum distances,
+  then checks fee/FX-adjusted loss and `[lib.rs:validate_risk]`. It rejects an
+  unworkable technical stop instead of searching for a tighter one. A stop is a
+  planned trigger, not a fill-price guarantee.
+  `[economics.rs:target_price]` enforces its own 10% ceiling independently of a
+  stricter policy cap. `[economics.rs:validate_protective_stop]` requires distance
+  strictly above zero/noise and at least the supplied minimum.
+- `[holding.rs:holding_target_ceiling]` preserves an existing target ceiling
+  below 70 while disallowing increases. At 70 and above it applies the existing
+  confidence bands without imposing the new-entry confidence floor. Low confidence
+  alone creates no exit. `[holding.rs:activate_plan]` validates expected version
+  and exactly one version increment, nondecreasing long stop, nonextending
+  deadline and nonincreasing trailing activation/distance. Target increases also
+  require the caller's checked evidence/permission flag. Available research is
+  required for every replacement, including tighter stops and lower targets.
+- `[holding.rs:evaluate_holding]` evaluates the latest fresh accepted quote,
+  retaining it against older/conflicting observations. Default trailing activates
+  at net return `0.005`, retains peak return and sets a nondecreasing floor to
+  peak minus `0.005` (`[holding.rs:TrailingSettings::default]`,
+  `[holding.rs:TrailingState::observe]`). Existing latches always win; newly
+  observed simultaneous conditions use hard stop, trailing floor, target,
+  deadline, maximum sessions, unprotected close, owner close in that order.
+  A stale/unusable valuation cannot produce a target/trailing exit. A fresh
+  instrument-price stop still works without FX; time/owner exits need no quote.
+- `[holding.rs:activate_plan]` evaluates old thresholds before replacement. An
+  old latch blocks activation; an accepted lower target/tighter stop/trailing
+  rule can latch immediately under the new version. Rejections return the
+  evaluated old state, including peak/floor changes, for persistence.
+  Activation also requires fresh executable valuation, potentially using a retained
+  fresh quote, and available session/calendar data. Initial evaluation errors
+  propagate as `Err` rather than returned rejection snapshots. Unknown
+  outcomes return `HoldingAction::Reconcile`, including when an exit is latched;
+  no result grants permission to retry or bypass broker protection coordination.
+  Persist snapshots under application serialization/CAS; these functions do not
+  make database writes atomic or verify the caller's evidence flags.
+- `[holding.rs:SessionWindow::validate_entry_time]` expires proposals at the
+  earlier of five minutes and the actual close-minus-30-minute cutoff, exclusive
+  at the boundary. `[holding.rs:evaluate_holding]` latches time exits 15 minutes
+  before actual close without verified overnight protection or on the final
+  permitted holding session; an already-exceeded session count exits immediately.
+  Missing calendars block activation. The caller must resolve the original
+  deadline and inclusive holding-session count from a verified exchange calendar.
+  An unresolved exit at close remains an exit latch, not a closed/flat holding.
+- `[capital.rs:session_performance]` uses
+  `current_equity - opening_equity - deposits + withdrawals` as P&L and
+  `opening_equity + deposits` as denominator. Confirmed gross flows are separate;
+  withdrawals never reduce the denominator. Zero denominator returns an unavailable
+  fraction. `[lib.rs:SessionLossGuard::observe_cash_flows]` latches at or below
+  `-0.02`, on an unavailable fraction or a calculation error. It never clears
+  after a deposit/rebound and does not reset `session_id`. Both fields remain
+  caller-owned public fields. The legacy `observe` accepts a single signed net
+  flow; use `observe_cash_flows` whenever both deposits and withdrawals occurred.
+  This operational metric is not a time-weighted investment return.
+  `[capital.rs:session_performance]` assumes a common currency and confirmed
+  cumulative gross flows; callers establish both. `[capital.rs:account_return_contribution]`
+  separately checks matching currencies and positive opening equity.
 
 ## Side Effects
 
-Only the caller-owned pause flag can change. There is no I/O.
+Only `[lib.rs:SessionLossGuard::observe]` and `observe_cash_flows` change the
+caller-owned pause flag. `[holding.rs:evaluate_holding]` and `activate_plan` return
+new snapshots. There is no I/O, broker order coordination or durable mutation.
+
+## Application integration
+
+Construct `[economics.rs:CostBasis]` from broker-confirmed filled quantity and
+total actual account-currency acquisition cost, or call `cost_basis` with actual
+deduplicated fills. Entry prechecks can use conservative sized acquisition cost;
+recompute quantity, actual cost and derived limits after each fill.
+`net_executable_return(&basis, &quote, &exit_costs, now)` returns
+`NetReturn { proceeds, pnl, fraction, fx_rate }`. For an instrument-price stop use
+`planned_loss_fraction(&basis, stop_price, &exit_costs, now)`; validate a new entry
+with `validate_protective_stop(&basis, &quote, &exit_costs, &constraints, &proposal,
+now, &policy)`. The returned `ProtectiveStop` contains `price`,
+`estimated_proceeds`, `planned_loss_fraction` and `reward_to_risk`.
+
+`evaluate_holding(&state, &basis, quote.as_ref(), &exit_costs, &context, &policy)`
+returns a `HoldingEvaluation`. `activate_plan(&state, &update, &basis,
+quote.as_ref(), &exit_costs, &context, &policy)` returns a `PlanActivation` with
+`activated`, optional `rejection` and `evaluation`. Persist `evaluation.state` even
+on a rejected update. Reconcile unknown outcomes and coordinate native orders
+before any software exit. State deserialization requires trusted journal
+provenance; it does not establish research, protection or order authority.
 
 ## Verification
 
 Run `cargo test --workspace` from the repository root for workspace verification.
 
 Run `cargo test -p trady-policy --locked` from the repository root.
+
+Run `cargo test -p trady-policy --test financial --locked` for numeric boundaries,
+fee/FX economics, holding-update races, trailing restart and cash-flow accounting.
+
+Run `cargo clippy -p trady-policy --all-targets --locked -- -D warnings` for lints.

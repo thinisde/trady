@@ -8,10 +8,10 @@ fn run(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_trady"))
         .args(args)
         .env_remove("TRADY_CREDENTIALS_FILE")
-        .env("TRADY_T212_DEMO_READ_API_KEY", "")
-        .env("TRADY_T212_DEMO_READ_API_SECRET", "")
-        .env("TRADY_T212_LIVE_READ_API_KEY", "")
-        .env("TRADY_T212_LIVE_READ_API_SECRET", "")
+        .env("TRADY_T212_DEMO_API_KEY", "")
+        .env("TRADY_T212_DEMO_API_SECRET", "")
+        .env("TRADY_T212_LIVE_API_KEY", "")
+        .env("TRADY_T212_LIVE_API_SECRET", "")
         .output()
         .unwrap()
 }
@@ -28,11 +28,11 @@ fn snapshot_requires_private_environment_credentials_and_documents_command() {
     for (path, key_name) in [
         (
             "config/trading212.demo.example.json",
-            "TRADY_T212_DEMO_READ_API_KEY",
+            "TRADY_T212_DEMO_API_KEY",
         ),
         (
             "config/trading212.live.example.json",
-            "TRADY_T212_LIVE_READ_API_KEY",
+            "TRADY_T212_LIVE_API_KEY",
         ),
     ] {
         let absolute = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

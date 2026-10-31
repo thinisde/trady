@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trady demo verification · 31 October 2026</title>
+<style>
+body { margin:0; color:var(--foreground,#202827); font-family:var(--font-sans,system-ui,sans-serif); font-size:14px; line-height:1.55; }
+h2 { font-size:22px; letter-spacing:-.4px; margin:0 0 8px; }
+h3 { font-size:16px; margin:24px 0 8px; }
+p { margin:8px 0; }
+.muted { color:var(--muted-foreground,#64716b); }
+.metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:16px 0; }
+.metric { background:var(--secondary,#f0f3f0); border-radius:var(--radius,8px); padding:16px; }
+.metric strong { display:block; font-size:24px; line-height:1.25; letter-spacing:-.5px; }
+.metric span { display:block; font-size:12px; color:var(--muted-foreground,#64716b); margin-top:5px; }
+.notice { background:var(--accent-surface,#edf6ef); color:var(--foreground,#202827); border-radius:var(--radius,8px); padding:16px; margin:16px 0; }
+code,pre { font-family:var(--font-mono,ui-monospace,monospace); font-size:12px; }
+code { overflow-wrap:anywhere; }
+pre { background:var(--code-background,#f2f4f3); color:var(--code-foreground,inherit); padding:16px; border-radius:var(--radius,8px); white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.55; margin:8px 0; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { text-align:left; padding:9px 8px 9px 0; border-bottom:1px solid var(--border,#d9dfda); vertical-align:top; }
+th { font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted-foreground,#64716b); font-weight:600; }
+td:last-child,th:last-child { padding-right:0; }
+.pass { color:var(--success,#287349); font-weight:650; }
+details { border-bottom:1px solid var(--border,#d9dfda); padding:10px 0; }
+summary { cursor:pointer; font-weight:600; }
+.foot { font-size:12px; margin-top:18px; color:var(--muted-foreground,#64716b); }
+@media(max-width:450px) { .metrics { gap:6px; } .metric { padding:16px; } .metric strong { font-size:20px; } th,td { font-size:12px; } }
+</style>
+</head>
+<body>
+<h2>Demo checks · 31 October 2026</h2>
+<p>Automated checks passed. Demo account reads and the pinned model succeeded.</p>
+<div class="metrics" aria-label="Verification summary">
+ <div class="metric"><strong>537</strong><span>Distinct tests passed</span></div>
+ <div class="metric"><strong>€5,000</strong><span>Demo cash available</span></div>
+ <div class="metric"><strong>0</strong><span>Broker mutations sent</span></div>
+</div>
+<div class="notice"><strong>Saved pin: <code>deepseek-v4.1-flash</code></strong><br>Verified with real OpenCode Go requests, correct calculations and two completed Rust streaming turns. There is no automatic model fallback.</div>
+<h3>Actual OpenCode Go responses</h3>
+<table aria-label="Model responses">
+<thead><tr><th>Model</th><th>Result</th><th>Scope</th></tr></thead>
+<tbody>
+<tr><td><code>deepseek-v4.1-flash</code></td><td class="pass">200 · correct</td><td>Saved pin · JSON + two completed Rust streaming turns</td></tr>
+<tr><td><code>glm-5.2</code></td><td class="pass">200 · correct</td><td>Diagnostic JSON calculation</td></tr>
+</tbody></table>
+<p class="muted">The pinned model and separate GLM diagnostic both returned:</p>
+<pre>{
+  "budget_eur": "4900.00",
+  "reserve_eur": "100.00",
+  "risk_eur": "50.00",
+  "entry_authorized": false
+}</pre>
+<details><summary>Rust streaming conversation and follow-up</summary>
+<p>The real CLI persisted two completed runs in one session, then closed it. The temporary PostgreSQL database was removed. Both replies contained no proposal and granted no entry authority.</p>
+<table><thead><tr><th>Supplied demo cash</th><th>98% budget</th><th>2% reserve</th><th>1% risk</th></tr></thead><tbody><tr><td>€5,000.00</td><td>€4,900.00</td><td>€100.00</td><td>€50.00</td></tr><tr><td>€5,100.00</td><td>€4,998.00</td><td>€102.00</td><td>€51.00</td></tr></tbody></table>
+</details>
+<details><summary>Demo account return · GET only</summary>
+<pre>{
+  "entry_authorized": false,
+  "environment": "demo",
+  "provider": "trading212",
+  "snapshot": {
+    "mode": "paper",
+    "observed_at": "2026-10-31T18:26:53.595930461Z",
+    "spendable_cash": {"amount":"5000.00", "currency":"EUR"},
+    "positions": [],
+    "orders": []
+  }
+}</pre><p class="muted">Account and generated snapshot identifiers are omitted. Account summary also reported €0 invested and €0 reserved. No live account was read.</p>
+</details>
+<h3>Production formula calculation</h3>
+<p class="muted">€5,000 demo cash value with hypothetical prices and evidence from the existing dated fixture. These expired fixture limits were never sent to a broker.</p>
+<table aria-label="Hypothetical formula calculation"><tbody>
+<tr><td>Maximum cash budget</td><td>€4,900.00</td></tr>
+<tr><td>Calculated quantity × hypothetical limit</td><td>41.36 × €100.10</td></tr>
+<tr><td>Estimated acquisition cost</td><td>€4,144.476136</td></tr>
+<tr><td>Hypothetical stop / target</td><td>€99.10 / €103.32</td></tr>
+<tr><td>Calculated account risk</td><td>€49.998912</td></tr>
+<tr><td>Reward to risk</td><td>2.487369</td></tr>
+</tbody></table>
+<p class="muted">The risk bound reduced the calculated quantity below the cash allocation. Ineligible signals and division by zero were rejected.</p>
+<details><summary>Checks and integration fix</summary>
+<table aria-label="Test suite results"><tbody>
+<tr><td>Rust workspace</td><td class="pass">357 passed</td></tr>
+<tr><td>Isolated PostgreSQL / CLI</td><td class="pass">20 passed</td></tr>
+<tr><td>Python lab</td><td class="pass">154 passed</td></tr>
+<tr><td>FinBERT service unit tests</td><td class="pass">6 passed</td></tr>
+<tr><td>Formatting / Clippy</td><td class="pass">Passed</td></tr>
+<tr><td>JSON, skills and Markdown assets</td><td class="pass">Validated</td></tr>
+</tbody></table>
+<p>The first real model request exposed Go's required <code>x-opencode-session</code> header. The adapter now sends the persistent conversation ID, including tool rounds and resumed runs. The regression suite checks the header and requested model.</p>
+</details>
+<p class="foot">README audit: <span id="contract-count">verification in progress</span>. Demo probes used read-only broker operations. Current market quotes, entry readiness, strategy performance and a deployed FinBERT model were outside this verification.</p>
+<script>console.log('Verification summary: 537 distinct passing tests; deepseek-v4.1-flash pin verified; no broker mutations.');</script>
+</body>
+</html>

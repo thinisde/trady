@@ -66,6 +66,7 @@ pub(super) struct AccountSummary {
     pub id: i64,
     pub currency: Currency,
     pub cash: Cash,
+    pub total_value: Option<Number>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -93,6 +94,16 @@ pub(super) struct InstrumentMetadata {
 pub(super) struct PositionDto {
     pub instrument: Instrument,
     pub quantity: Number,
+    #[serde(rename = "quantityAvailableForTrading")]
+    pub available: Option<Number>,
+    #[serde(rename = "walletImpact")]
+    pub wallet_impact: Option<PositionWalletImpact>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct PositionWalletImpact {
+    pub currency: Currency,
+    pub total_cost: Number,
 }
 impl PositionDto {
     pub fn normalize(self) -> BrokerResult<Position> {

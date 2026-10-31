@@ -68,7 +68,7 @@ def verify_catalog():
 
 def verify_markdown():
     files = [ROOT / "README.md", ROOT / "index.md"]
-    for directory in ["docs", "skills", "crates", "schemas", "migrations", "scripts", "config"]:
+    for directory in ["docs", "skills", "crates", "schemas", "migrations", "scripts", "config", "lab", "services"]:
         files.extend((ROOT / directory).rglob("*.md"))
     links = 0
     for path in files:

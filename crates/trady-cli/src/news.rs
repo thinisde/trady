@@ -1,12 +1,14 @@
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde_json::{Value, json};
 use std::{fs::File, io::Read};
-use trady_adapters::news::{MAX_BODY_BYTES, SourceClient, parse_feed};
+use trady_adapters::news::{MAX_BODY_BYTES, MeteredHttp, SafeHttp, SourceClient, parse_feed};
 use trady_application::research::*;
+use trady_application::x_monitoring::measure_x_counts;
 use trady_domain::{Error, Result, require, research::*};
 use trady_storage::research::PgResearchRepository;
+use trady_storage::x_monitoring::{PgXCostRepository, XReconciliation};
 
-pub const HELP: &str = "\n  trady news status [--config FILE]\n  trady news collect --once [--source ID] [--config FILE] [--force]\n  trady news read [--source ID] [--limit 1..100] [--for-model] [--config FILE]\n  trady news x URL --source ID [--config FILE]\n  trady news resolve-x HANDLE --source ID [--config FILE]\n  trady news parse-feed FILE --source ID [--config FILE]\n\nResearch database commands use TRADY_ANALYST_DSN. X/API credentials are environment references in config/research.json.\n";
+pub const HELP: &str = "\n  trady news status [--config FILE]\n  trady news collect --once [--source ID] [--config FILE] [--force]\n  trady news read [--source ID] [--limit 1..100] [--for-model] [--config FILE]\n  trady news x URL --source ID [--config FILE]\n  trady news resolve-x HANDLE --source ID [--config FILE]\n  trady news counts-x --source ID --config FILE\n  trady news budget-x --config FILE\n  trady news reconcile-x FILE --config FILE\n  trady news export-x [--source ID] [--as-of UTC] [--limit 1..100] [--config FILE]\n  trady news parse-feed FILE --source ID [--config FILE]\n\nResearch database commands use TRADY_ANALYST_DSN. X/API credentials are environment references in config/research.json.\n";
 
 #[derive(Default)]
 struct Options {
@@ -17,6 +19,7 @@ struct Options {
     force: bool,
     for_model: bool,
     positional: Option<String>,
+    as_of: Option<DateTime<Utc>>,
 }
 
 fn options(args: &[String]) -> Result<Options> {
@@ -29,7 +32,7 @@ fn options(args: &[String]) -> Result<Options> {
             require(seen.insert(flag), "duplicate news option")?;
         }
         match flag {
-            "--config" | "--source" | "--limit" => {
+            "--config" | "--source" | "--limit" | "--as-of" => {
                 i += 1;
                 let value = args
                     .get(i)
@@ -38,6 +41,13 @@ fn options(args: &[String]) -> Result<Options> {
                 match flag {
                     "--config" => result.config = Some(value.clone()),
                     "--source" => result.source = Some(value.clone()),
+                    "--as-of" => {
+                        result.as_of = Some(
+                            DateTime::parse_from_rfc3339(value)
+                                .map_err(|_| Error("invalid export cutoff".into()))?
+                                .to_utc(),
+                        )
+                    }
                     _ => {
                         result.limit = Some(
                             value
@@ -97,6 +107,16 @@ fn repository() -> Result<PgResearchRepository> {
     PgResearchRepository::connect(&super::secret("TRADY_ANALYST_DSN")?)
 }
 
+fn client(
+    config: &ResearchConfig,
+) -> Result<SourceClient<MeteredHttp<SafeHttp, PgXCostRepository>>> {
+    let ledger = PgXCostRepository::connect(&super::secret("TRADY_ANALYST_DSN")?)?;
+    Ok(SourceClient::with_transport(
+        MeteredHttp::new(SafeHttp, ledger, config.x_budget.clone()),
+        |name| trady_adapters::credentials::optional(name).map(|s| s.map(|s| s.into_inner())),
+    ))
+}
+
 fn selected<'a>(config: &'a ResearchConfig, options: &Options) -> Result<&'a SourceConfig> {
     config
         .sources
@@ -135,12 +155,17 @@ pub fn run(args: &[String]) -> Result<Value> {
         "--for-model applies only to news read",
     )?;
     require(
-        options.limit.is_none() || command == "read",
-        "--limit applies only to news read",
+        options.limit.is_none() || matches!(command, "read" | "export-x"),
+        "--limit applies only to news read or export-x",
     )?;
     require(
-        options.positional.is_none() || matches!(command, "x" | "resolve-x" | "parse-feed"),
+        options.positional.is_none()
+            || matches!(command, "x" | "resolve-x" | "parse-feed" | "reconcile-x"),
         "unexpected news argument",
+    )?;
+    require(
+        options.as_of.is_none() || command == "export-x",
+        "--as-of applies only to export-x",
     )?;
     let config = config(&options)?;
     let now = Utc::now();
@@ -148,21 +173,24 @@ pub fn run(args: &[String]) -> Result<Value> {
         "status" => {
             let sources: Vec<_> = config.sources.iter().filter(|s| options.source.as_ref().is_none_or(|id| id == &s.id)).map(|source| json!({"source_id":source.id,"kind":source.kind,
                 "account":source.x_account,
+                "rule":source.x_rule,
                 "enabled":source.enabled,"activation_gap":source.activation_gap(now),"interval_seconds":source.interval_seconds,
                 "daily_request_limit":source.daily_request_limit,"rights":source.rights,
-                "delivery":if matches!(source.kind,SourceKind::XTimeline) { "POLLING" } else { "ON_DEMAND" },
+                "delivery":match source.kind { SourceKind::XTimeline => "TIMELINE_POLLING", SourceKind::XRecentSearch => "INCREMENTAL_RECENT_SEARCH", _ => "ON_DEMAND" },
                 "capability_gaps":if matches!(source.kind,SourceKind::XTimeline) {
                     vec!["no_stream_or_webhooks","no_delete_or_unrepost_delivery","provider_limited_history","no_subsecond_latency_guarantee"]
+                } else if source.kind == SourceKind::XRecentSearch {
+                    vec!["query_selected_coverage_not_full_timeline","no_stream_or_webhooks","complete_counts_and_budget_required","context_not_routinely_fetched"]
                 } else { vec!["primary_verification_required"] }})).collect();
             Ok(
-                json!({"sources":sources,"entry_authorized":false,"provider_access_verified":false,
+                json!({"sources":sources,"x_budget":config.x_budget,"entry_authorized":false,"provider_access_verified":false,
                 "coverage_gaps":["Truth_Social_not_configured","live_entitlements_and_content_rights_require_operator_review"]}),
             )
         }
         "collect" => {
             require(options.once, "news collection requires --once")?;
             let mut repository = repository()?;
-            let mut client = SourceClient::default();
+            let mut client = client(&config)?;
             let mut reports = vec![];
             for source in config
                 .sources
@@ -202,6 +230,56 @@ pub fn run(args: &[String]) -> Result<Value> {
                 json!({"items":items,"untrusted_source_data":true,"evidence_verified":false,"entry_authorized":false}),
             )
         }
+        "budget-x" | "reconcile-x" => {
+            let policy = config
+                .x_budget
+                .as_ref()
+                .ok_or_else(|| Error("X billing policy required".into()))?;
+            let mut ledger = PgXCostRepository::connect(&super::secret("TRADY_ANALYST_DSN")?)?;
+            if command == "reconcile-x" {
+                let path = options
+                    .positional
+                    .as_deref()
+                    .ok_or_else(|| Error("reconcile-x requires a provider evidence file".into()))?;
+                let evidence: XReconciliation = serde_json::from_slice(&read_bounded(path, 8192)?)
+                    .map_err(|_| Error("invalid X reconciliation evidence".into()))?;
+                ledger.reconcile(policy, &evidence)?;
+            }
+            ledger.status(policy)
+        }
+        "export-x" => {
+            let mut repository = repository()?;
+            sync_registry(&config, &mut repository)?;
+            let as_of = options.as_of.unwrap_or(now);
+            let observations = repository.export_x_evidence(
+                options.source.as_deref(),
+                as_of,
+                now,
+                options.limit.unwrap_or(100),
+            )?;
+            Ok(
+                json!({"observations":observations,"as_of":as_of,"exported_at":now,"x_network_requests":0,
+                "training_permitted":false,"untrusted_source_data":true,"entry_authorized":false,
+                "limitations":["unverified_issuer_links","feature_ready_time_not_established","no_semantic_event_clustering","current_permitted_versions_only"]}),
+            )
+        }
+        "counts-x" => {
+            let source = selected(&config, &options)?;
+            require(
+                source.kind == SourceKind::XRecentSearch,
+                "counts-x requires X_RECENT_SEARCH",
+            )?;
+            if let Some(gap) = source.activation_gap(now) {
+                return Ok(json!({"status":"DISABLED","gaps":[gap],"entry_authorized":false}));
+            }
+            let mut repository = repository()?;
+            let report =
+                measure_x_counts(&config, source, &mut client(&config)?, &mut repository, now)?;
+            Ok(
+                json!({"report":report,"identity_context_and_recovery_costs_additional":true,
+                "activation_authorized":false,"entry_authorized":false}),
+            )
+        }
         "parse-feed" => {
             let source = selected(&config, &options)?;
             let path = options
@@ -228,7 +306,10 @@ pub fn run(args: &[String]) -> Result<Value> {
                 .ok_or_else(|| Error("X operation requires a URL or handle".into()))?;
             require(source.enabled, "X source is disabled in the registry")?;
             require(
-                matches!(source.kind, SourceKind::XLookup | SourceKind::XTimeline),
+                matches!(
+                    source.kind,
+                    SourceKind::XLookup | SourceKind::XTimeline | SourceKind::XRecentSearch
+                ),
                 "selected source is not X",
             )?;
             require(
@@ -257,7 +338,7 @@ pub fn run(args: &[String]) -> Result<Value> {
                     json!({"status":"RATE_LIMITED","retry_at":state.retry_at,"gaps":state.gaps,"entry_authorized":false}),
                 );
             }
-            let mut client = SourceClient::default();
+            let mut client = client(&config)?;
             let result = if command == "resolve-x" {
                 client.resolve_x(source,input.trim_start_matches('@'),now).map(|user| json!({"user":user,"identity_approved":false,
                     "next_step":"Verify ownership and recent activity, then set the stable user ID and review timestamp in the registry."}))

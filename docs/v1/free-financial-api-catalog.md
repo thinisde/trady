@@ -6,6 +6,11 @@ point-in-time semantics, quotas, model access, safeguards and acceptance tests.
 These are candidate adapters and request templates, not account-level entitlement
 certificates. No authenticated API smoke tests were performed for this document.
 
+The [implemented routes and operator guide](../financial-data.md) map these
+candidates to Rust collectors, shared consumer signals and central credentials.
+The reference templates below remain subject to endpoint-specific review; the
+implementation does not enable accounts or infer free access.
+
 ## What free access does and does not establish
 
 A free API key does not imply every endpoint, ticker, historical interval, model
@@ -29,15 +34,14 @@ terms before activation and after changes; store the reviewed source and date.
 | Financial Modeling Prep | Free plan advertises 250 calls/day; pricing also lists free bandwidth constraints [P1] [P2] | 200/day and 400 MB per trailing 30 days, subject to lower account limits | Optional normalized statements; endpoint/ticker/history entitlements vary |
 | GDELT DOC | Public DOC interface; article-list maximum 250 documented [G1] | 1 request/10 seconds globally and 200/day | News discovery, not a licensed full-article archive or guaranteed alert service |
 | CoinGecko Demo | Pricing currently lists 100 calls/minute, 10,000/month and attribution [C1] | 5/minute and 3,000/month | Optional crypto context, not executable stock prices |
-| Nasdaq Data Link | Free access is dataset-specific; `NDAQ/RTAT10` is identified as free, full `NDAQ/RTAT` is premium [N1] | 30/minute and 100/day only after account/table review | Selected context tables, not a universal free equity feed |
 | yfinance | Unofficial Python library; research/education purpose and Yahoo data-use restrictions [Y1] | Manual bounded offline imports only | No production SLA, approved live fallback or Rust runtime dependency |
 | Tiingo Starter | Pricing lists 50/hour, 1,000/day, 500 unique symbols/month and 1 GB/month [I1] | 40/hour, 800/day, 450 unique symbols/month and 800 MB/month | Alternative EOD history; symbol cap may preclude full-universe coverage |
 | Massive Stocks Basic | 5 calls/minute, two years of history and EOD availability [M1] | 4/minute and 1,000/day as an owner cap | Alternative history/corporate-action context; not a real-time free quote feed |
 
 These local numbers are engineering starting points, not promises of enough quota
 for every workload. Respect the provider's accounting units and reset windows.
-A rate or bandwidth ceiling does not grant access to an endpoint. FRED, GDELT and
-Nasdaq limits must be filled from the actual reviewed service/account rather than
+A rate or bandwidth ceiling does not grant access to an endpoint. FRED and GDELT
+limits must be filled from the actual reviewed service/account rather than
 assuming the local cap is an advertised provider guarantee. For unknown ceilings,
 source enablement remains blocked pending operator review.
 
@@ -278,29 +282,6 @@ provide executable prices or authorize cryptocurrency orders. Review retention,
 model processing and attribution separately; do not infer commercial rights from
 a free Demo key.
 
-## Nasdaq Data Link: select a specific free table
-
-This is a marketplace/access platform, not one uniform free dataset. One concrete
-candidate is `NDAQ/RTAT10`, the daily top-ten retail-activity table; the full-universe
-`NDAQ/RTAT` product is premium. Its documentation describes a reporting lag and
-historical coverage issues [N1]. Do not represent the top-ten subset as market-wide
-coverage or a same-day live signal.
-
-```http
-GET https://data.nasdaq.com/api/v3/datatables/NDAQ/RTAT10/metadata?api_key=SECRET_INJECTED_BY_ADAPTER
-GET https://data.nasdaq.com/api/v3/datatables/NDAQ/RTAT10.json?api_key=SECRET_INJECTED_BY_ADAPTER
-```
-
-Review table metadata, filters, column types, pagination and actual account limits
-before enabling row downloads. Keys are redacted from every logged URL. Persist
-the table code, metadata revision, historical symbol interpretation and supported
-availability. Follow only allowlisted, reconstructed continuation requests.
-
-Research use is a contextual retail-activity feature, subject to incremental
-validation. Absence from the top ten is not zero activity. Free sample rows in a
-premium table do not establish a complete free backtest dataset. Do not default to
-old WIKI examples or assume SHARADAR fundamentals are free current data.
-
 ## yfinance: explicitly offline and unofficial
 
 The maintainers describe yfinance as an unofficial Python tool for research and
@@ -404,7 +385,6 @@ Historical documentation publication dates are not claims of a recent API change
 [G1]: https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
 [C1]: https://www.coingecko.com/en/api/pricing
 [C2]: https://docs.coingecko.com/demo/reference/simple-price
-[N1]: https://data.nasdaq.com/databases/RTAT/documentation
 [Y1]: https://ranaroussi.github.io/yfinance/
 [I1]: https://www.tiingo.com/pricing
 [I2]: https://www.tiingo.com/documentation/end-of-day

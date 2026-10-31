@@ -8,14 +8,16 @@ license.workspace = true
 [dependencies]
 trady-domain.workspace = true
 trady-application.workspace = true
+trady-policy.workspace = true
 postgres.workspace = true
+native-tls.workspace = true
+postgres-native-tls.workspace = true
 chrono.workspace = true
 serde_json.workspace = true
 serde.workspace = true
 
 [dev-dependencies]
 trady-adapters.workspace = true
-trady-policy.workspace = true
 rust_decimal.workspace = true
 
 [lints]

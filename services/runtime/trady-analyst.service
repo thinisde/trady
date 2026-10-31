@@ -1,0 +1,40 @@
+[Unit]
+Description=Trady analyst private Unix socket service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=trady-analyst
+Group=trady-ipc
+ExecStart=/opt/trady/bin/trady autonomous analyst-service --config /etc/trady/runtime/analyst.json
+Environment=TRADY_CREDENTIALS_FILE=%d/credentials.json
+LoadCredential=credentials.json:/etc/trady/secrets/analyst.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/opt/trady /etc/trady/runtime /var/lib/trady/models
+RuntimeDirectory=trady-analyst
+RuntimeDirectoryMode=0750
+StateDirectory=trady-analyst
+ReadWritePaths=/var/lib/trady-analyst
+UMask=0027
+MemoryMax=2G
+CPUQuota=150%
+TasksMax=64
+TimeoutStopSec=5
+KillMode=control-group
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -20,13 +20,14 @@ Prediction advice grants no order or release authority.
   `ScenarioUtility`, `UtilitySelection`: conditional net account returns,
   account/snapshot/equity basis, frozen penalties and cash comparison.
   `expected_utility(fusion, payoffs, config, now)` returns checked utility;
-  `select_scenario(scenarios, config, now)` selects a unique supported candidate
-  strictly above cash or returns `NoTrade`.
+  `select_scenario(scenarios, config, now)` requires distinct scenario hashes and
+  selects the best supported candidate strictly above cash or returns `NoTrade`.
+  Equal best utilities retain the first candidate.
 - `[history.rs:PredictionPerformance]`, `score_matured_predictions`: multiclass
   Brier score, scored/pending-or-censored counts and per-regime sample counts.
 - `[history.rs:ChronologicalSplit]`: `validate` checks separated training,
   calibration, validation and test partitions; `training_sample_eligible`
-  checks information and label availability against the training cutoff.
+  checks information availability and label-window end against the training cutoff.
 - [Domain meanings](../../../trady-domain/src/prediction.rs) own typed prediction
   metadata/payloads, calibration lineage and matured outcome labels.
 
@@ -34,30 +35,43 @@ Prediction advice grants no order or release authority.
 
 - `[mod.rs:PredictionFusionEngine::fuse_ablation]` checks bounded, causal, fresh
   compatible predictions, approved revisions, exact horizon/market/scenario and
-  regime. Repeated IDs and shared evidence/dependence groups are recorded;
+  regime. A supplied scenario hash must match; research, sentiment and
+  quantitative predictions need not supply one. Repeated IDs and shared
+  evidence/dependence groups are recorded;
   changed content under an existing prediction ID produces abstention.
-- The baseline requires all four source categories and exactly one complete,
+- `[mod.rs:PredictionFusionEngine::fuse_ablation]` accepts at most 128 predictions.
+  The baseline requires all four source categories and exactly one complete,
   validated outcome distribution with sufficient calibration samples, approved
   calibration report, supported regime and bounded net-return uncertainty.
   Missing quantitative coverage, conflicting research, drift and adverse sentiment
-  produce abstention. Offline source ablation cannot produce an entry-ready result.
+  produce abstention; the negative-sentiment veto is `0.80`. Expiry is capped by
+  accepted forecast expiry, horizon and observed-time age limits.
+  Offline source ablation cannot produce an entry-ready result.
   Binary target-hit and sentiment probabilities do not fill missing outcome classes.
 - `[mod.rs:FusedPrediction]` and `ScenarioUtility` have private fields and no
   unchecked deserialization path. Utility and selection recheck expiry and the
   frozen comparison configuration. Payoff report/cost hashes and normalization
-  are required; multi-scenario comparison requires the same equity basis and horizon.
-  Conditional returns include costs once and cannot exceed total account loss
+  are required; `[mod.rs:select_scenario]` accepts at most 32 scenarios with the
+  same equity basis, decision time and comparison deadline. Individual forecast
+  deadlines may differ. Callers supply conditional returns with costs included
+  once; validation rejects returns below total account loss
   on the downside. Deployment must resolve actual payoff/calibration provenance.
+  `[mod.rs:expected_utility]` subtracts weighted downside, uncertainty and
+  complexity penalties from expected net account return using checked arithmetic.
 - `[history.rs:score_matured_predictions]` revalidates originals at decision time,
   rejects duplicate identities/mismatched labels and counts unavailable/censored
   outcomes separately. It scores all four outcome classes without inventing wins.
-  `ChronologicalSplit` enforces chronological gaps plus the configured embargo;
-  callers supply actual exchange-calendar label ends.
+  Both history inputs are bounded to 100,000 entries. `[history.rs:ChronologicalSplit]`
+  enforces chronological gaps plus the configured embargo. Training eligibility
+  checks `available_at <= label_end_at <= training_end_at`, with no separate
+  label-publication-time argument; callers supply actual exchange-calendar label ends.
 
 ## Side Effects
 
-None. The functions read caller-owned values and supplied time, return calculated
-records, and perform no network, filesystem, training, scheduling or broker I/O.
+None. `[mod.rs:PredictionFusionEngine::fuse]`, `expected_utility`, `select_scenario`
+and `[history.rs:score_matured_predictions]` read caller-owned values and supplied
+time, return calculated records, and perform no network, filesystem, training,
+scheduling or broker I/O.
 
 ## Verification
 

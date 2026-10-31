@@ -1,9 +1,10 @@
 # Trading 212 API implementation
 
 The HTTP adapter supports explicit demo and live account bindings. It can read
-account state and provides an executor-only order transport. Automated live trading
-is still blocked: durable live intent dispatch, protection coordination, complete
-readiness checks and the release gates are not implemented by this adapter.
+account state and provides an executor-only order transport. The separate
+[autonomous runtime](./autonomous.md) now owns durable dispatch, protection,
+readiness and exact-ID recovery; live use still requires reviewed deployment artifacts
+and release evidence.
 
 ## Read an account
 
@@ -14,18 +15,18 @@ number shown in Trading 212 and `base_currency` with its primary currency. Use a
 `paper_` local account ID for demo and a `live_` ID for live. Environment selection
 is explicit; there is no fallback between them.
 
-The configuration's `environment` selects the matching endpoint and read-only
+The configuration's `environment` selects the matching endpoint and API
 credentials from your secret manager, private process environment or
 [central store](./credentials.md):
 
-- `"demo"` uses `TRADY_T212_DEMO_READ_API_KEY` and `TRADY_T212_DEMO_READ_API_SECRET`.
-- `"live"` uses `TRADY_T212_LIVE_READ_API_KEY` and `TRADY_T212_LIVE_READ_API_SECRET`.
+- `"demo"` uses `TRADY_T212_DEMO_API_KEY` and `TRADY_T212_DEMO_API_SECRET`.
+- `"live"` uses `TRADY_T212_LIVE_API_KEY` and `TRADY_T212_LIVE_API_SECRET`.
 
 Fill the appropriate pair in `config/credentials.local.json`. Environment values
 override the matching entries. Both values must belong to that account and mode;
 missing credentials fail before a request, without falling back to the other
-mode or the former shared credential names. Use a key with only information
-permissions. Credential values stay out of broker configuration, arguments and output.
+mode. Configure the API key's permissions in Trading 212 for the operations your
+deployment uses. Credential values stay out of broker configuration, arguments and output.
 
 ```sh
 cargo run --locked --bin trady -- t212 snapshot --config config/trading212.demo.example.json
@@ -37,8 +38,10 @@ The command performs GETs for account summary, positions and pending orders and
 prints a normalized snapshot with `entry_authorized=false`. It does not contact
 PostgreSQL or submit/cancel an order. Successful snapshot collection is tested at
 the adapter level against local HTTP fixtures. CLI tests cover help, missing
-credentials and configuration/command rejection; successful CLI collection has not
-been tested with Trading 212. No broker account or credential has been used.
+credentials and configuration/command rejection. The separate
+[2026-10-31 demo verification](./demo-verification-2026-10-31.md) also exercised the
+real demo account summary and normalized CLI snapshot using GET requests only:
+EUR 5,000 cash, no positions, no pending orders and `entry_authorized=false`.
 
 ## Implemented boundaries
 
@@ -58,10 +61,11 @@ the instrument currency and metadata must identify a stock with the expected
 currency. The API performs execution and account reporting in the primary account
 currency; FX/cost policy verification remains the caller's responsibility.
 
-The port is a low-level transport, not the validated entry use case. Callers must
+The port is a low-level transport. The autonomous application is its validated entry caller and must
 persist an intent before sending, verify current fencing/readiness/policy and
-available sell quantities, and coordinate existing protection. No command or model
-tool exposes this mutation port. Existing `FoundationConfig`, paper intent SQL and
+available sell quantities, and coordinate existing protection. Model tools have no
+mutation port. `autonomous run` wires it under explicit configuration.
+Existing `FoundationConfig`, paper intent SQL and
 paper reconciliation restrictions have not been extended to live accounts.
 
 ## Failure and recovery behavior
@@ -120,8 +124,9 @@ Fixtures cover account binding, decimal precision, all four order bodies and bot
 sides, partial fills, unknown statuses, ambiguous submissions, rejection/rate limits,
 cancellation acknowledgments and lost responses, malicious continuations and CLI
 credential/endpoint boundaries. Cancellation racing with a fill remains future work.
-The broker verification run on 2026-10-31 passed 16 adapter tests and two CLI tests. They do not verify an
-actual Trading 212 account or complete the live execution acceptance cases.
+The broker verification run on 2026-10-31 passed 16 adapter tests and two CLI tests.
+Those fixtures and the subsequent GET-only demo checks do not complete the live
+execution acceptance cases.
 
 Current behavior was checked on 2026-10-31 using Context7 and the official
 [Trading 212 API reference](https://docs.trading212.com/), including its downloadable

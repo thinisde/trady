@@ -1,8 +1,12 @@
 //! Trading 212 v0 HTTP adapter. Production endpoints are fixed HTTPS origins.
 //! Read access and executor mutation access are separate concrete types.
 
+mod autonomous;
 mod dto;
 mod http;
+pub use autonomous::AutonomousTrading212;
+#[cfg(test)]
+mod autonomous_tests;
 #[cfg(test)]
 mod tests;
 
@@ -40,16 +44,10 @@ pub enum Environment {
     Live,
 }
 impl Environment {
-    pub fn read_credential_names(self) -> (&'static str, &'static str) {
+    pub fn credential_names(self) -> (&'static str, &'static str) {
         match self {
-            Self::Demo => (
-                "TRADY_T212_DEMO_READ_API_KEY",
-                "TRADY_T212_DEMO_READ_API_SECRET",
-            ),
-            Self::Live => (
-                "TRADY_T212_LIVE_READ_API_KEY",
-                "TRADY_T212_LIVE_READ_API_SECRET",
-            ),
+            Self::Demo => ("TRADY_T212_DEMO_API_KEY", "TRADY_T212_DEMO_API_SECRET"),
+            Self::Live => ("TRADY_T212_LIVE_API_KEY", "TRADY_T212_LIVE_API_SECRET"),
         }
     }
 
@@ -101,9 +99,9 @@ pub struct Credentials {
     secret: String,
 }
 impl Credentials {
-    /// Resolve the read-only pair for exactly one explicitly configured environment.
-    pub fn read_from_store(environment: Environment, store: &CredentialStore) -> Result<Self> {
-        let (key_name, secret_name) = environment.read_credential_names();
+    /// Resolve the API key and secret for exactly one explicitly configured environment.
+    pub fn from_store(environment: Environment, store: &CredentialStore) -> Result<Self> {
+        let (key_name, secret_name) = environment.credential_names();
         Self::new(
             store.required(key_name)?.into_inner(),
             store.required(secret_name)?.into_inner(),
@@ -419,13 +417,20 @@ impl<C: Clock> Trading212Executor<C> {
         &mut self.reader
     }
 }
-impl<C: Clock> BrokerExecutionPort for Trading212Executor<C> {
-    fn submit_order(&mut self, request: &BrokerOrderRequest) -> BrokerResult<BrokerOrder> {
+impl<C: Clock> Trading212Executor<C> {
+    /// Caller has just consumed a fresh account binding for this single mutation.
+    fn submit_bound(&mut self, request: &BrokerOrderRequest) -> BrokerResult<BrokerOrder> {
+        self.submit_bound_before(request, None)
+    }
+
+    fn submit_bound_before(
+        &mut self,
+        request: &BrokerOrderRequest,
+        expires_at: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> BrokerResult<BrokerOrder> {
         request.validate()?;
         self.reader.check_account(&request.account_id)?;
         let body = dto::order_body(request)?;
-        // Bind credentials to the expected broker account before every mutation.
-        self.reader.spendable_cash()?;
         let instruments = self.reader.instruments()?;
         let instrument = instruments
             .iter()
@@ -440,6 +445,9 @@ impl<C: Clock> BrokerExecutionPort for Trading212Executor<C> {
             OrderKind::Stop { .. } => (Bucket::Stop, "stop"),
             OrderKind::StopLimit { .. } => (Bucket::StopLimit, "stop_limit"),
         };
+        if expires_at.is_some_and(|expiry| self.reader.clock.now() >= expiry) {
+            return Err(BrokerFailure::new(BrokerFailureKind::InvalidRequest));
+        }
         let order: Order = self.reader.http.json(
             bucket,
             Method::POST,
@@ -458,6 +466,14 @@ impl<C: Clock> BrokerExecutionPort for Trading212Executor<C> {
             e.broker_order_id = (order.id > 0).then(|| order.id.to_string());
             e
         })
+    }
+}
+impl<C: Clock> BrokerExecutionPort for Trading212Executor<C> {
+    fn submit_order(&mut self, request: &BrokerOrderRequest) -> BrokerResult<BrokerOrder> {
+        request.validate()?;
+        self.reader.check_account(&request.account_id)?;
+        self.reader.spendable_cash()?;
+        self.submit_bound(request)
     }
 
     fn cancel_order(
