@@ -29,6 +29,7 @@ The ordinary objective is approximately 1% daily growth, with position profit ta
 | [Sector and subsector funnel](./sector-workflow.md) | S&P 500 eligibility, all-sector comparison, group/branch filtering and finalist selection |
 | [Company intelligence](./company-intelligence.md) | Profiles, CEO/counterparty statements, directional mentions and PostgreSQL memory |
 | [X accounts and watchdogs](./watchdogs-and-x.md) | Owner's Trump/Musk/Gill/Ackman/Icahn list, listener coverage, holding focus and alternatives |
+| [Five-account X pilot and costs](./x-api-monitoring.md) | Proposed Ackman/Musk/Bessent/Burry/Altman pilot, identity evidence, upstream filters, delivery choices, budgets and offline evaluation; no replacement or activation of the owner's existing watchlist |
 | [Perpetual advisor](./perpetual.md) | Native Rust inference, feature/label lineage, advisory influence, limit ownership and tool schema |
 | [FinBERT sentiment](./finbert/README.md) | Self-hosted Docker inference for X/news/text, source permissions, wire adapters, threshold effects and dormant deployment |
 | [Research artifact contracts](./research-contracts.md) | Exact bounded screening/profile/relationship/watchdog/comparison writes and calculators |
