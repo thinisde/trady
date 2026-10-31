@@ -16,6 +16,7 @@ for the initial offline Rust foundation.
 - [OpenCode Go conversations](./opencode/README.md): provider calls, durable sessions,
   context manifests, approved skills and bounded tool execution.
 - [v1 specification](./v1/README.md): current requirements, Rust architecture, research sources, trading policy, Telegram, memory, multi-round tools, runtime skills, operations and acceptance criteria.
+- [Ten proposed market intelligence features](./v1/features/README.md): separate optional designs for options, coordination, event surprise, short interest, insiders, cross-asset state, alternative attention, accounting anomalies, order books and tax scenarios.
 - [Original v1.1 input](./v1/v1.1.md): preserved historical design, superseded by the current v1 decisions where requirements differ.
 - [Offline foundation](./foundation.md): working commands, evidence, acceptance coverage and remaining work.
 - [X and news reading](./news.md): bounded source adapters, registry, durable observations, commands and remaining coverage gaps.
