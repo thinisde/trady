@@ -26,6 +26,8 @@ The ordinary objective is approximately 1% daily growth, with position profit ta
 |---|---|
 | [Architecture](./architecture.md) | Rust processes, module ownership, ports, scheduling, configuration, and event flows |
 | [Research and sources](./research.md) | X, news APIs, RSS, website collectors, evidence quality, and submitted URLs |
+| [Free financial data integration](./free-financial-data.md) | Shared Rust data layer, point-in-time snapshots, LLM/ML consumers, quotas, safeguards and delivery gates |
+| [Free financial API catalog](./free-financial-api-catalog.md) | Provider endpoints, verified public limits, access caveats, authentication and primary references |
 | [Sector and subsector funnel](./sector-workflow.md) | S&P 500 eligibility, all-sector comparison, group/branch filtering and finalist selection |
 | [Company intelligence](./company-intelligence.md) | Profiles, CEO/counterparty statements, directional mentions and PostgreSQL memory |
 | [X accounts and watchdogs](./watchdogs-and-x.md) | Owner's Trump/Musk/Gill/Ackman/Icahn list, listener coverage, holding focus and alternatives |
