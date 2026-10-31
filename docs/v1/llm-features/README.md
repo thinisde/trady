@@ -2,7 +2,7 @@
 
 Status: **12 optional research designs**, 2026-10-31, not implemented by this documentation. They extend Trady's existing [LLM/tool protocol](../llm-and-tools.md), [source review](../research.md), [approved skills](../runtime-skills.md), [memory](../memory-and-data.md), and [prediction fusion](../prediction-fusion.md). They do **not** add LLM trading authority.
 
-**Mandatory deployment policy:** [OpenCodeGo-only model governance](./model-routing-and-governance.md). All 12 proposals use **\`deepseek-v4.1-flash\`** for every ordinary model call. **\`deepseek-v4.1-pro\`** is only an optional, explicit, bounded complex-task escalation after the exact ID is verified on OpenCodeGo; the documented current model list does not establish it. **No alternative models, generative providers or silent fallback.** Existing non-generative FinBERT/Perpetual remain separate.
+**Mandatory deployment policy:** [OpenCodeGo-only model governance](./model-routing-and-governance.md). All 12 proposals use **`deepseek-v4.1-flash`** for every ordinary model call. **`deepseek-v4.1-pro`** is only an optional, explicit, bounded complex-task escalation after the exact ID is verified on OpenCodeGo; the documented current model list does not establish it. **No alternative models, generative providers or silent fallback.** Existing non-generative FinBERT/Perpetual remain separate.
 
 ## Feature catalog
 
@@ -23,7 +23,7 @@ Status: **12 optional research designs**, 2026-10-31, not implemented by this do
 
 ## New architecture and common orchestration
 
-\`\`\`text
+```text
 Approved data snapshots / existing verified source IDs
     -> rust ResearchOrchestrator (scope, rights, budgets, model allowlist)
     -> OpenCodeGo: deepseek-v4.1-flash (isolated role tasks)
@@ -31,13 +31,13 @@ Approved data snapshots / existing verified source IDs
     -> independent Rust validators and optional Flash review
     -> current historical reliability / predictor / policy layers
     -> existing executor-only order workflow OR NO_TRADE
-\`\`\`
+```
 
 All model work uses the already implemented OpenCodeGo conversation harness and its approved tool registry; these documents define **future typed tools/ports** and do not imply the tools already exist. Agents are **prompt/persona roles run through one provider**, not independently hosted models. Reuse the existing session, tool-call ID, fencing, context limits and recovery semantics; new orchestration is an application service, not a permission to run hidden third-party frameworks or additional LLM endpoints.
 
 ### Minimum shared artifact
 
-Every result must have a version, \`run_id\`, \`agent_role\`, pinned \`provider\`, \`model_id\`, \`model_request_id\`, \`evidence_snapshot_id\`, source ids and observed/available times, \`status\` (\`COMPLETE\`, \`INCOMPLETE\`, \`ABSTAIN\`, \`REVIEW_REQUIRED\`), explicitly typed claims, counterevidence, confidence **in source interpretation** distinct from outcome probabilities, uncertainty, coverage, cost and source-processing rights. A draft is not an executor command, a source verification, a trained forecast or a finalized proposal.
+Every result must have a version, `run_id`, `agent_role`, pinned `provider`, `model_id`, `model_request_id`, `evidence_snapshot_id`, source ids and observed/available times, `status` (`COMPLETE`, `INCOMPLETE`, `ABSTAIN`, `REVIEW_REQUIRED`), explicitly typed claims, counterevidence, confidence **in source interpretation** distinct from outcome probabilities, uncertainty, coverage, cost and source-processing rights. A draft is not an executor command, a source verification, a trained forecast or a finalized proposal.
 
 ### Trust and research discipline
 
@@ -45,7 +45,7 @@ Every result must have a version, \`run_id\`, \`agent_role\`, pinned \`provider\
 - Evidence lineages must not be counted multiple times merely because agents agree. The committee does not produce probabilities through votes; only approved calibration/history may support them.
 - All generated scenarios/historical analogs remain **candidates** for independent evaluators. They cannot change stops, holding deadline, liquidity gates, profit target caps, owner policy, risk checks or broker permissions.
 - Source articles, X posts and transcripts are untrusted data. No model outputs skills, tool registrations, executable policy, SQL, filesystem paths or new provider/model routes with authority.
-- No production workflow can require Pro until the exact OpenCodeGo \`deepseek-v4.1-pro\` is verified and owner enabled; otherwise bounded Flash/abstention must be usable.
+- No production workflow can require Pro until the exact OpenCodeGo `deepseek-v4.1-pro` is verified and owner enabled; otherwise bounded Flash/abstention must be usable.
 - Privacy, X/news processing rights, provider quotas and existing run/session limits remain binding.
 - Maintain original forecasts/failed research and no-trade histories; don't replace them retrospectively with improved explanations.
 - Read-only analyst/LLM tools cannot create broker orders; unprotected positions stay a higher-priority executor concern than any research escalation.
@@ -64,5 +64,5 @@ Every result must have a version, \`run_id\`, \`agent_role\`, pinned \`provider\
 
 - Every link resolves; 12 specs contain input contracts, workflow, JSON or structured output examples, failure cases, evaluation and acceptance.
 - No doc claims new tools are implemented, no extra provider/model ID is permitted, no unreviewed model escalation.
-- Under crashes, stale data, refused rights or incompatible tool schemas, research terminates \`INCOMPLETE\`/\`ABSTAIN\` and existing protection continues.
+- Under crashes, stale data, refused rights or incompatible tool schemas, research terminates `INCOMPLETE`/`ABSTAIN` and existing protection continues.
 - Run the repository's standard asset, test and integration checks when **code** is eventually changed. These Markdown files themselves do not run a schedule, API request, background agent or trading action.
