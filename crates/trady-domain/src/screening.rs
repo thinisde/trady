@@ -291,13 +291,17 @@ pub struct ScreeningResult {
 pub fn valid_reference(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 96
-        && value.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
 }
 
 pub fn valid_isin(value: &str) -> bool {
     if value.len() != 12
         || !value[..2].bytes().all(|b| b.is_ascii_uppercase())
-        || !value.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
+        || !value
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
         || !value.as_bytes()[11].is_ascii_digit()
     {
         return false;
@@ -311,21 +315,36 @@ pub fn valid_isin(value: &str) -> bool {
             digits.extend([n / 10, n % 10]);
         }
     }
-    digits.iter().rev().enumerate().map(|(i, digit)| {
-        let n = if i % 2 == 1 { digit * 2 } else { *digit };
-        u16::from(n / 10 + n % 10)
-    }).sum::<u16>() % 10 == 0
+    digits
+        .iter()
+        .rev()
+        .enumerate()
+        .map(|(i, digit)| {
+            let n = if i % 2 == 1 { digit * 2 } else { *digit };
+            u16::from(n / 10 + n % 10)
+        })
+        .sum::<u16>()
+        % 10
+        == 0
 }
 
 /// Validate the effective 11-sector / 25-industry-group taxonomy, not a draft
 /// consultation. The edition itself remains provider-supplied and persisted.
 pub fn valid_gics_pair(sector: &str, group: &str) -> bool {
-    matches!((sector, group),
-        ("10", "1010") | ("15", "1510") | ("20", "2010" | "2020" | "2030")
-        | ("25", "2510" | "2520" | "2530" | "2550")
-        | ("30", "3010" | "3020" | "3030") | ("35", "3510" | "3520")
-        | ("40", "4010" | "4020" | "4030") | ("45", "4510" | "4520" | "4530")
-        | ("50", "5010" | "5020") | ("55", "5510") | ("60", "6010" | "6020"))
+    matches!(
+        (sector, group),
+        ("10", "1010")
+            | ("15", "1510")
+            | ("20", "2010" | "2020" | "2030")
+            | ("25", "2510" | "2520" | "2530" | "2550")
+            | ("30", "3010" | "3020" | "3030")
+            | ("35", "3510" | "3520")
+            | ("40", "4010" | "4020" | "4030")
+            | ("45", "4510" | "4520" | "4530")
+            | ("50", "5010" | "5020")
+            | ("55", "5510")
+            | ("60", "6010" | "6020")
+    )
 }
 
 fn fresh(at: DateTime<Utc>, expires: DateTime<Utc>, now: DateTime<Utc>, age: i64) -> bool {
@@ -333,7 +352,9 @@ fn fresh(at: DateTime<Utc>, expires: DateTime<Utc>, now: DateTime<Utc>, age: i64
 }
 
 fn checked_bps(numerator: Decimal, denominator: Decimal) -> Option<Decimal> {
-    numerator.checked_div(denominator)?.checked_mul(Decimal::from(10_000))
+    numerator
+        .checked_div(denominator)?
+        .checked_mul(Decimal::from(10_000))
 }
 
 /// All inputs must come from the trusted application ports. Missing data is a
@@ -355,34 +376,61 @@ pub fn screen_universe(
         "screening input bound exceeded",
     )?;
     let mut result = ScreeningResult {
-        method: SCREENING_METHOD.into(), purpose: ScreeningPurpose::ResearchOnly,
-        as_of: now, universe_snapshot_id: universe.snapshot_id.clone(),
+        method: SCREENING_METHOD.into(),
+        purpose: ScreeningPurpose::ResearchOnly,
+        as_of: now,
+        universe_snapshot_id: universe.snapshot_id.clone(),
         classification_snapshot_id: universe.classification_snapshot_id.clone(),
-        candidates: vec![], peer_controls: vec![], finalist_instrument_id: None,
-        rejections: vec![], blockers: vec![],
+        candidates: vec![],
+        peer_controls: vec![],
+        finalist_instrument_id: None,
+        rejections: vec![],
+        blockers: vec![],
     };
     let lineage = &universe.provenance;
-    if universe.index_id != "SP500" || !valid_reference(&universe.snapshot_id)
+    if universe.index_id != "SP500"
+        || !valid_reference(&universe.snapshot_id)
         || !valid_reference(&universe.classification_snapshot_id)
         || !valid_reference(&universe.taxonomy_edition)
-        || !valid_reference(&lineage.source_id) || !valid_reference(&lineage.parser_version)
-        || lineage.provider.trim().is_empty() || lineage.provider.len() > 256
-        || lineage.source_url.len() > 2048 || !lineage.source_url.starts_with("https://")
+        || !valid_reference(&lineage.source_id)
+        || !valid_reference(&lineage.parser_version)
+        || lineage.provider.trim().is_empty()
+        || lineage.provider.len() > 256
+        || lineage.source_url.len() > 2048
+        || !lineage.source_url.starts_with("https://")
         || lineage.content_sha256.len() != 64
-        || !lineage.content_sha256.bytes().all(|b| b.is_ascii_hexdigit())
+        || !lineage
+            .content_sha256
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit())
         || lineage.rights.terms_reference.trim().is_empty()
         || lineage.rights.terms_reference.len() > 512
         || !(1..=8760).contains(&lineage.rights.retention_hours)
-    { result.blockers.push(RejectionReason::InvalidUniverse); }
-    if !lineage.rights.store_content {
-        result.blockers.push(RejectionReason::UnpermittedSourceStorage);
+    {
+        result.blockers.push(RejectionReason::InvalidUniverse);
     }
-    if !fresh(universe.as_of, universe.expires_at, now, policy.max_membership_age_seconds)
-        || universe.available_at < universe.as_of || universe.available_at > now
-        || lineage.fetched_at < universe.available_at || lineage.fetched_at > now
-        || now.signed_duration_since(lineage.fetched_at) > Duration::hours(i64::from(lineage.rights.retention_hours))
-    { result.blockers.push(RejectionReason::StaleOrFutureUniverse); }
-    if universe.members.is_empty() { result.blockers.push(RejectionReason::EmptyUniverse); }
+    if !lineage.rights.store_content {
+        result
+            .blockers
+            .push(RejectionReason::UnpermittedSourceStorage);
+    }
+    if !fresh(
+        universe.as_of,
+        universe.expires_at,
+        now,
+        policy.max_membership_age_seconds,
+    ) || universe.available_at < universe.as_of
+        || universe.available_at > now
+        || lineage.fetched_at < universe.available_at
+        || lineage.fetched_at > now
+        || now.signed_duration_since(lineage.fetched_at)
+            > Duration::hours(i64::from(lineage.rights.retention_hours))
+    {
+        result.blockers.push(RejectionReason::StaleOrFutureUniverse);
+    }
+    if universe.members.is_empty() {
+        result.blockers.push(RejectionReason::EmptyUniverse);
+    }
 
     let mut active_classes: BTreeMap<&str, usize> = BTreeMap::new();
     for member in &universe.members {
@@ -393,63 +441,122 @@ pub fn screen_universe(
     let mut accepted = Vec::new();
     for member in &universe.members {
         let mut reasons = result.blockers.clone();
-        if !valid_reference(&member.issuer_id) || !valid_isin(&member.share_class_isin)
-            || member.symbol.is_empty() || member.symbol.len() > 32
-            || !member.symbol.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || matches!(b, b'.' | b'-'))
+        if !valid_reference(&member.issuer_id)
+            || !valid_isin(&member.share_class_isin)
+            || member.symbol.is_empty()
+            || member.symbol.len() > 32
+            || !member
+                .symbol
+                .bytes()
+                .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || matches!(b, b'.' | b'-'))
             || member.listing_mic.len() != 4
-            || !member.listing_mic.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
+            || !member
+                .listing_mic
+                .bytes()
+                .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
             || !member.membership.valid()
-        { reasons.push(RejectionReason::InvalidIdentity); }
-        if !member.membership.contains(now) { reasons.push(RejectionReason::MembershipNotEffective); }
-        if active_classes.get(member.share_class_isin.as_str()).is_some_and(|n| *n > 1) {
+        {
+            reasons.push(RejectionReason::InvalidIdentity);
+        }
+        if !member.membership.contains(now) {
+            reasons.push(RejectionReason::MembershipNotEffective);
+        }
+        if active_classes
+            .get(member.share_class_isin.as_str())
+            .is_some_and(|n| *n > 1)
+        {
             reasons.push(RejectionReason::DuplicateShareClass);
         }
         let classification = &member.classification;
-        if !valid_gics_pair(&classification.sector_code, &classification.industry_group_code)
-            || !classification.effective.valid()
-        { reasons.push(RejectionReason::InvalidClassification); }
-        if !classification.effective.contains(now) { reasons.push(RejectionReason::ClassificationNotEffective); }
+        if !valid_gics_pair(
+            &classification.sector_code,
+            &classification.industry_group_code,
+        ) || !classification.effective.valid()
+        {
+            reasons.push(RejectionReason::InvalidClassification);
+        }
+        if !classification.effective.contains(now) {
+            reasons.push(RejectionReason::ClassificationNotEffective);
+        }
         if classification.observed_at > universe.as_of
-            || now.signed_duration_since(classification.observed_at) > Duration::seconds(policy.max_membership_age_seconds)
-        { reasons.push(RejectionReason::StaleOrFutureClassification); }
+            || now.signed_duration_since(classification.observed_at)
+                > Duration::seconds(policy.max_membership_age_seconds)
+        {
+            reasons.push(RejectionReason::StaleOrFutureClassification);
+        }
 
-        let matching: Vec<_> = observations.broker_support.iter().filter(|support| {
-            support.share_class_isin == member.share_class_isin
-                && support.listing_mic == member.listing_mic && support.currency == member.currency
-        }).collect();
+        let matching: Vec<_> = observations
+            .broker_support
+            .iter()
+            .filter(|support| {
+                support.share_class_isin == member.share_class_isin
+                    && support.listing_mic == member.listing_mic
+                    && support.currency == member.currency
+            })
+            .collect();
         let mut candidate = None;
         let instrument_id = matching.first().map(|s| s.instrument_id.clone());
         if matching.len() != 1 {
-            reasons.push(if matching.is_empty() { RejectionReason::MissingBrokerSupport } else { RejectionReason::AmbiguousBrokerSupport });
+            reasons.push(if matching.is_empty() {
+                RejectionReason::MissingBrokerSupport
+            } else {
+                RejectionReason::AmbiguousBrokerSupport
+            });
         } else {
             let support = matching[0];
             // A broker ID must not alias a second share class or listing.
-            if observations.broker_support.iter().filter(|s| s.instrument_id == support.instrument_id).count() != 1 {
+            if observations
+                .broker_support
+                .iter()
+                .filter(|s| s.instrument_id == support.instrument_id)
+                .count()
+                != 1
+            {
                 reasons.push(RejectionReason::AmbiguousBrokerSupport);
             }
-            if support.status != SupportStatus::Verified || support.instrument_kind != "STOCK"
-                || !valid_reference(&support.evidence_id) || !valid_reference(&support.snapshot_id)
-            { reasons.push(RejectionReason::BrokerStockNotVerified); }
-            if !fresh(support.observed_at, support.expires_at, now, policy.max_broker_age_seconds) {
+            if support.status != SupportStatus::Verified
+                || support.instrument_kind != "STOCK"
+                || !valid_reference(&support.evidence_id)
+                || !valid_reference(&support.snapshot_id)
+            {
+                reasons.push(RejectionReason::BrokerStockNotVerified);
+            }
+            if !fresh(
+                support.observed_at,
+                support.expires_at,
+                now,
+                policy.max_broker_age_seconds,
+            ) {
                 reasons.push(RejectionReason::StaleOrFutureBrokerSupport);
             }
-            if !owner_allowlist.contains(&support.instrument_id) { reasons.push(RejectionReason::OwnerNotPermitted); }
+            if !owner_allowlist.contains(&support.instrument_id) {
+                reasons.push(RejectionReason::OwnerNotPermitted);
+            }
             candidate = evaluate_member(member, support, observations, policy, now, &mut reasons);
         }
         if reasons.is_empty() {
-            accepted.push(candidate.ok_or_else(|| Error("screening candidate missing after validation".into()))?);
+            accepted.push(
+                candidate
+                    .ok_or_else(|| Error("screening candidate missing after validation".into()))?,
+            );
         } else {
             result.rejections.push(RejectedMember {
-                issuer_id: member.issuer_id.clone(), share_class_isin: member.share_class_isin.clone(),
-                symbol: member.symbol.clone(), instrument_id, reasons,
+                issuer_id: member.issuer_id.clone(),
+                share_class_isin: member.share_class_isin.clone(),
+                symbol: member.symbol.clone(),
+                instrument_id,
+                reasons,
             });
         }
     }
-    accepted.sort_by(|a, b| b.priority_score.cmp(&a.priority_score)
-        .then_with(|| b.priority_components[4].cmp(&a.priority_components[4]))
-        .then_with(|| a.spread_bps.cmp(&b.spread_bps))
-        .then_with(|| b.average_daily_notional.cmp(&a.average_daily_notional))
-        .then_with(|| a.instrument_id.cmp(&b.instrument_id)));
+    accepted.sort_by(|a, b| {
+        b.priority_score
+            .cmp(&a.priority_score)
+            .then_with(|| b.priority_components[4].cmp(&a.priority_components[4]))
+            .then_with(|| a.spread_bps.cmp(&b.spread_bps))
+            .then_with(|| b.average_daily_notional.cmp(&a.average_daily_notional))
+            .then_with(|| a.instrument_id.cmp(&b.instrument_id))
+    });
     let primary_group = accepted.first().map(|c| c.industry_group_code.clone());
     for candidate in accepted {
         if result.candidates.len() < policy.candidate_limit {
@@ -460,76 +567,177 @@ pub fn screen_universe(
             result.peer_controls.push(candidate);
         } else {
             result.rejections.push(RejectedMember {
-                issuer_id: candidate.issuer_id, share_class_isin: candidate.share_class_isin,
-                symbol: universe.members.iter().find(|m| m.share_class_isin == candidate.share_class_isin)
-                    .map(|m| m.symbol.clone()).unwrap_or_default(),
-                instrument_id: Some(candidate.instrument_id), reasons: vec![RejectionReason::ShortlistLimit],
+                issuer_id: candidate.issuer_id,
+                share_class_isin: candidate.share_class_isin.clone(),
+                symbol: universe
+                    .members
+                    .iter()
+                    .find(|m| m.share_class_isin == candidate.share_class_isin)
+                    .map(|m| m.symbol.clone())
+                    .unwrap_or_default(),
+                instrument_id: Some(candidate.instrument_id),
+                reasons: vec![RejectionReason::ShortlistLimit],
             });
         }
     }
     result.finalist_instrument_id = result.candidates.first().map(|c| c.instrument_id.clone());
-    result.rejections.sort_by(|a, b| a.share_class_isin.cmp(&b.share_class_isin).then_with(|| a.symbol.cmp(&b.symbol)));
+    result.rejections.sort_by(|a, b| {
+        a.share_class_isin
+            .cmp(&b.share_class_isin)
+            .then_with(|| a.symbol.cmp(&b.symbol))
+    });
     Ok(result)
 }
 
 fn evaluate_member(
-    member: &UniverseMember, support: &BrokerStockSupport, observations: &ScreeningObservations,
-    policy: &ScreeningPolicy, now: DateTime<Utc>, reasons: &mut Vec<RejectionReason>,
+    member: &UniverseMember,
+    support: &BrokerStockSupport,
+    observations: &ScreeningObservations,
+    policy: &ScreeningPolicy,
+    now: DateTime<Utc>,
+    reasons: &mut Vec<RejectionReason>,
 ) -> Option<ScreenedCandidate> {
-    let markets: Vec<_> = observations.markets.iter().filter(|m| m.instrument_id == support.instrument_id).collect();
-    let priorities: Vec<_> = observations.priorities.iter().filter(|p| p.instrument_id == support.instrument_id).collect();
-    if markets.len() != 1 { reasons.push(if markets.is_empty() { RejectionReason::MissingMarketData } else { RejectionReason::AmbiguousMarketData }); }
-    if priorities.len() != 1 { reasons.push(if priorities.is_empty() { RejectionReason::MissingPriority } else { RejectionReason::AmbiguousPriority }); }
+    let markets: Vec<_> = observations
+        .markets
+        .iter()
+        .filter(|m| m.instrument_id == support.instrument_id)
+        .collect();
+    let priorities: Vec<_> = observations
+        .priorities
+        .iter()
+        .filter(|p| p.instrument_id == support.instrument_id)
+        .collect();
+    if markets.len() != 1 {
+        reasons.push(if markets.is_empty() {
+            RejectionReason::MissingMarketData
+        } else {
+            RejectionReason::AmbiguousMarketData
+        });
+    }
+    if priorities.len() != 1 {
+        reasons.push(if priorities.is_empty() {
+            RejectionReason::MissingPriority
+        } else {
+            RejectionReason::AmbiguousPriority
+        });
+    }
     let market = markets.first()?;
     let priority = priorities.first()?;
-    if !fresh(market.observed_at, market.expires_at, now, policy.max_quote_age_seconds) {
+    if !fresh(
+        market.observed_at,
+        market.expires_at,
+        now,
+        policy.max_quote_age_seconds,
+    ) {
         reasons.push(RejectionReason::StaleOrFutureMarketData);
     }
-    let midpoint = market.bid.checked_add(market.ask).and_then(|sum| sum.checked_div(Decimal::from(2)));
-    let spread = market.ask.checked_sub(market.bid).and_then(|gap| checked_bps(gap, midpoint?));
-    if market.bid <= Decimal::ZERO || market.ask < market.bid || market.currency != member.currency
-        || !valid_reference(&market.snapshot_id) || !valid_reference(&market.source_id) || spread.is_none()
-    { reasons.push(RejectionReason::InvalidQuote); }
+    let midpoint = market
+        .bid
+        .checked_add(market.ask)
+        .and_then(|sum| sum.checked_div(Decimal::from(2)));
+    let spread = market
+        .ask
+        .checked_sub(market.bid)
+        .and_then(|gap| checked_bps(gap, midpoint?));
+    if market.bid <= Decimal::ZERO
+        || market.ask < market.bid
+        || market.currency != member.currency
+        || !valid_reference(&market.snapshot_id)
+        || !valid_reference(&market.source_id)
+        || spread.is_none()
+    {
+        reasons.push(RejectionReason::InvalidQuote);
+    }
     let spread = spread.unwrap_or(Decimal::MAX);
-    if spread > policy.max_spread_bps { reasons.push(RejectionReason::SpreadTooWide); }
-    let participation = checked_bps(market.proposed_order_notional, market.average_daily_notional);
+    if spread > policy.max_spread_bps {
+        reasons.push(RejectionReason::SpreadTooWide);
+    }
+    let participation = checked_bps(
+        market.proposed_order_notional,
+        market.average_daily_notional,
+    );
     if market.average_daily_notional < policy.minimum_daily_notional
         || participation.is_none_or(|v| v > policy.max_order_participation_bps)
-    { reasons.push(RejectionReason::InsufficientLiquidity); }
+    {
+        reasons.push(RejectionReason::InsufficientLiquidity);
+    }
     if market.estimated_round_trip_cost_bps < spread
         || market.estimated_round_trip_cost_bps > policy.max_round_trip_cost_bps
-    { reasons.push(RejectionReason::InvalidOrExcessiveCosts); }
-    if support.minimum_order_notional <= Decimal::ZERO || market.proposed_order_notional <= Decimal::ZERO
+    {
+        reasons.push(RejectionReason::InvalidOrExcessiveCosts);
+    }
+    if support.minimum_order_notional <= Decimal::ZERO
+        || market.proposed_order_notional <= Decimal::ZERO
         || market.proposed_order_notional < support.minimum_order_notional
         || (!support.fractional_orders && market.proposed_order_notional < market.ask)
-    { reasons.push(RejectionReason::UnaffordableOrder); }
+    {
+        reasons.push(RejectionReason::UnaffordableOrder);
+    }
     if let Some(timing) = &market.timing {
-        if !fresh(timing.observed_at, timing.expires_at, now, policy.max_timing_age_seconds)
-            || !valid_reference(&timing.snapshot_id) || !valid_reference(&timing.session_id)
-        { reasons.push(RejectionReason::StaleOrFutureTiming); }
-        if timing.opens_at >= timing.closes_at || now < timing.opens_at
-            || timing.closes_at.signed_duration_since(now) <= Duration::seconds(policy.minimum_seconds_to_close)
-        { reasons.push(RejectionReason::OutsideSession); }
-        if !timing.event_window_clear { reasons.push(RejectionReason::EventTimingBlocked); }
-    } else { reasons.push(RejectionReason::MissingTiming); }
-    if !fresh(priority.observed_at, priority.expires_at, now, policy.max_priority_age_seconds) {
+        if !fresh(
+            timing.observed_at,
+            timing.expires_at,
+            now,
+            policy.max_timing_age_seconds,
+        ) || !valid_reference(&timing.snapshot_id)
+            || !valid_reference(&timing.session_id)
+        {
+            reasons.push(RejectionReason::StaleOrFutureTiming);
+        }
+        if timing.opens_at >= timing.closes_at
+            || now < timing.opens_at
+            || timing.closes_at.signed_duration_since(now)
+                <= Duration::seconds(policy.minimum_seconds_to_close)
+        {
+            reasons.push(RejectionReason::OutsideSession);
+        }
+        if !timing.event_window_clear {
+            reasons.push(RejectionReason::EventTimingBlocked);
+        }
+    } else {
+        reasons.push(RejectionReason::MissingTiming);
+    }
+    if !fresh(
+        priority.observed_at,
+        priority.expires_at,
+        now,
+        policy.max_priority_age_seconds,
+    ) {
         reasons.push(RejectionReason::StaleOrFuturePriority);
     }
-    if priority.components.iter().any(|c| c.is_none_or(|value| value > 4))
-        || !valid_reference(&priority.calculation_id) || !valid_reference(&priority.rubric_version)
-        || priority.evidence_ids.is_empty() || priority.evidence_ids.len() > 64
+    if priority
+        .components
+        .iter()
+        .any(|c| c.is_none_or(|value| value > 4))
+        || !valid_reference(&priority.calculation_id)
+        || !valid_reference(&priority.rubric_version)
+        || priority.evidence_ids.is_empty()
+        || priority.evidence_ids.len() > 64
         || !priority.evidence_ids.iter().all(|id| valid_reference(id))
-    { reasons.push(RejectionReason::InvalidOrIncompletePriority); }
-    if !priority.material_exposure { reasons.push(RejectionReason::NoMaterialExposure); }
-    if !reasons.is_empty() { return None; }
+    {
+        reasons.push(RejectionReason::InvalidOrIncompletePriority);
+    }
+    if !priority.material_exposure {
+        reasons.push(RejectionReason::NoMaterialExposure);
+    }
+    if !reasons.is_empty() {
+        return None;
+    }
     let components = priority.components.map(|value| value.unwrap_or(0));
     Some(ScreenedCandidate {
-        instrument_id: support.instrument_id.clone(), issuer_id: member.issuer_id.clone(),
-        share_class_isin: member.share_class_isin.clone(), sector_code: member.classification.sector_code.clone(),
+        instrument_id: support.instrument_id.clone(),
+        issuer_id: member.issuer_id.clone(),
+        share_class_isin: member.share_class_isin.clone(),
+        sector_code: member.classification.sector_code.clone(),
         industry_group_code: member.classification.industry_group_code.clone(),
-        priority_score: components.iter().sum(), priority_components: components, spread_bps: spread,
-        average_daily_notional: market.average_daily_notional, broker_snapshot_id: support.snapshot_id.clone(),
-        market_snapshot_id: market.snapshot_id.clone(), timing_snapshot_id: market.timing.as_ref()?.snapshot_id.clone(),
-        calculation_id: priority.calculation_id.clone(), evidence_ids: priority.evidence_ids.clone(),
+        priority_score: components.iter().sum(),
+        priority_components: components,
+        spread_bps: spread,
+        average_daily_notional: market.average_daily_notional,
+        broker_snapshot_id: support.snapshot_id.clone(),
+        market_snapshot_id: market.snapshot_id.clone(),
+        timing_snapshot_id: market.timing.as_ref()?.snapshot_id.clone(),
+        calculation_id: priority.calculation_id.clone(),
+        evidence_ids: priority.evidence_ids.clone(),
     })
 }

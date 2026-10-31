@@ -8,6 +8,13 @@ integration work. Automated trading is still unavailable.
 
 ## Ownership and evidence flow
 
+The [prediction-fusion contract](../prediction-fusion.md) treats this output as
+financial-text sentiment. Positive/negative/neutral class probabilities are never
+target-hit probabilities, expected returns or extra independent news lineages.
+The existing adverse overlay remains a mandatory constraint on formula selection.
+Original item/model/time bindings feed cumulative calibration and ablation; no
+learned fusion weight or sentiment-to-return mapping is approved by this document.
+
 Trady sends permitted English X posts, news, issuer releases and other related
 texts to its own FinBERT service. The analyst owns collection, relevance selection
 and inference. Rust policy uses the resulting observations when calculating entry

@@ -23,6 +23,13 @@ for the initial offline Rust foundation.
 
 ## Interface
 
+The [prediction-fusion design](./v1/prediction-fusion.md) owns model semantics,
+calibrated baseline, scenario utility and mathematical limit authority. The
+[weekly workflow](./v1/weekly-optimization.md) owns cumulative evaluation, offline
+tools and release gates. The [implementation record](./v1/prediction-implementation.md)
+identifies the tested Rust subset; the local developer skill is separate from
+runtime skills.
+
 The [v1 reading map](./v1/README.md#reading-map) is the requirements entry point.
 The [foundation record](./foundation.md) distinguishes implemented symbols from future contracts.
 

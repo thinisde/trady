@@ -1,6 +1,9 @@
 # Trady v1 trading policy and execution
 
-Status: proposed policy to implement and evaluate in paper mode. Numeric defaults are starting settings, not measured predictors of returns. The owner versions policy; the LLM proposes plans inside it.
+Status: policy specification with pure Rust subsets. Numeric defaults are starting
+settings, not measured predictors of returns. The owner versions risk policy.
+The LLM proposes research constraints; approved mathematics calculates numerical
+limits under the [fusion contract](./prediction-fusion.md). Deployment stays gated.
 
 ## Objective and scope
 
@@ -8,7 +11,11 @@ Aim for a normal 1% net position gain, 2–3% when evidence and market condition
 
 V1 uses one dedicated cash account, one distinct stock at a time, a small owner-approved universe, no shorting or leverage, and no additions to an open holding. Research continues throughout a holding. A fast rise may justify a higher target and a tighter trailing floor; a slower rise may retain the existing plan until its target, stop, expiry, or maximum holding time is reached.
 
-The LLM chooses the candidate and proposes an entry range, stop, target, holding thesis and invalidation conditions. Rust evaluates those proposals and submits orders. There is no `SELL` or `BUY` model tool. A `PLAN_UPDATE` can cause a deterministic exit after validation, but it is never an order instruction.
+The LLM researches the candidate, thesis, invalidation conditions and admissible
+constraints. Approved mathematics calculates numerical limits; Rust independently
+validates readiness/risk and controls orders. Model-owned price fields are hints.
+There is no `SELL` or `BUY` model tool. A validated `PLAN_UPDATE` may change a plan
+or latch an exit; it is never an order instruction.
 
 ## Capital and deposits
 
@@ -74,6 +81,13 @@ Calculate a reproducible evidence score from checked inputs. The model explains 
 
 Relative volume compares volume so far with the median volume at the same session minute over 20 comparable previous sessions. VWAP and bars require suitable feed coverage. Missing observations give no points; unavailable venue coverage is not invented. Store semantic verifier results and their evidence so relevance judgments can be audited. Fix the scoring algorithm within a policy version and evaluate it before changing defaults.
 
+For economics, use `spread_fraction = (ask - bid) / ask` and
+`round_trip_cost_fraction = (C(q, ask) - V(q, bid)) / C(q, ask)` for the same
+supported quantity, current FX and conservative charges. `C`/`V` follow the
+definitions below; spread enters through bid/ask and is not added again. Both
+fractions must be known and nonnegative. These position-cost denominators differ
+from account-return utility and the session-loss guard.
+
 Entry requires all readiness checks independently of points: finalized skill-backed research, primary verification and independent comparison, exact instrument mapping, adequate quotes/bars, permitted source processing, spendable cash, an unused entry slot, achievable protective orders and acceptable risk/reward. An unresolved material contradiction blocks entry even when the arithmetic score is high. A score is not a probability of winning.
 
 | Validated points | Permitted profit target |
@@ -89,6 +103,24 @@ Targets may remain below the band maximum. An exceptional target requires a chec
 An existing holding whose score drops below 70 receives no target increase. Retain the active plan while obtaining a reassessment; a valid update may lower the target or tighten the stop. A low score alone does not become an unconfigured market sell. Entry eligibility and holding management are separate decisions.
 
 ## Define prices, net returns and risk
+
+`FORMULA_V1` is the target primary numerical authority for buy limit, stop trigger,
+target price, quantity and horizon. The [weekly design](./weekly-optimization.md)
+specifies its bounded ATR/price/lot solver; [prediction fusion](./prediction-fusion.md)
+adds calibrated scenario utility after feasibility. LLM price hints are comparisons
+and cannot override the result. Require a final scenario hash and compatible
+formula/model/calibrator/fusion revisions; changed prices, costs, quantity or
+horizon invalidate affected forecasts/readiness. This design does not enable
+production mode without independent release evidence.
+
+Rank only feasible scenarios using separately calibrated target-first, stop-first,
+expiry and non-fill probabilities and conditional net account outcomes. Preserve
+each input's units and uncertainty; a binary hit probability or sentiment class
+cannot imply expected return. Choose `NO_TRADE` when inputs are inadequate or
+utility does not exceed cash. Utility never increases allocation, target/loss
+caps, leverage, holding duration or permissions. Existing confidence, required
+skills and FinBERT vetoes remain mandatory. After fills, use actual acquisition
+cost for protection/targets; original forecast estimates cannot replace the ledger.
 
 Use account-currency position returns for target validation. Let `C` be actual acquisition cost, including attributable entry fees and FX. Let `V(b)` be estimated net liquidation proceeds for the filled quantity at executable bid `b`, after current FX and estimated exit charges.
 
@@ -204,4 +236,10 @@ All financial calculations use checked decimal arithmetic. No confidence score r
 
 ## Verification
 
-Acceptance cases cover allocation with fees/deposits, confidence band boundaries, target/stop mathematics, target-update races, partial fills, native protection conflicts and unknown submission outcomes. They are listed in [implementation and acceptance](./implementation.md). There is no application or executable test target yet.
+Acceptance cases cover allocation, confidence, costs/targets/stops, update races,
+partial fills, protection conflicts, unknown submissions and fusion/weekly failure
+modes in [implementation and acceptance](./implementation.md). The Cargo workspace
+has executable tests; run `cargo test --workspace --locked` and the other checks
+in the [fusion contract](./prediction-fusion.md#verification). Actual coverage and
+remaining deployment gaps belong in implementation records, not inferred from
+the existence of a test target.

@@ -4,7 +4,7 @@ description: >-
   Summarize Trady sessions, record completed research/trade outcomes and produce
   evidence-based weekly lessons without changing policy, ledger facts or skill files.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Memory and review
@@ -22,6 +22,13 @@ Capture the current question/thesis, established facts and citations, unresolved
 Do not turn a simplified summary into the authoritative account balance, held quantity, order status or active threshold. The next research run refreshes those facts from application views. Keep unresolved call/result pairs intact; session compaction must not fabricate completed tools.
 
 ## Review outcomes
+
+Retain original model predictions and their availability/production times,
+target/horizon/scenario and calibration revisions. Score only matured outcomes;
+pending labels remain pending. Record cumulative errors, sample counts, drift,
+regime gaps and repeated evidence without reconstructing historical forecasts
+with today's LLM. The [offline weekly Codex workflow](../../docs/v1/weekly-optimization.md)
+is separate from this runtime skill and cannot receive broker/deployment authority.
 
 Use `portfolio.performance` and reconciled records for numbers. Distinguish deposits from gains, realized from unrealized results, brokerage costs from outside operating expenses and filled round trips from pending orders. A profitable holding without a sale is not a completed win.
 

@@ -4,7 +4,7 @@ description: >-
   Finalize a possible Trady entry only after required research, source comparison,
   high computed confidence and current financial checks are complete; otherwise record blockers.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Entry readiness
@@ -22,6 +22,14 @@ Obtain a fresh account/position/active-plan view, executable quote/FX, actual ex
 Use `calculator.confidence_score` for the evidence-based score and `calculator.entry_budget`/`calculator.plan_economics` for allocation, target, stop and cost/reward checks. Do not substitute your own confidence number or arithmetic. The proposed entry floor is 90/100; the ordinary target stays 1%, with higher caps only under the target/exceptional rules.
 
 Verify that the thesis deadline, required stop/protection and size are supported. An unaffordable minimum, stop inside spread/noise, unacceptable reward/risk or unproven protection means no entry. Do not raise a target, tighten a technical stop arbitrarily or widen the entry range simply to make the calculation pass.
+
+The target [fusion/formula contract](../../docs/v1/prediction-fusion.md) requires
+application-resolved approved numerical limits, model/calibrator/fusion revisions
+and exact scenario-bound forecasts. Price fields are research hints until Rust
+recomputes and binds them. Missing/stale/unsupported required predictions, unknown
+uncertainty or absent complete outcomes prevents utility selection. No new tool
+becomes available merely because it appears in a design; return blocked/no action
+when the needed validated calculator and readiness records do not exist.
 
 ## Finalize or block
 

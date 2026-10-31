@@ -103,7 +103,7 @@ Each tool has a versioned name/description, argument/result JSON schemas, implem
 | `x.listener_status`, `watchdog.status` | Verified listener coverage and personalized holding-watchdog state; no subscription/activation changes |
 | `research.get_artifact`, `research.store_artifact` | Scoped immutable stage reads and exact typed drafts for validation/persistence; no arbitrary DB writes |
 | `calculator.research_priority`, `calculator.rotation_economics` | Separate research priority and common-horizon net comparison; no extra confidence points or execution authority |
-| `perpetual.assess` | Approved native Rust model and point-in-time features → advisory prediction/calibration/drift/explanation; LLM still proposes limits |
+| `perpetual.assess` | Approved Rust model and point-in-time features → advisory prediction/calibration/drift; final numerical limits come from the approved calculator |
 
 These tools obtain information and calculations. Collector tools can make permitted billable requests and persist deduplicated research items; they are not free or side-effectless merely because they cannot trade. A result from `evidence.compare` is a review artifact, not extra corroborating evidence. Calculator output does not reserve funds or authorize entry.
 
@@ -112,6 +112,13 @@ New tools require reviewed Rust adapters/registry versions specifying schemas, p
 The new read tools take only these required argument keys: `universe.snapshot {session_id}`, `market.sector_snapshot {universe_snapshot_id, market_snapshot_id}`, `entities.resolve {query, entity_type}`, `profiles.get {entity_id}`, `relationships.get {entity_id, max_hops, max_neighbors}`, `x.listener_status {social_account_ids}`, `watchdog.status {position_id}`, and `research.get_artifact {artifact_id}`. IDs use the canonical type; query is bounded text, entity_type is COMPANY/PERSON/PRODUCT/REGULATOR, max_hops is 1–2 and max_neighbors 1–10; account arrays have at most 32 scoped IDs. Reject extras and attempts to select accounts/URLs/files. Results retain standard tool metadata and immutable references. Exact typed read-result schemas must be supplied before advertising these adapters; that is a phase-1 deliverable, not permission to trust arbitrary returned fields.
 
 ## FinBERT observations and threshold constraints
+
+The [prediction-fusion contract](./prediction-fusion.md) defines the target
+handoff: LLM research supplies evidence and admissible constraints; the application
+resolves approved predictions and mathematical calculations. Existing model-owned
+price fields are hints. Final readiness must bind the independently recomputed
+formula result and exact assessed scenario. No `fusion.*`, retraining, promotion
+or live-order tool is introduced merely by documenting this architecture.
 
 The [FinBERT path](./finbert/README.md) is a separate self-hosted classifier used by
 Rust research adapters. It does not replace the conversational LLM or Perpetual.

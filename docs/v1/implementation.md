@@ -23,6 +23,28 @@ Paper balances begin with the owner's representative €50 example and include d
 
 ## Required behavioral acceptance cases
 
+### Prediction fusion and weekly optimization
+
+The [fusion specification](./prediction-fusion.md) and [weekly design](./weekly-optimization.md)
+add the following delivery order. The [implementation record](./prediction-implementation.md)
+identifies the tested Rust subset and remaining trusted integrations. The full
+rows remain acceptance requirements; none enables live trading.
+
+| Milestone | Deliverable and acceptance |
+|---|---|
+| Typed contracts and baseline | Distinct research/sentiment/binary/scenario/quantitative payloads with version, model, availability, horizon, uncertainty and historical calibration; reject semantic mixing and stale/future inputs; report duplicated lineage and abstention |
+| Pure mathematical selection | Checked formula feasibility plus scenario utility for validated complete outcomes; `NO_TRADE` for missing support or utilities below cash; policy caps unchanged; tick/lot precision and costs/FX tested |
+| Immutable prediction history | Original forecast ledger, matured/pending labels, cumulative Brier/reliability/drift/regime records and purged chronological splits; no retrospective LLM forecasts used as independent history |
+| Offline experiments | Registered bounded formula/model/calibrator/fusion trials, shared Rust/LEAN bridge, realistic execution stress, simple baselines/ablation and exact hashes; all failures/budgets retained |
+| Proof and independent release | Pinned Lean 4 definitions, axiom/non-vacuity/parity checks, sealed holdout-consumption ledger, adequate prospective shadow and owner deployment approval; original holdings/latches unchanged |
+
+Required tests include sentiment versus target-event type confusion, binary-only
+forecast abstention, unsupported regimes, unknown uncertainty, correlated/repeated
+evidence, immature/overlapping outcomes, changed scenario after assessment, fee/FX
+double counting, no feasible trade, extreme decimal precision, interrupted trials,
+duplicate weekly invocation, missed activation deadline and self-promotion denial.
+No model change may bypass existing acceptance cases or live release gates.
+
 ### FinBERT implementation and acceptance
 
 The [sentiment contract](./finbert/README.md) implements the sidecar files, domain/port,
@@ -143,7 +165,7 @@ These are future tests that check externally meaningful behavior. Pure policy/st
 | ML-04 | No approved model, stale assessment, out-of-range regime or unsupported scenario | Explicit abstain/unavailable and blocked required entry; no fabricated prediction/interval |
 | ML-05 | LLM changes target/stop/horizon after assessment | Recalculate/reassess the exact final scenario; stale advice cannot satisfy readiness |
 | ML-06 | Perpetual likes a setup but primary evidence conflicts or score is below 90 | No entry; prediction is not independent evidence or confidence points |
-| ML-07 | LLM disagrees with a usable assessment and keeps supported limits | Record reason and actual assessment; LLM proposal remains possible within every independent Rust gate |
+| ML-07 | LLM disagrees with a usable assessment | Record reason and actual assessment; no override of calculated limits, required fusion/readiness or independent Rust gates |
 | ML-08 | Price target latches during slow inference or offline training spikes CPU | Exit/protection proceed independently; no delayed latch or inference-caused executor starvation |
 | ML-09 | New extractor/model revision or delayed outcomes change monitoring | Version/replay/evaluate before promotion; label-free drift is not proof of predictive accuracy |
 | ROT-01 | Holding bought today, default one-entry policy, attractive alternative | `ENTRY_SLOT_USED`; no second buy or research-originated sell |
@@ -165,7 +187,7 @@ These are future tests that check externally meaningful behavior. Pure policy/st
 | News/X/T212 information and other scoped model tools | [Tool catalog](./llm-and-tools.md#tool-registry-and-scope) | LLM-05, LLM-09, DB-04; source/market adapter cases |
 | Scenario SKILL.md files and finalized high-confidence entry | [Runtime skills](./runtime-skills.md), [entry readiness](./strategy.md#finalized-research-and-entry-readiness) | POL-01, SKL-01 through SKL-07 |
 | PostgreSQL using the existing server with a new database | [Operations](./operations.md) | DB-01 through DB-03; verified isolated provisioning/restore |
-| LLM chooses stocks, entries, stop losses and sell targets | [Trading policy](./strategy.md), [proposal schema](./memory-and-data.md) | POL-01 through POL-04, LLM-01; no broker tools in analyst |
+| LLM researches stocks/constraints; approved mathematics determines numerical limits | [Trading policy](./strategy.md), [prediction fusion](./prediction-fusion.md), [proposal schema](./memory-and-data.md) | POL-01 through POL-04, LLM-01 plus fusion cases; no broker tools in analyst |
 | Continue research and adjust thresholds during holding | [Architecture](./architecture.md), [trading policy](./strategy.md) | PLN-01 through PLN-06 |
 | Confidence points affect targets | [Trading policy](./strategy.md) | POL-01, POL-02, SRC-01 |
 | Automatically sell at an active threshold | [Trading policy](./strategy.md) | ORD-02, ORD-06, PLN-02, PLN-03 |
@@ -176,7 +198,7 @@ These are future tests that check externally meaningful behavior. Pure policy/st
 | CEO/company deep dive, profiles, praise/criticism and cross-stock links | [Company intelligence](./company-intelligence.md) | CO-01 through CO-04; provenance and revision checks |
 | Owner's five influential X people, their replies/reposts and scoped priority | [X listeners](./watchdogs-and-x.md) | X-01 through X-05; active account identity/capability checks |
 | Personalized holding watchdog and selective alternative attention | [Watchdogs](./watchdogs-and-x.md), [rotation](./strategy.md#opportunity-rotation) | WD-01 through WD-04, ROT-01 through ROT-05 |
-| Perpetual advisory tool with LLM-chosen limits | [Perpetual](./perpetual.md), [skill](../../skills/perpetual-review.SKILL.md) | ML-01 through ML-09; actual model/version/calibration evidence before promotion |
+| Perpetual advisory inputs with mathematical limits | [Perpetual](./perpetual.md), [fusion](./prediction-fusion.md), [skill](../../skills/perpetual-review.SKILL.md) | ML-01 through ML-09 and fusion cases; actual calibration/validation evidence required |
 
 ## Live release gates
 

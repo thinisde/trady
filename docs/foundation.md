@@ -1,5 +1,12 @@
 # Offline foundation implementation
 
+The later [prediction-fusion](./v1/prediction-fusion.md) and
+[weekly optimization](./v1/weekly-optimization.md) contracts supersede LLM-selected
+final numerical limits. The [implementation record](./v1/prediction-implementation.md)
+identifies tested pure Rust calculations and remaining integration work. This
+historical foundation evidence does not certify trained forecasts, LEAN backtests,
+Lean 4 proofs or deployment.
+
 The later [X and news reading slice](./news.md) adds bounded source collection,
 PostgreSQL observations/cursors and read-only CLI commands. The evidence in this
 file describes the original foundation, rather than full research readiness.
@@ -123,7 +130,8 @@ versions remain 1. The drift review found and corrected a stale version instruct
 in the [conversation skill](../skills/conversation-and-tools/SKILL.md), advancing it
 to 1.0.1 and the catalog bundle to 2.0.1. These source revisions still require a
 deployment approval manifest before runtime loading. The validator rejects research
-version 1. See the [drift report](../2026-10-31_DRIFT_REPORT.md) for the scoped review.
+version 1. The previously referenced scoped drift-report artifact is not present
+in this checkout; its results cannot be verified from this implementation record.
 
 The `policy.versions`, research/job/command tables establish storage boundaries.
 Approved policy activation, authenticated owner ingress, complete job claiming,

@@ -9,7 +9,14 @@ foundation record identifies working interfaces and validation evidence.
 
 Trady screens effective S&P 500 membership within owner/broker permissions, selects a sector then an industry-group subsector, researches a finalist and maintains an evidence-backed plan. It combines X, news APIs, Google News RSS, disclosures and configured collectors. PostgreSQL holds profiles, public statements and directed relationships. The owner receives Telegram research/execution/watchdog updates and can submit X URLs.
 
-The LLM researches, selects stocks and proposes entry/stop/target limits, consulting native Rust Perpetual as an advisory tool. It records the advice's influence or a reasoned disagreement; Perpetual does not set limits. Rust validates and executes. A personalized watchdog prioritizes holding evidence; price protection runs independently of LLM/inference calls.
+The LLM researches stocks and proposes evidence-backed scenario constraints.
+The target [prediction-fusion architecture](./prediction-fusion.md) combines
+distinct LLM research, FinBERT sentiment, calibrated Perpetual forecasts and
+quantitative observations. Approved mathematics is the primary numerical
+authority for buy/stop/target limits, quantity and horizon; Rust independently
+validates risk/readiness and controls execution. Unsupported forecasts abstain
+and the selector may return `NO_TRADE`. This supersedes LLM-selected final prices;
+deployment remains gated. Holding protection runs independently of inference.
 
 The ordinary objective is approximately 1% daily growth, with position profit targets of 1% normally, 2–3% for stronger opportunities, and up to 10% for an exceptional verified catalyst. These are objectives, not a requirement to trade every day. Returns, losses, costs, and idle cash must be reported accurately. No configured profit target may exceed 10%.
 
@@ -27,7 +34,9 @@ The ordinary objective is approximately 1% daily growth, with position profit ta
 | [Research artifact contracts](./research-contracts.md) | Exact bounded screening/profile/relationship/watchdog/comparison writes and calculators |
 | [Research guide sources](./research-sources.md) | Researched primary measurements, taxonomy, attribution and limitations |
 | [Trading policy](./strategy.md) | Allocation, confidence points, targets, stops, adaptive holding, and execution state machines |
-| [Weekly optimization](./weekly-optimization.md) | Local Codex skill design, historical calibration with QuantConnect LEAN, Lean 4 proofs, evaluation gates and next-session handoff; not implemented or scheduled |
+| [Prediction fusion](./prediction-fusion.md) | Typed model semantics, calibrated baseline, scenario utility, historical evaluation and mathematical limit authority |
+| [Prediction implementation record](./prediction-implementation.md) | Tested Rust subset, source contracts, trusted-service obligations and unimplemented proof/backtest/deployment work |
+| [Weekly optimization](./weekly-optimization.md) | Local Codex skill, cumulative predictive/formula calibration, offline LEAN, Lean 4 proofs and independent release gates; no installed schedule or validated deployment |
 | [Telegram](./telegram.md) | Owner authorization, commands, notifications, and operational control |
 | [Memory and data](./memory-and-data.md) | LLM sessions, memory files, knowledge retrieval, PostgreSQL schema, and concurrency |
 | [LLM conversations and tools](./llm-and-tools.md) | JSON responses, repeated tool rounds, news/X/T212 information tools, and conversation finalization |
@@ -86,11 +95,12 @@ Requirements below originate from the requested product behavior. Defaults provi
 | Topic guides | Separate files for 11 sectors and 25 industry groups used as subsectors, plus operating branches |
 | Company/people memory | Revisioned profiles and attributed statements/relationships with provenance and corrections |
 | Global X people | Owner-selected Trump, Musk, Gill, Ackman and Icahn; scoped qualitative priorities |
-| Perpetual | Approved Rust gradient-boosting advisor; usable assessment required for entry, LLM proposes limits |
+| Perpetual | Approved Rust advisor; compatible assessment required for entry; binary probability alone cannot enable expected-utility selection |
 | FinBERT | Self-hosted Docker text-sentiment service; versioned Rust overlay affects entry/target thresholds; source rights and freshness apply; shipped disabled |
 | Holding attention | Personalized watchdog; 80% holding / 10% global / at most 10% alternative research, separate safety capacity |
 | Opportunity rotation | Initially disabled; comparative/execution gate required, default entry slot retained; bounded two-attempt policy is opt-in |
-| Initial position stop | Model proposes a price; policy allows at most 2% estimated net downside, with reward/risk validation |
+| Numerical limits | Approved formula selects buy/stop/target, quantity and horizon within verified constraints; LLM hints confer no authority |
+| Initial position stop | Formula derives a meaningful technical stop; at most 2% planned net downside and minimum reward/risk remain policy |
 | Daily loss guard | Proposed default: -2% deposit-adjusted session return blocks entries; exits continue |
 | Holding duration | Intraday preferred; overnight allowed with verified protection; proposed maximum five exchange sessions |
 | Trading hours | Regular exchange sessions initially; use exchange calendars and early closes |
@@ -120,6 +130,8 @@ implementation records.
 ## Invariants
 
 - The analyst has no broker trading credential and cannot call an executor order API.
+- LLM confidence, sentiment classes and scenario probabilities have different meanings; missing forecasts or outcomes cannot be invented.
+- Formula/fusion results, a backtest or a theorem cannot bypass risk, readiness or deployment approval.
 - Rust sells under validated price/time rules, authenticated owner close or an enabled deterministic rotation gate; research and ML text cannot submit orders.
 - New research can adjust future thresholds only through validation and an atomic plan-version change.
 - A triggered exit stays triggered; a newer optimistic recommendation cannot cancel it.

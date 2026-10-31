@@ -1,8 +1,12 @@
 # Trady v1 weekly strategy calibration and formal verification
 
-Status: implementation specification and researched design, checked 2026-10-31.
-This change adds documentation only. No Codex skill, calibration helper, Lean 4
-proof project, QuantConnect LEAN backtest or scheduler is installed or executed.
+Status: implementation specification and researched design, updated 2026-10-31.
+The [prediction-fusion contract](./prediction-fusion.md) extends this design with
+typed AI inputs, a calibrated baseline and scenario utility. A local Codex skill
+is included; the [implementation record](./prediction-implementation.md) identifies
+the tested pure Rust baseline and bounded workflow ports. No approved fusion
+model, calibration dataset, Lean 4 proof, QuantConnect LEAN backtest or scheduler
+is installed or executed by documenting these contracts.
 The owner will configure the weekend invocation locally using Codex CLI. No
 ChatGPT automation, cron entry or systemd timer is created by this document.
 
@@ -31,20 +35,22 @@ Keep [trading policy](./strategy.md), [Perpetual](./perpetual.md),
 and this offline developer agent are different identities. The offline agent is
 not another market-research skill with access to production tools.
 
-The current design lets the LLM propose entry/stop/target prices. This document
-proposes an **opt-in future `FORMULA_V1` limits authority**: the analyst supplies
-verified evidence and admissible scenario constraints; an approved deterministic
-Rust formula produces the final numerical proposal, and the executor revalidates
-it. Existing LLM price hints may be retained as non-authoritative comparisons.
-Do not enable this mode until strategy, architecture, proposal/readiness schemas,
-Perpetual scenario bindings and acceptance tests are updated together. Merely
-merging this document does not change the current limits authority.
+The target architecture uses **`FORMULA_V1` as the primary numerical limits
+authority**: the analyst supplies verified research and admissible constraints;
+`PredictionFusionEngine` validates compatible forecasts; deterministic Rust
+calculations select prices, quantity and horizon; the executor independently
+revalidates them. LLM price hints are non-authoritative comparisons. This
+supersedes earlier LLM-selected final prices. Activation remains blocked until
+compatible schemas/readiness, approved formula/models, final-scenario bindings,
+deployment evidence and acceptance tests exist together. Documentation or an
+implementation commit alone does not enable production trading.
 
 Perpetual remains an advisory predictor. When the formula changes a scenario,
 obtain an assessment bound to the final limits and horizon before readiness.
-A proposed expected-return formula requires separately validated return estimates;
-a target-hit probability alone is insufficient. Preserve the existing required
-skills, confidence floor and sentiment vetoes.
+Expected utility requires separately validated conditional net outcomes and the
+target-first/stop-first/expiry/non-fill partition; a target-hit probability alone
+is insufficient. Missing support yields abstention or `NO_TRADE`. Preserve the
+existing required skills, confidence floor and sentiment vetoes.
 
 ## Weekend lifecycle
 
@@ -58,11 +64,11 @@ which may not be Monday.
 | Stage | Required work | Durable result |
 |---|---|---|
 | 1. Freeze | Acquire a single-run lease; identify week, source revision, active strategy, data cutoff and next-session deadline | Immutable run manifest and duplicate-run decision |
-| 2. Reconcile | Compare recorded decisions with broker-confirmed fills, cash events, holdings, costs and orders through the cutoff | Reconciliation report; unresolved differences block promotion |
-| 3. Diagnose | Attribute returns, missed fills, rejected opportunities, execution errors and data gaps | Weekly review with sample counts and testable hypotheses |
-| 4. Register | Declare candidate family, parameter bounds, objective, splits, budgets and acceptance thresholds before new trials | Experiment plan plus append-only trial registry |
+| 2. Reconcile | Compare decisions with broker-confirmed fills, cash events, holdings, costs and orders; match original predictions to matured outcomes | Reconciliation report and append-only labels; open/censored horizons stay pending |
+| 3. Diagnose | Attribute returns, rejections and gaps; update cumulative calibration, drift, regime support, errors and feature redundancy | Historical sample counts, reliability records and testable hypotheses |
+| 4. Register | Declare formula/model/calibrator/fusion hypothesis, bounds, objective, chronological splits, purge/embargo, budgets and acceptance thresholds | Frozen plan plus append-only trial and holdout-consumption registry |
 | 5. Develop | Codex proposes bounded candidate changes; deterministic workers run development experiments | Candidate artifacts, all attempted trials and failures |
-| 6. Verify | Check proofs, arithmetic parity, chronological evaluation and stressed execution assumptions | Independently generated proof/parity/evaluation reports |
+| 6. Verify | Check Lean 4 proofs, arithmetic/wire parity, walk-forward evaluation, model/feature ablations and stressed execution | Independent proof/parity/calibration/evaluation reports |
 | 7. Decide | Apply fixed promotion rules; retain the champion when evidence is insufficient | `KEEP`, `SHADOW_CANDIDATE`, `APPROVAL_REQUIRED` or `BLOCKED` |
 | 8. Handoff | Deployment authority stages an approved revision for new plans and publishes the review | Activation/rollback references, or explicit unchanged configuration |
 
@@ -154,13 +160,14 @@ A prospective pure boundary is:
 
 ```text
 calculate_limits(policy, approved_formula, evidence_constraints,
-                 account_snapshot, market_snapshot, cost_model)
+                 account_snapshot, market_snapshot, cost_model, prediction_fusion)
   -> AcceptedCalculation | RejectedCalculation
 ```
 
 The accepted result binds formula/policy hashes, input IDs and timestamps,
 entry range, buy limit, quantity, stop trigger, target return/price, expiry,
-calculated costs and rejection/check records. This is not an order or an entry
+calculated costs, forecast/fusion/calibration revisions, utility and rejection/check
+records. This is not an order or an entry
 readiness certificate. Price/quantity/currency values use checked decimal or
 integer-unit arithmetic with explicit conversion and rounding.
 
@@ -170,21 +177,22 @@ The following is a proposed starting family, not a fitted profitable equation.
 Let `A` be spendable account cash; `a` the fresh ask; `[L,U]` the approved entry
 range; `tau` the instrument's price tick; `step` its quantity increment; and `v`
 a positive ATR-like volatility distance in instrument-price units. All are known
-at decision time. Candidate parameters `delta`, `k` and `r` remain inside a
+at decision time. Candidate parameters `d`, `k` and `r` remain inside a
 separately approved envelope.
 
 ```text
 floor_tick(x) = tau * floor(x / tau)
 ceil_tick(x)  = tau * ceil(x / tau)
 
-B = floor_tick(min(U, a + delta))
+B = floor_tick(min(U, a * (1 + d)))
 S = ceil_tick(B - k * v)
 
 Require L <= a <= U, a <= B <= U, 0 < S < B,
         valid ticks and broker/noise minimum stop distance.
 ```
 
-`delta` is a bounded entry-price allowance, not permission to chase later prices.
+`d` is a bounded fractional entry-price allowance applied once to this snapshot,
+not permission to chase later prices.
 This initial variant seeks a marketable limit; a resting-limit variant is a
 separate fill-model experiment. If rounding cannot satisfy the range or a stop
 is inside ordinary spread/noise, reject the setup rather than tightening the stop
@@ -210,6 +218,8 @@ Require (V(q*,T) - C(q*,B)) / (C(q*,B) - V(q*,S)) >= 1.5.
 
 Use a bounded solver and recheck the final quantity, prices and fees together;
 nonlinear fees, quantity minimums and tick rounding can invalidate a candidate.
+Check final tick/lot remainders, including extreme decimal magnitudes where an
+operation may round without overflow; reject unrepresentable results.
 An empty feasible set returns `REJECTED`. The account-risk budget is an additional
 constraint requiring owner configuration, not a new already-implemented policy
 field. No amount is inferred from account size or a model's confidence.
@@ -226,6 +236,34 @@ Use the existing monotonic trailing floor, original holding deadline and exit
 latch. A new weekly formula applies to new plans, not to the thresholds of an
 already-open position. Policy-owned confidence weights/floors, allocation ceilings,
 entry slots, risk limits and permissions are outside the optimization search space.
+
+### Prediction fusion and scenario objective
+
+The full contract is [prediction fusion and mathematical limits](./prediction-fusion.md).
+Keep LLM evidence, FinBERT classes, Perpetual forecasts and quantitative features
+as distinct typed inputs. Start with one approved calibrated forecaster plus
+evidence gates; never average unrelated probabilities. Historical reliability
+and regime support require cumulative matured out-of-sample predictions, not one
+week. Record shared lineages/errors without counting extra independent votes.
+
+After financial feasibility, compare a finite registered set of `(B,S,T,q,h)`
+scenarios using calibrated unconditional event probabilities `p_o`, conditional
+net account returns `R_o`, uncertainty `u` and fixed complexity `c`:
+
+```text
+utility = sum_o p_o * R_o
+          - lambda_risk * sum_o p_o * max(0, -R_o)
+          - lambda_uncertainty * u - lambda_complexity * c
+o in {TARGET_FIRST, STOP_FIRST, EXPIRY, NON_FILL}
+```
+
+The partition sums to one and binds the final scenario/execution convention.
+Conditional returns include costs/FX/slippage once. Select only a feasible
+scenario above the frozen cash hurdle; otherwise `NO_TRADE`. The binary Perpetual
+task cannot supply missing events/payoffs: utility selection abstains until
+separately trained and validated support exists. LLM confidence and sentiment
+cannot fill that gap. This per-decision utility and the cross-fold research
+objective below have distinct purposes and units; freeze both before experiments.
 
 ## Historical data and LEAN integration
 
@@ -341,6 +379,12 @@ do not subtract those costs twice. Reject invalid returns at or below -100%,
 undefined metrics and incomplete folds. Report monetary project costs separately
 and apply a predeclared economic-feasibility gate before live promotion.
 
+For this initial objective, `t` is one completed exchange session and every fold
+uses the same calendar-resolved number of sessions. Daily returns use
+cash-flow-adjusted account equity, including idle sessions and mark-to-market
+holdings; outcome-label maturity remains a separate requirement. Do not compare
+hourly and daily log-return means or folds of different length under one objective.
+
 The trusted evaluator also reports net return, maximum drawdown, downside/tail
 loss, Sharpe/Sortino with stated conventions, turnover, exposure, fill rate,
 trade count, regime/sector breakdown, parameter-neighborhood sensitivity and
@@ -427,14 +471,15 @@ of price inequalities.
 
 ## Local coding-agent skill
 
-The future developer skill belongs at
-`.agents/skills/trady-weekly-optimization/SKILL.md`, following the current
-[Codex local skill convention][c1]. It is separate from the 52 approved Trady
+The developer skill is included at
+[`.agents/skills/trady-weekly-optimization/SKILL.md`](../../.agents/skills/trady-weekly-optimization/SKILL.md),
+following the [Codex local skill convention][c1]. It is separate from the 52 approved Trady
 runtime skills in `skills/catalog.yaml`; do not add it to that catalog or expose
-its development tools to the live analyst. Its installation is a later task.
+its development tools to the live analyst. Its presence does not install a
+schedule or trusted experiment/proof/evaluation infrastructure.
 
-The following is the proposed skill body. The independent runner, not these
-instructions alone, must enforce the restrictions.
+The following summarizes the workflow; the linked skill is the maintained body.
+The independent runner, not these instructions alone, must enforce restrictions.
 
 ```markdown
 ---
@@ -455,8 +500,8 @@ implement missing infrastructure as an unreviewed part of this weekly run.
 
 1. Confirm the run cutoff, completed exchange sessions, current champion and lease.
 2. Inspect the trusted reconciliation report. Do not change ledger records.
-3. Diagnose winners, losers, rejections, open positions and no-trade periods.
-4. Register a falsifiable hypothesis, immutable development splits and a trial budget.
+3. Diagnose results and cumulative matured prediction calibration, drift and redundancy.
+4. Register a formula/fusion/model hypothesis, purged chronological splits and cumulative trial budget.
 5. Edit only allowlisted candidate parameters or separately authorized formula code.
 6. Request development experiments; keep every result, including failed hypotheses.
 7. Request clean proof, numeric parity and independent evaluation reports.
@@ -477,7 +522,7 @@ model identity, CLI version, prompt/skill hashes, usage, errors and any fallback
 silent model substitution invalidates reproducibility. Codex is the research and
 coding orchestrator, not the numerical optimizer or trusted evaluator.
 
-After the skill, runner and output schema exist, the owner may invoke the following
+After the trusted runner and output schema exist, the owner may invoke the following
 **illustrative local command** from an isolated candidate Git checkout. This does
 not install a schedule. Environment values and files must already be validated
 by the trusted wrapper, and the schema is a planned asset, not a bundled file.
@@ -510,6 +555,7 @@ can explain the workflow but cannot safely perform calibration.
 |---|---|---|
 | `review.read` / trusted exporter | Frozen run ID -> sanitized reconciliation/performance records | Read-only; unresolved records cannot be edited by the agent |
 | `dataset.describe` / dataset registry | Approved dataset ID -> coverage, availability/rights, feature schema and hashes | No arbitrary paths/SQL/download URLs; hidden partitions remain hidden |
+| `prediction.review` / trusted evaluator | Original predictions and matured outcome IDs -> cumulative calibration/drift/regime/ablation records | No contemporary/revised LLM predictions substituted into history; pending labels remain pending |
 | `experiment.register` / lab runner | Hypothesis, parent revision, bounded parameters, split/objective versions -> experiment ID | Reject changed gates/bounds and exhausted cumulative budgets |
 | `backtest.development` / sandbox runner | Registered candidate ID -> immutable LEAN artifacts and computed development metrics | Fixed driver, no credentials/network; no caller-supplied command line |
 | `proof.check` / trusted verifier | Candidate hash -> theorem, build and transitive-axiom report | Cannot accept changed safety specifications or model-written pass flags |
@@ -542,7 +588,8 @@ versions, model/calibrator IDs, Codex identity, skill/prompt hashes, engine/prov
 versions, random seeds, objective/split/gate versions, budgets and trial lineage.
 Store deterministic numeric artifacts separately from explanatory model text.
 
-Every candidate bundle includes its formula/parameter hash, proof report, exact
+Every candidate bundle includes formula/parameter, model, feature, calibrator,
+fusion and forecast-target hashes, original prediction/outcome lineage, proof report, exact
 Rust build, parity report, full development results, independent evaluation result,
 shadow lineage and applicable policy compatibility. Hash changes invalidate the
 corresponding evidence. Keep sensitive exports and licensed data out of Git;
@@ -630,12 +677,15 @@ No background task or automatic strategy deployment is installed here.
 
 ## Verification
 
-For this documentation change, check Markdown fences, reference definitions,
-relative links and consistency with the linked v1 contracts. Full repository
-checks remain `python3 scripts/verify-assets.py` and
-`cargo test --workspace --locked`; documenting them does not assert they ran.
+Check Markdown fences, references, local links and consistency with the linked
+v1 contracts. The [implementation record](./prediction-implementation.md) separates
+the executed Rust subset from remaining integration, proof and backtest work.
+Required repository checks are `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets --locked -- -D warnings`,
+`cargo test --workspace --locked` and `python3 scripts/verify-assets.py`.
 
-The future implementation must test at least these cases:
+Complete implementation must cover at least these cases; current focused tests
+cover only the subset identified in the implementation record:
 
 | Case | Expected result |
 |---|---|

@@ -15,6 +15,11 @@ and persistence ports, plus read-only owner monitoring.
 
 ## Interface
 
+- [Optimization contract](./src/optimization/README.md): approved formula/policy/
+  prediction bindings, deterministic replay and bounded weekly research decisions.
+  `WeeklyStore` and `WeeklyLab` are ports; concrete durable storage, proof/backtest
+  helpers and release authorization remain separate responsibilities.
+
 - `[src/sentiment/mod.rs:SentimentProvider]`, `assess_sentiment`: rights-aware source
   projection and exact prediction correlation; [design](../../docs/v1/finbert/README.md).
 

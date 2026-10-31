@@ -15,9 +15,27 @@ Use one Rust release with three isolated services: analyst, executor and Telegra
 
 Use a distinct account/mode namespace for every record and queue. Separate paper and live credential references and deployment configuration. A mode change is a restart/deployment operation that requires a verified flat or explicitly reconciled holding state; never silently convert simulated cash, plans or orders into live state.
 
-The suggested future invocation shapes are `trady analyst`, `trady executor` and `trady gateway`; the binary does not exist yet. Choose an exact Rust toolchain and dependencies when implementing the workspace. Deployment includes a schema compatibility check, a configuration fingerprint and process build identity in every audit event.
+The service invocation shapes are `trady analyst`, `trady executor` and
+`trady gateway`. The binary and bounded foundation probes exist; use the current
+implementation records and CLI help for supported orchestration. A documented
+shape is not an installed or approved deployment. Pin the Rust toolchain and
+dependencies, and include schema compatibility, configuration fingerprint and
+build identity in every deployment audit event.
 
 ## FinBERT sidecar preparation
+
+Offline [weekly optimization](./weekly-optimization.md) and
+[prediction fusion](./prediction-fusion.md) require a separate lab identity,
+rights-approved frozen data, cumulative resource/spend budgets and protected
+evaluators. The owner configures any weekend invocation locally; no timer is
+installed by the included skill. Keep LEAN offline, Lean 4 in its pinned proof
+project, model preparation outside ordinary experiment runs, and broker/release
+credentials outside the coding workspace. Missing tools, data, budgets or proofs
+produce `BLOCKED`; keep the compatible champion or pause new entries while
+protection continues. Apply the stated lab CPU/memory caps without starving the
+executor. Activation/rollback is atomic and deployment-owned, at a safe next-session
+boundary, for new plans only. Model/fusion/formula changes require refreshed
+compatibility, independent evidence, shadow outcomes and owner approval.
 
 [FinBERT deployment and activation](./finbert/README.md#deployment-files-and-later-activation)
 defines the opt-in CPU service, local port, pinned revision, non-root cache and

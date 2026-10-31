@@ -6,6 +6,23 @@ guides. FinBERT assessment persistence below is planned, not existing DDL.
 
 ## Authority and storage
 
+The [fusion design](./prediction-fusion.md) additionally requires original
+prediction records, immutable payload hashes, source/model/extractor/calibrator
+versions, observation/availability/production times, target/horizon/scenario
+bindings, uncertainty and evidence/dependence lineage. Store matured/censored
+outcomes as append-only linked observations with effective and available times;
+never overwrite a forecast using a later model or corrected source. Historical
+calibration/reliability by regime includes sample counts, split identities and
+holdout-consumption records. These additional tables/privileges are requirements,
+not DDL implied to exist by this documentation.
+
+Freeze weekly manifests, all attempted trials/failures, proof/parity/evaluation
+artifacts and compatible model/fusion/formula release hashes. The offline lab
+receives a sanitized export, no production database or broker credential.
+Its artifact store is not the financial ledger or release authority. The
+deployment-owned store controls approval/activation; new revisions never rewrite
+an existing position's original plan, deadline, trailing state or exit latch.
+
 Use a dedicated `trady` database in the existing PostgreSQL server when its version, capacity and access arrangement are verified. PostgreSQL is authoritative for policy, research history, model sessions, position plans, broker reconciliation and queues. Local Markdown/JSON memory files are readable projections with database revision metadata; they are not a second source of financial truth.
 
 | Information | Authoritative writer | Use in a model context |

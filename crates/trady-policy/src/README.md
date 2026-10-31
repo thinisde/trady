@@ -7,6 +7,24 @@ Its feature inputs require verification by the application; they are not model a
 
 ## Interface
 
+- `[lib.rs:ceil_to]`: checked upward tick rounding. `[lib.rs:floor_to]` and
+  `ceil_to` recheck exact remainders and reject exhausted decimal precision.
+- `[economics.rs:AcquisitionFill]`, `CostBasis::{validate}`, `cost_basis`,
+  `ExitCosts`, `liquidation_proceeds`, `planned_loss_fraction`, `NetReturn`,
+  `validate_executable_quote`, `net_executable_return`, `target_price`,
+  `StopConstraints`, `StopProposal`, `ProtectiveStop`, `validate_protective_stop`:
+  checked linear account-currency acquisition/liquidation/stop economics.
+  Current cross-currency FX is positive, directed and at most 60 seconds old.
+  Actual fills require deduplication by the caller; a stop is a planned trigger,
+  rather than a guarantee of an executable fill price.
+- `[limits/mod.rs:calculate_limits]`: approved parameter envelope, checked
+  prices/lots and financial constraints; [component contract](./limits/README.md).
+- `[prediction/mod.rs:PredictionFusionEngine]`, `expected_utility`,
+  `select_scenario`, `score_matured_predictions`, `ChronologicalSplit`:
+  calibrated baseline, abstention/cash selection and original-outcome evaluation;
+  [component contract](./prediction/README.md). All of these boundaries are pure;
+  successful calculations grant no order or deployment authority.
+
 - `[sentiment/mod.rs:sentiment_thresholds]`, `SentimentThresholds`,
   `validate_probabilities`: conservative FinBERT overlay with current-time checks;
   [component contract](./sentiment/README.md).

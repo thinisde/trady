@@ -57,6 +57,10 @@ The FinBERT row is implemented as described in its linked contract.
 | `ExecutionRepository` | Account snapshots, entry-slot reservation, position/plan compare-and-swap, order intent, fills and ledger |
 | `NotificationPort` | Transactional outbox events with stable delivery keys |
 | `Clock` / `ExchangeCalendar` | Reproducible time, sessions, holidays, early closes and trading cutoffs |
+| `PredictionFusionEngine` / pure policy | Versioned predictions and resolved calibration support -> compatible calibrated baseline or explicit abstention; no averaging of unlike probabilities |
+| `FormulaCalculator` / pure policy | Approved formula, constraints, account/market/costs and fusion -> feasible decimal limits or rejection/`NO_TRADE` |
+| `PredictionRepository` / research | Original immutable predictions, matured/censored outcomes, model/regime reliability, dependence and calibration records |
+| `WeeklyLab` / offline trusted workers | Frozen trials -> chronological LEAN development, Lean 4 proof/parity and independently consumed evaluation reports; no broker credentials |
 
 Do not expose `place_order` as an LLM tool, include broker secrets in prompts, or let a model choose a destination URL outside the source registry. Domain objects cross application boundaries; provider field names stay inside adapters.
 
@@ -73,8 +77,8 @@ exist; this durable dossier/executor binding remains planned.
 2. Collectors ingest permitted material; verifiers map instruments, collapse repeated stories, and retain contradictions.
 3. The analyst creates a session context from approved policy, synchronized account state, relevant memory, evidence and quotes.
 4. The analyst loads the required scenario skills and runs bounded JSON tool-request/result rounds until a validated final answer, clarification or incomplete result. A final proposal may be `ENTRY_PROPOSAL`, `PLAN_UPDATE`, `HOLD`, or `NO_ACTION`; none is an order command.
-5. The analyst stores every turn/tool result, final artifacts, skill-completion/readiness dossier, validation errors, usage and context manifest. Only a finalized eligible dossier queues a proposal-ready event for new entry.
-6. The executor checks complete required research/skills, independent-source comparison, resolved contradictions and at least 90 confidence, then rechecks policy, quote freshness, account state and economics. A stale, incomplete or invalid proposal produces a recorded rejection.
+5. Under the target [fusion contract](./prediction-fusion.md), the application freezes a finite scenario domain, validates distinct predictions and calculates final numerical limits. A binary hit probability without validated payoffs/other outcomes cannot enable utility selection. Record `ABSTAIN`/`NO_TRADE` when evidence is inadequate. Bind final calculations and forecasts to the same prices, costs, quantity and horizon before final Perpetual review.
+6. Store every turn/tool result, original prediction, calculation and readiness dossier. The executor independently checks approved formula/fusion revisions, skills, independent sources, contradictions, sentiment-adjusted confidence at least 90, quote/FX freshness, account state, costs and risk. A changed scenario requires recalculation and reassessment; JSON validity grants no authority.
 7. For an entry, a database transaction reserves the session's entry slot and stores the sized order intent. Commit before contacting the broker.
 8. The executor submits once, reconciles the actual fill and protects the filled quantity. Telegram receives a research decision and separately an execution outcome.
 
@@ -101,6 +105,8 @@ LLM downtime does not stop price monitoring. Telegram downtime does not stop pro
 | `AttentionScheduler` / analyst | Holding/global/alternative work → priority queues | 80/10/10 research default; executor safety capacity separate |
 | `PerpetualAdvisor` / analyst | Approved model + point-in-time features/scenario → advisory assessment | Bounded Rust inference; unusable results block required entries, retain holding plan |
 | `SentimentProvider` / analyst | Rights-checked X/news/text → pinned FinBERT probabilities → Rust threshold overlay | Bounded HTTP; stale/invalid/truncated results fail; no model call under executor locks |
+| `PredictionFusionEngine` / pure policy | Distinct research/sentiment/ML/quantitative predictions + historical support → calibrated baseline or abstention | Immutable provenance, redundancy diagnostics, explicit missing/stale/regime failures; no order port |
+| `FormulaCalculator` / pure policy | Approved finite parameters + compatible predictions + verified financial inputs → limits and utility or `NO_TRADE` | Financial constraints precede ranking; executor revalidates the final scenario |
 | `RotationEvaluator` / executor | Validated comparison/policy/state → rotation authorization | Serialized with exits; opt-in, old trigger wins |
 
 ```text
@@ -108,9 +114,11 @@ Sources / X events → durable items → entity/claim verification
                                       ↓
 S&P 500 snapshot → sector → group → finalist → profile / relationships
                                       ↓                 ↓
-                             scenario economics → Perpetual advisory tool
+               research + FinBERT + Perpetual + quantitative observations
                                       ↓
-LLM proposed limits + explanation + watchdog → readiness dossier
+                calibrated baseline + financial scenario feasibility
+                                      ↓
+         mathematical limits / NO_TRADE + explanation + watchdog → readiness dossier
                                       ↓
 Executor rechecks → intent / fills → price protection + active watchdog binding
 ```
@@ -135,6 +143,7 @@ Initial universe: US regular sessions, calendar timezone `America/New_York`; own
 | Overnight research | Hourly while a position is held | Queue evidence; no extended-hours trading in initial policy |
 | End-of-day reconciliation | 10 minutes after actual close | Block next entry on unresolved differences |
 | Weekly review | 30 minutes after the week's last actual session closes | Numeric metrics calculated in code |
+| Weekly optimization | Owner-configured Saturday/Sunday job after data/reconciliation are ready | Frozen cumulative model/formula experiment; missed next-session deadline retains a safe approved revision or pauses new entry |
 
 These intervals are defaults, not promises about provider delivery latency. A market-data provider that cannot support the freshness envelope cannot enable live mode. Use a configurable 60-second account/FX age limit for new orders, a 5-minute proposal lifetime, and at most one queued reassessment per held symbol. Revalidate at submission rather than treating these lifetimes as permission to use stale quotes.
 

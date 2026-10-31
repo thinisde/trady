@@ -1,5 +1,8 @@
 //! Pure, checked financial calculations. Inputs must be verified observations.
 
+pub mod economics;
+pub mod limits;
+pub mod prediction;
 pub mod sentiment;
 
 use chrono::{DateTime, Duration, Utc};
@@ -227,14 +230,16 @@ pub fn validate_risk(
         "invalid initial loss",
     )?;
     require(
-        div(target, planned_loss)? >= policy.min_reward_to_risk,
+        target >= mul(planned_loss, policy.min_reward_to_risk)?,
         "insufficient reward/risk",
     )
 }
 
 pub fn fresh(observed_at: DateTime<Utc>, now: DateTime<Utc>, max_age_seconds: i64) -> bool {
-    observed_at <= now
-        && now.signed_duration_since(observed_at) <= Duration::seconds(max_age_seconds)
+    max_age_seconds >= 0
+        && observed_at <= now
+        && now.signed_duration_since(observed_at)
+            <= Duration::seconds(max_age_seconds.min(i64::MAX / 1000))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -245,28 +250,32 @@ pub struct EntryRange {
     pub currency: Currency,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FxObservation {
     pub from: Currency,
     pub to: Currency,
     pub rate: Decimal,
     pub observed_at: DateTime<Utc>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct EntryCosts {
     pub fixed: Money,
     pub rate: Decimal,
     pub uncertainty: Money,
     pub fx: Option<FxObservation>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct InstrumentRules {
     pub price_tick: Decimal,
     pub quantity_step: Decimal,
     pub minimum_quantity: Decimal,
     pub currency_unit: Decimal,
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SizedEntry {
     pub limit_price: Decimal,
     pub quantity: Decimal,
@@ -280,7 +289,30 @@ pub fn floor_to(value: Decimal, step: Decimal) -> Result<Decimal> {
         step > Decimal::ZERO && value >= Decimal::ZERO,
         "invalid rounding step or value",
     )?;
-    mul(div(value, step)?.floor(), step)
+    let remainder = value
+        .checked_rem(step)
+        .ok_or_else(|| Error("decimal remainder overflow".into()))?;
+    let rounded = sub(value, remainder)?;
+    require(
+        rounded <= value && rounded.checked_rem(step) == Some(Decimal::ZERO),
+        "rounding precision exhausted",
+    )?;
+    Ok(rounded)
+}
+
+/// Round upward without division losing a tiny remainder at a large magnitude.
+pub fn ceil_to(value: Decimal, step: Decimal) -> Result<Decimal> {
+    let floor = floor_to(value, step)?;
+    if floor == value {
+        Ok(value)
+    } else {
+        let rounded = add(floor, step)?;
+        require(
+            rounded >= value && rounded > floor && rounded.checked_rem(step) == Some(Decimal::ZERO),
+            "rounding precision exhausted",
+        )?;
+        Ok(rounded)
+    }
 }
 
 /// A linear, conservative cost model only. Unsupported fee models must abstain.
@@ -348,7 +380,7 @@ pub fn size_entry(
         )?;
         fx.rate
     };
-    let limit_price = mul(div(quote.ask, rules.price_tick)?.ceil(), rules.price_tick)?;
+    let limit_price = ceil_to(quote.ask, rules.price_tick)?;
     require(
         limit_price >= range.minimum && limit_price <= range.maximum,
         "no valid entry tick inside range",

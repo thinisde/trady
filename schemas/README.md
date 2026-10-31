@@ -23,6 +23,12 @@ own schema version is distinct from LLM protocol version and proposal-body versi
 `[../scripts/verify-assets.py:verify_schemas]` checks copies against the normative Markdown.
 Schema validity alone does not prove evidence or readiness.
 
+The [prediction-fusion design](../docs/v1/prediction-fusion.md) specifies additional
+typed prediction/calculation/release bindings. The existing two JSON schemas
+remain unchanged research contracts; model threshold fields are hints and do not
+form a fusion or execution certificate. Do not expose a new tool until its
+versioned closed schema, semantic validation and handler are implemented together.
+
 ## Side Effects
 
 None. These are static JSON assets embedded by the application validator.

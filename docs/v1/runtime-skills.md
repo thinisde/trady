@@ -1,6 +1,10 @@
 # Trady v1 runtime skills
 
-Status: the linked `SKILL.md` instruction files are included in this repository. The Rust loader, validators and execution workflow described here are not implemented yet. These are Trady analyst skills, not installations into the developer's local Codex skill directory.
+Status: runtime instruction files are included, and the OpenCode loader implements
+an approved subset as recorded in [its guide](../opencode/README.md). Full trading
+readiness remains a separate integration. These are Trady analyst skills; the
+[local weekly Codex skill](../../.agents/skills/trady-weekly-optimization/SKILL.md)
+is a separate offline developer workflow outside the 52-skill runtime catalog.
 
 ## Skill bundle and routing
 
@@ -44,8 +48,8 @@ For a possible new entry, require thirteen routed skills: `conversation-and-tool
 2. Compare 11 sectors, narrow the best group/branch, and shortlist at most five stocks under [sector selection](./sector-workflow.md).
 3. Deep-read the finalist's filings, CEO/company/counterparty statements and adverse evidence; persist the profile and relationship review.
 4. Compare reporting origins and resolve material contradictions. Prepare the stock-specific watchdog template.
-5. Calculate draft plan economics, call Perpetual on the matching versioned scenario, and explicitly explain its advisory influence or disagreement. The LLM still proposes limits.
-6. Refresh prices/FX and final economics; require every artifact, usable required ML assessment, confidence at least 90 and complete readiness before entry.
+5. Propose verified scenario constraints; the approved mathematical engine calculates numerical limits using the [fusion contract](./prediction-fusion.md). Call Perpetual on the exact final scenario, explaining use/disagreement without overriding numerical results. Missing complete calibrated outcomes prevents utility selection.
+6. Refresh prices/FX and final economics; bind formula/fusion/model/calibrator revisions and original forecasts. Require every artifact, usable required assessment, sentiment-adjusted confidence at least 90 and independent readiness. Changed numerical scenarios require recalculation/reassessment; `NO_TRADE` is valid.
 
 Persist stages through [typed artifacts](./research-contracts.md) across bounded runs; include earlier validated skill results/dependencies in the current context manifest. A new material fact invalidates affected completions. Selecting another sector/group changes mandatory topic skills. A mere loaded file or model completion claim never proves that work ran. The final v2 research object links the validated stage records, including the Perpetual review.
 

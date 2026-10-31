@@ -2,7 +2,12 @@
 
 ## Overview
 
-These **52 instruction files** cover 16 workflow skills, 11 sectors and 25 subsectors. They are included artifacts; no runtime loader/trading implementation exists yet. [The catalog](./catalog.yaml) binds names, paths, versions and GICS parents. Use [runtime integration](../docs/v1/runtime-skills.md) for progressive loading and completion.
+These **52 instruction files** cover 16 workflow skills, 11 sectors and 25 subsectors.
+[The catalog](./catalog.yaml) binds names, paths, versions and GICS parents.
+The [OpenCode guide](../docs/opencode/README.md) records the approved loader subset;
+full trading readiness remains separate. Use [runtime integration](../docs/v1/runtime-skills.md)
+for loading/completion. The [offline Codex optimization skill](../.agents/skills/trady-weekly-optimization/SKILL.md)
+is outside this production catalog and grants no runtime tools.
 
 ## Interface
 
@@ -23,7 +28,7 @@ These **52 instruction files** cover 16 workflow skills, 11 sectors and 25 subse
 | [influential-people](./influential-people.SKILL.md) | Apply the owner's account scopes, identity checks and event triage |
 | [holding-watchdog](./holding-watchdog.SKILL.md) | Prepare personalized monitoring and prioritize the holding |
 | [opportunity-comparison](./opportunity-comparison.SKILL.md) | Compare keeping, cash and an alternative under rotation/entry gates |
-| [perpetual-review](./perpetual-review.SKILL.md) | Weigh ML advice while retaining LLM-proposed limits |
+| [perpetual-review](./perpetual-review.SKILL.md) | Explain ML advice while retaining approved mathematical limits and independent Rust policy |
 | [11 sector guides](./sectors/README.md) | Separate research instructions for every GICS sector |
 | [25 subsector guides](./subsectors/README.md) | Separate industry-group instructions with operating branches |
 

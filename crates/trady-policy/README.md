@@ -13,6 +13,13 @@ updates a caller-owned pause flag when the adjusted session loss reaches 2%.
 
 ## Interface
 
+- [Formula calculator](./src/limits/README.md): checked entry/stop/target,
+  cash/risk-bounded lots and calendar-deadline bindings.
+- [Prediction fusion](./src/prediction/README.md): distinct source semantics,
+  calibrated baseline, net utility, cash selection and original-outcome scoring.
+- `[src/economics.rs:CostBasis]`, `ExitCosts`, `liquidation_proceeds`, `target_price`:
+  account-currency linear fee/FX economics shared by the formula calculator.
+
 - `[src/sentiment/mod.rs:sentiment_thresholds]`, `SentimentThresholds`,
   `validate_probabilities`: pure sentiment adjustment and entry/target constraints;
   [versioned rules](../../docs/v1/finbert/README.md#threshold-calculation-version-1).

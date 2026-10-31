@@ -1,5 +1,6 @@
 //! Provider-neutral, validated identifiers and execution observations.
 
+pub mod prediction;
 pub mod research;
 pub mod screening;
 pub mod sentiment;

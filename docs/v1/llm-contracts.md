@@ -1,8 +1,21 @@
 # Trady v1 exact JSON contracts
 
-Status: normative documentation for protocol/proposal version 1 and research schema version 2; no runtime validator is implemented. The JSON Schema below and its examples define canonical model payloads. A provider adapter may translate into a supported native schema/wire format, but local validation uses this full contract.
+Status: normative documentation for protocol/proposal version 1 and research
+schema version 2. The application validator and OpenCode harness implement a
+subset recorded in [the foundation](../foundation.md) and
+[OpenCode guide](../opencode/README.md); full readiness is separate. The schema
+and examples define canonical model payloads. Provider adaptation never replaces
+local semantic validation or grants financial authority.
 
 ## Direction and ownership
+
+Under the target [mathematical-limits contract](./prediction-fusion.md), the
+model-owned threshold fields below are research hints. The application/executor
+must independently resolve the approved formula and compatible fusion inputs,
+recompute final prices/quantity/horizon and bind forecasts to that final scenario.
+These existing schemas do not yet encode a complete fusion/readiness certificate
+and cannot enable that production path on shape validation alone. Do not fabricate
+probabilities or calibration/release records in otherwise schema-valid JSON.
 
 | Record | Writer and allowed fields |
 |---|---|

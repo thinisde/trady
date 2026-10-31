@@ -3,6 +3,7 @@
 pub mod broker;
 pub mod contracts;
 pub mod harness;
+pub mod optimization;
 pub mod research;
 pub mod sentiment;
 pub mod telegram;

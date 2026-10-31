@@ -1,8 +1,21 @@
 # Trady exact research artifact contracts
 
-Status: normative design schemas, not implemented tool handlers. Artifact version 1 and final research schema version 2 support the sector/company/watchdog workflow. The existing model-turn protocol and proposal body versions remain 1.
+Status: normative design schemas with implemented validator/handler subsets
+identified in [the foundation](../foundation.md) and [OpenCode guide](../opencode/README.md).
+Artifact version 1 and final research schema version 2 support the target
+sector/company/watchdog workflow. Complete readiness is separate. Model-turn
+protocol and proposal-body versions remain 1.
 
 ## Ownership and bounded storage
+
+The [prediction-fusion contract](./prediction-fusion.md) extends the target
+application boundary with immutable typed predictions, calibration records and
+formula/fusion calculation bindings. Existing artifact/calculator schemas below
+remain unchanged research contracts; they do not accept model-written calibration
+success, approved formula revisions or execution authority. Application-resolved
+records must bind source/model/availability/horizon/target/uncertainty and the
+final scenario before any future formula readiness acceptance. A new tool/schema
+revision needs explicit handlers, fixtures and deployment review before exposure.
 
 `research.store_artifact` takes exactly `{"artifact": <one typed object>}`. It writes an immutable draft and returns application-generated references plus validation status; it cannot write arbitrary tables, verification results, policy or orders. The handler binds owner/run/source scope from trusted context and deduplicates by run/call ID. No model-provided artifact ID, owner ID, SQL, filesystem path or verification flag is accepted.
 

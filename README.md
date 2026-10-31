@@ -2,13 +2,28 @@
 
 ## System Overview
 
-Trady is a planned Rust trading bot that narrows S&P 500 stocks by sector and subsector, researches companies and public statements, and stores profiles and relationships in PostgreSQL. It combines X, market-news APIs, Google News RSS and approved collectors. The LLM uses JSON tools, [52 runtime skills](./skills/README.md) and [Perpetual's advisory predictions](./docs/v1/perpetual.md) to propose entry, stop and target limits. Rust validates plans and controls orders; Telegram provides conversations, controls and holding-watchdog updates.
+Trady is a planned Rust trading bot that narrows S&P 500 stocks by sector and
+subsector and researches companies and public statements. Its
+[hybrid prediction design](./docs/v1/prediction-fusion.md) combines LLM research,
+FinBERT, calibrated Perpetual forecasts and quantitative signals. Approved
+mathematics determines buy/stop/target limits, quantity and horizon; Rust
+independently enforces risk and controls orders. The [52 runtime skills](./skills/README.md)
+guide research; Telegram provides conversations and monitoring. Missing predictive
+support can produce `NO_TRADE`; no model invents an outcome probability or return.
 
 **Current repository status:** the six-crate Rust workspace includes strict JSON contracts, checked policy calculations, fake providers, paper demonstrations, PostgreSQL recovery, and an [OpenCode Go conversation harness](./docs/opencode/README.md) with durable sessions, approved skill loading and bounded tool execution. The three service commands remain bounded startup probes. Complete research readiness, Perpetual, Telegram and validated order/protection orchestration remain incomplete. Automated paper, shadow and live execution are not enabled.
 
 Start with the [Trady v1 specification](./docs/v1/README.md), [daily selection workflow](./docs/v1/sector-workflow.md), [company intelligence](./docs/v1/company-intelligence.md) and [owner-selected X accounts/watchdogs](./docs/v1/watchdogs-and-x.md). The bundle includes separate guides for all 11 sectors and 25 industry-group subsectors.
 
 ## Interface
+
+The [weekly optimization specification](./docs/v1/weekly-optimization.md) and
+[local Codex skill](./.agents/skills/trady-weekly-optimization/SKILL.md) define
+cumulative forecast calibration, offline QuantConnect LEAN experiments, Lean 4
+proof obligations and independent promotion. They do not install a schedule,
+provide trained models or certify a live release.
+The [prediction implementation record](./docs/v1/prediction-implementation.md)
+identifies tested Rust calculations and the remaining proof/backtest services.
 
 The [central credentials guide](./docs/credentials.md) covers API keys, shared
 secrets, hashing/signing keys and database credentials. Run

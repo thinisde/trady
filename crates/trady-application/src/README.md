@@ -13,6 +13,17 @@ read-only monitoring.
 
 ## Interface
 
+- `[optimization/mod.rs:ApprovedFormula]`, `FormulaAuthority`, `PredictionAuthority`,
+  `BoundCalculation`, `FormulaProposal`, `ScenarioPredictionInput`,
+  `calculate_authoritative_limits`: deployment-supplied authority, deterministic
+  replay and final scenario/prediction/utility validation.
+- `[optimization/weekly.rs:WeeklyState]`, `RunManifest`, `ExperimentPlan`,
+  `WeeklyStore`, `WeeklyLab`, `run_weekly`: frozen bounded offline experiments;
+  [component contract](./optimization/README.md). Hash/metadata checks do not
+  authenticate reports. Pure formula operations perform no I/O; `run_weekly`
+  invokes supplied clock/store/lab ports and persists research recommendations
+  without entry or live-activation authority.
+
 - `[sentiment/mod.rs:SentimentProvider]`, `assess_sentiment`, `text_sha256`,
   `validate_probabilities`: provider port, rights-aware projection and correlated
   sentiment observations; [contract](./sentiment/README.md).

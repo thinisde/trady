@@ -38,7 +38,14 @@ The initial breadth pass can be completed across several bounded runs. Persist p
 
 Persist the scope, every covered/rejected sector/group, component calculation references, chosen codes/branch, candidate IDs, reasons and missing coverage through `research.store_artifact`. Store full breadth arrays in PostgreSQL; final JSON references their application-generated IDs so the model context stays bounded. Exact stage contracts are in [research artifact contracts](./research-contracts.md).
 
-A completed entry dossier binds the universe/classification snapshot, screening revision, topic skill hashes, profile revision, relationship review, watchdog and [Perpetual assessment](./perpetual.md). After draft scenario advice, the LLM chooses final limits and obtains matching final economics/ML bindings. The executor refreshes account/prices, recalculates score/economics and rejects materially invalidated assessments. A macro scan cannot repair missing company disclosure or failed protection.
+A completed entry dossier binds the universe/classification snapshot, screening
+revision, skill hashes, profile/relationship review, watchdog and
+[Perpetual assessment](./perpetual.md). Under [prediction fusion](./prediction-fusion.md),
+the LLM proposes constraints and the approved mathematical engine selects numerical
+limits, quantity and horizon. Bind the exact final scenario, original forecasts
+and formula/fusion/calibration revisions. The executor refreshes account/prices,
+recalculates score/economics and rejects invalidated assessments. A macro scan
+cannot repair missing disclosure, incomplete predictions or failed protection.
 
 ## Verification
 

@@ -4,7 +4,7 @@ description: >-
   Reassess Trady's existing holding after scheduled or material news updates and
   propose a justified hold or threshold update without cancelling a triggered exit.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Position review
@@ -16,6 +16,12 @@ Read actual held quantity, current plan/version, stop, target, trailing peak/flo
 Read the personalized [watchdog](../holding-watchdog.SKILL.md) and prioritize its issuer/people/relationship/sector dependencies. Compare new evidence with the original thesis and accepted/rejected changes. Reuse [news analysis](../news-analysis/SKILL.md) and [source comparison](../source-comparison/SKILL.md) for material claims; consult [Perpetual](../perpetual-review.SKILL.md) on changed plan scenarios. Price movement alone is not proof of an improved product story.
 
 ## Decide whether a change is justified
+
+Keep the original formula/fusion revision and deadline with the active plan.
+Request numerical changes through the approved calculator and a newly bound
+assessment under [prediction fusion](../../docs/v1/prediction-fusion.md); subjective
+price hints or a weekly model revision cannot replace active protection, reset
+age/entry slots, clear an exit latch or force rotation.
 
 For fast appreciation with new verified support, evaluate a higher target only before the old target is reached and within the computed confidence band. Retain or tighten protection. A higher target is optional; normal 1% taking remains valid.
 

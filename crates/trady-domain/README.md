@@ -13,6 +13,10 @@ redaction operation (`[src/research.rs:SourceItem::redact]`).
 
 ## Interface
 
+- `[src/prediction.rs:Prediction]`, `PredictionMetadata`, `PredictionPayload` and
+  `MaturedOutcome`: distinct versioned source meanings, original forecast
+  provenance and explicit validation; see the [fusion specification](../../docs/v1/prediction-fusion.md).
+
 - `[src/sentiment/mod.rs:SentimentAssessment]` and related DTOs/constants: decimal
   probabilities, exact text/model identity and source lineage/expiry observations.
 

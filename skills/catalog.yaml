@@ -1,5 +1,5 @@
 catalog_version: 1
-bundle_version: "2.0.1"
+bundle_version: "2.1.0"
 taxonomy:
   system: GICS
   reviewed_at: "2026-10-31"
@@ -27,11 +27,11 @@ skills:
     kind: workflow
   - name: entry-readiness
     path: entry-readiness/SKILL.md
-    version: "1.0.0"
+    version: "1.1.0"
     kind: workflow
   - name: position-review
     path: position-review/SKILL.md
-    version: "1.0.0"
+    version: "1.1.0"
     kind: workflow
   - name: conversation-and-tools
     path: conversation-and-tools/SKILL.md
@@ -43,7 +43,7 @@ skills:
     kind: workflow
   - name: memory-and-review
     path: memory-and-review/SKILL.md
-    version: "1.0.0"
+    version: "1.1.0"
     kind: workflow
   - name: sector-selection
     path: sector-selection.SKILL.md
@@ -71,7 +71,7 @@ skills:
     kind: workflow
   - name: perpetual-review
     path: perpetual-review.SKILL.md
-    version: "1.0.0"
+    version: "1.1.0"
     kind: workflow
   - name: sector-energy
     path: sectors/10-energy.SKILL.md

@@ -10,6 +10,19 @@ research observations, collection state and an explicit content-redaction method
 
 ## Interface
 
+- `[prediction.rs:PredictionSource]`, `PredictionTarget`, `CalibrationStatus`,
+  `ForecastHorizon`, `PredictionUncertainty`, `UncertaintyUnit`, `CalibrationRecord`,
+  `PredictionMetadata`, `PredictionPayload`, `Prediction`: typed versioned input
+  records with explicit `validate(now)` and closed source/payload meanings.
+- `[prediction.rs:OutcomeProbabilities::{values, validate}]`, `QuantitativeIndicators`,
+  `ScenarioOutcome::index`, `MaturedOutcome`: four-way probabilities, indicator
+  missingness and original-scenario labels bound to their convention version.
+- `[prediction.rs:valid_prediction_id]`, `valid_prediction_hash`, `probability`:
+  identifier/hash/probability checks. Metadata validation requires causal
+  observation/availability/generation times, current expiry, bounded lineages,
+  exact probability partitions and chronological out-of-sample calibration claims.
+  These checks do not authenticate provenance or establish forecast accuracy.
+
 - `[sentiment/mod.rs:SentimentProbabilities]`, `SentimentDocument`, `SentimentPrediction`,
   `SentimentBatch`, `SentimentEvidence`, `SentimentAssessment`: provider-neutral
   sentiment records. Constants expose schema version, shipped model/revision and
