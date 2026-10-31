@@ -27,6 +27,7 @@ The ordinary objective is approximately 1% daily growth, with position profit ta
 | [Research artifact contracts](./research-contracts.md) | Exact bounded screening/profile/relationship/watchdog/comparison writes and calculators |
 | [Research guide sources](./research-sources.md) | Researched primary measurements, taxonomy, attribution and limitations |
 | [Trading policy](./strategy.md) | Allocation, confidence points, targets, stops, adaptive holding, and execution state machines |
+| [Weekly optimization](./weekly-optimization.md) | Local Codex skill design, historical calibration with QuantConnect LEAN, Lean 4 proofs, evaluation gates and next-session handoff; not implemented or scheduled |
 | [Telegram](./telegram.md) | Owner authorization, commands, notifications, and operational control |
 | [Memory and data](./memory-and-data.md) | LLM sessions, memory files, knowledge retrieval, PostgreSQL schema, and concurrency |
 | [LLM conversations and tools](./llm-and-tools.md) | JSON responses, repeated tool rounds, news/X/T212 information tools, and conversation finalization |
