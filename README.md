@@ -13,6 +13,8 @@ support can produce `NO_TRADE`; no model invents an outcome probability or retur
 
 **Current repository status:** the six-crate Rust workspace includes strict JSON contracts, checked policy calculations, fake providers, paper demonstrations, PostgreSQL recovery, and an [OpenCode Go conversation harness](./docs/opencode/README.md) with durable sessions, approved skill loading and bounded tool execution. The three service commands remain bounded startup probes. Complete research readiness, Perpetual, Telegram and validated order/protection orchestration remain incomplete. Automated paper, shadow and live execution are not enabled.
 
+The [ten proposed market intelligence extensions](./docs/v1/features/README.md) are optional, separately documented research designs; they are not part of the current v1 trading requirements and are not implemented or activated.
+
 Start with the [Trady v1 specification](./docs/v1/README.md), [daily selection workflow](./docs/v1/sector-workflow.md), [company intelligence](./docs/v1/company-intelligence.md) and [owner-selected X accounts/watchdogs](./docs/v1/watchdogs-and-x.md). The bundle includes separate guides for all 11 sectors and 25 industry-group subsectors.
 
 ## Interface
