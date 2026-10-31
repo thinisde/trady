@@ -30,6 +30,7 @@ they received no broker credentials. Test containers were removed afterward.
 | `python3 -m unittest discover -s services/finbert/tests` | 6 passed |
 | `python3 scripts/verify-assets.py` | Passed before bootstrap changes; final documentation validation recorded below |
 | Post-fix isolated OpenCode CLI dialogue regression | Passed |
+| Corrected `deepseek-v4.1-flash` pin | 15 existing harness tests passed again; build, format, assets and whitespace checks passed; fresh default-model Rust chat completed |
 
 These suites contain **537 distinct passing tests**. The additional post-fix
 dialogue regression repeats an already counted database test. Rust formatting,
@@ -225,6 +226,14 @@ Persistence inspection confirmed two `COMPLETED` runs, four dialogue messages an
 provider identity `opencode-go` / `deepseek-v4.1-flash`. Recorded provider usage
 was 9,512 input / 329 output tokens, followed by 9,710 input / 167 output tokens.
 The session was explicitly closed and its temporary database removed.
+
+After pinning `deepseek-v4.1-flash`, a fresh Rust CLI chat **without an LLM
+configuration override** also completed successfully. The persisted provider
+identity was `opencode-go` / `deepseek-v4.1-flash`, matching the supplied
+configuration. It returned the EUR 4,900 budget, EUR 100 reserve and EUR 50 risk
+calculation, with `entry_authorized=false`, `research=null` and `proposal=null`.
+Provider usage was 9,505 input / 317 output tokens. That session was closed and
+its temporary database removed as well.
 
 ## Limits and documentation verification
 
