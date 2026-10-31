@@ -1,0 +1,21 @@
+{
+  "protocol_version": 1,
+  "message_type": "TOOL_RESULTS",
+  "results": [
+    {
+      "call_id": "call_1",
+      "tool": "t212.account_summary",
+      "status": "OK",
+      "data": {"currency": "EUR", "spendable_cash": "50.00", "reconciled": true},
+      "error": null,
+      "meta": {
+        "as_of": "2026-10-30T14:00:00Z",
+        "snapshot_id": "account_snapshot_04",
+        "source_ids": ["broker_account_sync"],
+        "freshness": "CURRENT",
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ]
+}

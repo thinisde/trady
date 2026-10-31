@@ -1,0 +1,40 @@
+name: trady-sentiment
+
+services:
+  finbert:
+    profiles: [finbert]
+    build:
+      context: .
+    image: trady-finbert:local
+    init: true
+    restart: "no"
+    ports:
+      - "127.0.0.1:8091:8000"
+    environment:
+      FINBERT_MODEL_REVISION: "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031"
+      FINBERT_LOCAL_FILES_ONLY: "false"
+      FINBERT_THREADS: "2"
+      HF_HOME: /cache/huggingface
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      DO_NOT_TRACK: "1"
+      TOKENIZERS_PARALLELISM: "false"
+      OMP_NUM_THREADS: "2"
+    volumes:
+      - finbert-cache:/cache
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 2.0
+    mem_limit: 2g
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      start_period: 180s
+      retries: 3
+
+volumes:
+  finbert-cache:

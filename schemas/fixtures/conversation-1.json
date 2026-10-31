@@ -1,0 +1,11 @@
+{
+  "protocol_version": 1,
+  "message_type": "TOOL_REQUEST",
+  "tool_calls": [
+    {
+      "call_id": "call_1",
+      "tool": "t212.account_summary",
+      "arguments": {"max_age_seconds": 60}
+    }
+  ]
+}

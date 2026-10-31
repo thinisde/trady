@@ -1,0 +1,83 @@
+{
+  "protocol_version": 1,
+  "message_type": "FINAL",
+  "reply": {
+    "status": "ANSWER", "text": "Research is finalized for the example candidate. A normal 1% net target is proposed, subject to the executor's current readiness and price checks.",
+    "evidence_ids": ["evidence_01", "evidence_02"], "snapshot_ids": ["account_snapshot_04", "market_snapshot_05"], "questions": []
+  },
+  "research": {
+    "schema_version": 2,
+    "focus": {
+      "universe_snapshot_id": "universe_01", "screening_artifact_id": "finalist_scan_03", "profile_review_id": "profile_review_03",
+      "relationship_review_id": "relations_review_03", "watchdog_template_id": "watchdog_template_03", "opportunity_comparison_id": null,
+      "perpetual_review": {"assessment_id": "ml_assessment_03", "influence": "USED", "reason": "The validated scenario assessment supports retaining the ordinary 1% target; final limits remain the LLM proposal."}
+    },
+    "scope": {"question": "Evaluate an approved example stock for entry.", "instrument_ids": ["instrument_03"], "as_of": "2026-10-30T14:00:00Z"},
+    "workflow_status": "FINAL",
+    "search_log": [
+      {
+        "source_id": "issuer_source_01", "query": "Example issuer product release and limitations",
+        "filters": {"instrument_ids": ["instrument_03"], "start_at": "2026-10-30T00:00:00Z", "end_at": null, "source_domains": []},
+        "tool_call_ids": ["call_primary_01"], "result_item_ids": ["primary_item_01"], "coverage_status": "COMPLETE", "gaps": []
+      },
+      {
+        "source_id": "news_api_01", "query": "Example issuer launch independent confirmation correction delays",
+        "filters": {"instrument_ids": ["instrument_03"], "start_at": "2026-10-30T00:00:00Z", "end_at": null, "source_domains": []},
+        "tool_call_ids": ["call_news_02"], "result_item_ids": ["report_item_02"], "coverage_status": "COMPLETE", "gaps": []
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "claim_01", "instrument_id": "instrument_03", "statement": "The product launch has primary and independent supporting evidence.", "claim_type": "FACT",
+        "published_at": "2026-10-30T13:00:00Z", "event_at": "2026-10-30T13:00:00Z", "materiality": "DIRECT",
+        "support_item_ids": ["primary_item_01", "report_item_02"], "contradiction_item_ids": [], "primary_verification_ids": ["verification_01"], "unknowns": []
+      }
+    ],
+    "source_comparison": [
+      {
+        "claim_id": "claim_01", "primary_item_ids": ["primary_item_01"], "independent_lineage_ids": ["lineage_reporter_02"],
+        "agreed_facts": ["A new commercial launch is documented."], "disputed_facts": [], "resolution_evidence_ids": [],
+        "unresolved_material_conflicts": [], "coverage_status": "COMPLETE"
+      }
+    ],
+    "skill_findings": [
+      {"skill_name": "conversation-and-tools", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/scope"], "blockers": []},
+      {"skill_name": "market-research", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/scope", "#/research/claims"], "blockers": []},
+      {"skill_name": "search-planning", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/search_log"], "blockers": []},
+      {"skill_name": "news-analysis", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/claims"], "blockers": []},
+      {"skill_name": "source-comparison", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/source_comparison"], "blockers": []},
+      {"skill_name": "entry-readiness", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/entry_readiness"], "blockers": []},
+      {"skill_name": "sector-selection", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/focus/screening_artifact_id"], "blockers": []},
+      {"skill_name": "sector-information-technology", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/focus/screening_artifact_id"], "blockers": []},
+      {"skill_name": "subsector-software-services", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/focus/screening_artifact_id"], "blockers": []},
+      {"skill_name": "company-profile", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/focus/profile_review_id"], "blockers": []},
+      {"skill_name": "relationship-analysis", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/focus/relationship_review_id"], "blockers": []},
+      {"skill_name": "holding-watchdog", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/focus/watchdog_template_id"], "blockers": []},
+      {"skill_name": "perpetual-review", "skill_version": "1.0.0", "status": "COMPLETED", "artifact_refs": ["#/research/focus/perpetual_review"], "blockers": []}
+    ],
+    "entry_readiness": {
+      "checks": [
+        {"code": "RESEARCH_FINAL", "status": "PASS", "evidence_refs": ["claim_01"]},
+        {"code": "REQUIRED_SKILLS", "status": "PASS", "evidence_refs": ["skill_bundle_01"]},
+        {"code": "PRIMARY_VERIFIED", "status": "PASS", "evidence_refs": ["verification_01"]},
+        {"code": "INDEPENDENT_COMPARISON", "status": "PASS", "evidence_refs": ["lineage_reporter_02"]},
+        {"code": "NO_MATERIAL_CONFLICTS", "status": "PASS", "evidence_refs": ["evidence_01", "evidence_02"]},
+        {"code": "CONFIDENCE_HIGH", "status": "PASS", "evidence_refs": ["confidence_01"]},
+        {"code": "MARKET_ECONOMICS", "status": "PASS", "evidence_refs": ["economics_01", "market_snapshot_05"]},
+        {"code": "ACCOUNT_ELIGIBLE", "status": "PASS", "evidence_refs": ["account_snapshot_04"]}
+      ],
+      "confidence_calculation_id": "confidence_01", "economics_calculation_id": "economics_01", "blockers": []
+    },
+    "review": null
+  },
+  "proposal": {
+    "schema_version": 1, "kind": "ENTRY_PROPOSAL", "instrument_id": "instrument_03",
+    "context_refs": {"account_snapshot_id": "account_snapshot_04", "market_snapshot_id": "market_snapshot_05", "confidence_calculation_id": "confidence_01", "economics_calculation_id": "economics_01"},
+    "evidence_ids": ["evidence_01", "evidence_02"], "reason": "Verified evidence and deterministic checks support the bounded setup.",
+    "thesis": "A verified material launch has current price confirmation.", "invalidation_conditions": ["A verified correction contradicts commercial availability."], "uncertainties": [],
+    "entry_range": {"currency": "USD", "minimum": "99.80", "maximum": "100.00"},
+    "currency": "USD", "stop_price": "99.70", "target_net_fraction": "0.01", "target_price_hint": null,
+    "trailing": {"activation_net_fraction": "0.005", "distance_fraction": "0.005"},
+    "holding_deadline_session": "NYSE:2026-11-05", "exceptional_catalyst": null
+  }
+}

@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:trady:llm-contracts:2",
+  "$ref": "#/$defs/ModelTurn",
+  "$defs": {
+    "Id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},
+    "Ids": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "uniqueItems": true, "maxItems": 32},
+    "Text": {"type": "string", "maxLength": 2000},
+    "Texts": {"type": "array", "items": {"$ref": "#/$defs/Text"}, "maxItems": 16},
+    "Time": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?Z$"},
+    "Decimal": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$", "maxLength": 48},
+    "Currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "NullableId": {"anyOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]},
+    "NullableTime": {"anyOf": [{"$ref": "#/$defs/Time"}, {"type": "null"}]},
+    "NullableText": {"anyOf": [{"$ref": "#/$defs/Text"}, {"type": "null"}]},
+    "NullableDecimal": {"anyOf": [{"$ref": "#/$defs/Decimal"}, {"type": "null"}]},
+    "Coverage": {"enum": ["COMPLETE", "PARTIAL", "UNAVAILABLE"]},
+    "ArtifactPointers": {"type": "array", "items": {"type": "string", "pattern": "^#/research/", "maxLength": 256}, "uniqueItems": true, "maxItems": 16},
+    "ModelTurn": {"oneOf": [{"$ref": "#/$defs/ToolRequest"}, {"$ref": "#/$defs/Final"}]},
+    "ToolCall": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "call_id": {"$ref": "#/$defs/Id"},
+        "tool": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$", "maxLength": 96},
+        "arguments": {"type": "object"}
+      },
+      "required": ["call_id", "tool", "arguments"]
+    },
+    "ToolRequest": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "protocol_version": {"const": 1}, "message_type": {"const": "TOOL_REQUEST"},
+        "tool_calls": {"type": "array", "items": {"$ref": "#/$defs/ToolCall"}, "minItems": 1, "maxItems": 4}
+      },
+      "required": ["protocol_version", "message_type", "tool_calls"]
+    },
+    "Reply": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "status": {"enum": ["ANSWER", "NEEDS_INPUT", "INCOMPLETE"]},
+        "text": {"type": "string", "minLength": 1, "maxLength": 6000},
+        "evidence_ids": {"$ref": "#/$defs/Ids"}, "snapshot_ids": {"$ref": "#/$defs/Ids"},
+        "questions": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 500}, "maxItems": 3}
+      },
+      "required": ["status", "text", "evidence_ids", "snapshot_ids", "questions"],
+      "if": {"properties": {"status": {"const": "NEEDS_INPUT"}}},
+      "then": {"properties": {"questions": {"minItems": 1}}},
+      "else": {"properties": {"questions": {"maxItems": 0}}}
+    },
+    "Scope": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"question": {"$ref": "#/$defs/Text"}, "instrument_ids": {"$ref": "#/$defs/Ids"}, "as_of": {"$ref": "#/$defs/Time"}},
+      "required": ["question", "instrument_ids", "as_of"]
+    },
+    "SearchFilters": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "instrument_ids": {"$ref": "#/$defs/Ids"}, "start_at": {"$ref": "#/$defs/NullableTime"}, "end_at": {"$ref": "#/$defs/NullableTime"},
+        "source_domains": {"type": "array", "items": {"type": "string", "maxLength": 253}, "uniqueItems": true, "maxItems": 8}
+      },
+      "required": ["instrument_ids", "start_at", "end_at", "source_domains"]
+    },
+    "SearchRecord": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "source_id": {"$ref": "#/$defs/Id"}, "query": {"$ref": "#/$defs/Text"}, "filters": {"$ref": "#/$defs/SearchFilters"},
+        "tool_call_ids": {"$ref": "#/$defs/Ids"}, "result_item_ids": {"$ref": "#/$defs/Ids"}, "coverage_status": {"$ref": "#/$defs/Coverage"}, "gaps": {"$ref": "#/$defs/Texts"}
+      },
+      "required": ["source_id", "query", "filters", "tool_call_ids", "result_item_ids", "coverage_status", "gaps"]
+    },
+    "Claim": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "claim_id": {"$ref": "#/$defs/Id"}, "instrument_id": {"$ref": "#/$defs/NullableId"}, "statement": {"$ref": "#/$defs/Text"},
+        "claim_type": {"enum": ["FACT", "FORECAST", "INTERPRETATION", "RUMOR"]},
+        "published_at": {"$ref": "#/$defs/NullableTime"}, "event_at": {"$ref": "#/$defs/NullableTime"},
+        "materiality": {"enum": ["DIRECT", "INDIRECT", "IMMATERIAL", "UNKNOWN"]},
+        "support_item_ids": {"$ref": "#/$defs/Ids"}, "contradiction_item_ids": {"$ref": "#/$defs/Ids"},
+        "primary_verification_ids": {"$ref": "#/$defs/Ids"}, "unknowns": {"$ref": "#/$defs/Texts"}
+      },
+      "required": ["claim_id", "instrument_id", "statement", "claim_type", "published_at", "event_at", "materiality", "support_item_ids", "contradiction_item_ids", "primary_verification_ids", "unknowns"]
+    },
+    "Comparison": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "claim_id": {"$ref": "#/$defs/Id"}, "primary_item_ids": {"$ref": "#/$defs/Ids"}, "independent_lineage_ids": {"$ref": "#/$defs/Ids"},
+        "agreed_facts": {"$ref": "#/$defs/Texts"}, "disputed_facts": {"$ref": "#/$defs/Texts"}, "resolution_evidence_ids": {"$ref": "#/$defs/Ids"},
+        "unresolved_material_conflicts": {"$ref": "#/$defs/Texts"}, "coverage_status": {"$ref": "#/$defs/Coverage"}
+      },
+      "required": ["claim_id", "primary_item_ids", "independent_lineage_ids", "agreed_facts", "disputed_facts", "resolution_evidence_ids", "unresolved_material_conflicts", "coverage_status"]
+    },
+    "SkillFinding": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "skill_name": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "skill_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "status": {"enum": ["COMPLETED", "BLOCKED"]}, "artifact_refs": {"$ref": "#/$defs/ArtifactPointers"}, "blockers": {"$ref": "#/$defs/Texts"}
+      },
+      "required": ["skill_name", "skill_version", "status", "artifact_refs", "blockers"]
+    },
+    "ReadinessCheck": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "code": {"enum": ["RESEARCH_FINAL", "REQUIRED_SKILLS", "PRIMARY_VERIFIED", "INDEPENDENT_COMPARISON", "NO_MATERIAL_CONFLICTS", "CONFIDENCE_HIGH", "MARKET_ECONOMICS", "ACCOUNT_ELIGIBLE"]},
+        "status": {"enum": ["PASS", "FAIL", "UNKNOWN"]}, "evidence_refs": {"$ref": "#/$defs/Ids"}
+      },
+      "required": ["code", "status", "evidence_refs"]
+    },
+    "EntryReadiness": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "checks": {"type": "array", "items": {"$ref": "#/$defs/ReadinessCheck"}, "minItems": 1, "maxItems": 8},
+        "confidence_calculation_id": {"$ref": "#/$defs/NullableId"}, "economics_calculation_id": {"$ref": "#/$defs/NullableId"}, "blockers": {"$ref": "#/$defs/Texts"}
+      },
+      "required": ["checks", "confidence_calculation_id", "economics_calculation_id", "blockers"]
+    },
+    "Observation": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"statement": {"$ref": "#/$defs/Text"}, "reference_ids": {"$ref": "#/$defs/Ids"}},
+      "required": ["statement", "reference_ids"]
+    },
+    "Lesson": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "hypothesis": {"$ref": "#/$defs/Text"}, "evidence_ids": {"$ref": "#/$defs/Ids"}, "counterexamples": {"$ref": "#/$defs/Texts"},
+        "sample_count": {"type": "integer", "minimum": 0}, "next_test": {"$ref": "#/$defs/Text"}
+      },
+      "required": ["hypothesis", "evidence_ids", "counterexamples", "sample_count", "next_test"]
+    },
+    "Review": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "summary": {"$ref": "#/$defs/Text"}, "observations": {"type": "array", "items": {"$ref": "#/$defs/Observation"}, "maxItems": 16},
+        "lessons": {"type": "array", "items": {"$ref": "#/$defs/Lesson"}, "maxItems": 8}
+      },
+      "required": ["summary", "observations", "lessons"]
+    },
+    "PerpetualReview": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "assessment_id": {"$ref": "#/$defs/Id"}, "influence": {"enum": ["USED", "DISAGREED", "ABSTAINED", "UNAVAILABLE"]},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 2000}
+      },
+      "required": ["assessment_id", "influence", "reason"]
+    },
+    "FocusRefs": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "universe_snapshot_id": {"$ref": "#/$defs/Id"},
+        "screening_artifact_id": {"$ref": "#/$defs/NullableId"},
+        "profile_review_id": {"$ref": "#/$defs/NullableId"},
+        "relationship_review_id": {"$ref": "#/$defs/NullableId"},
+        "watchdog_template_id": {"$ref": "#/$defs/NullableId"},
+        "opportunity_comparison_id": {"$ref": "#/$defs/NullableId"},
+        "perpetual_review": {"anyOf": [{"$ref": "#/$defs/PerpetualReview"}, {"type": "null"}]}
+      },
+      "required": ["universe_snapshot_id", "screening_artifact_id", "profile_review_id", "relationship_review_id", "watchdog_template_id", "opportunity_comparison_id", "perpetual_review"]
+    },
+    "Research": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 2}, "scope": {"$ref": "#/$defs/Scope"}, "workflow_status": {"enum": ["DRAFT", "BLOCKED", "FINAL"]},
+        "focus": {"anyOf": [{"$ref": "#/$defs/FocusRefs"}, {"type": "null"}]},
+        "search_log": {"type": "array", "items": {"$ref": "#/$defs/SearchRecord"}, "maxItems": 16},
+        "claims": {"type": "array", "items": {"$ref": "#/$defs/Claim"}, "maxItems": 8},
+        "source_comparison": {"type": "array", "items": {"$ref": "#/$defs/Comparison"}, "maxItems": 8},
+        "skill_findings": {"type": "array", "items": {"$ref": "#/$defs/SkillFinding"}, "maxItems": 24},
+        "entry_readiness": {"anyOf": [{"$ref": "#/$defs/EntryReadiness"}, {"type": "null"}]},
+        "review": {"anyOf": [{"$ref": "#/$defs/Review"}, {"type": "null"}]}
+      },
+      "required": ["schema_version", "scope", "workflow_status", "focus", "search_log", "claims", "source_comparison", "skill_findings", "entry_readiness", "review"]
+    },
+    "ContextRefs": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "account_snapshot_id": {"$ref": "#/$defs/NullableId"}, "market_snapshot_id": {"$ref": "#/$defs/NullableId"},
+        "confidence_calculation_id": {"$ref": "#/$defs/NullableId"}, "economics_calculation_id": {"$ref": "#/$defs/NullableId"}
+      },
+      "required": ["account_snapshot_id", "market_snapshot_id", "confidence_calculation_id", "economics_calculation_id"]
+    },
+    "CommonProposal": {
+      "type": "object",
+      "properties": {
+        "schema_version": {"const": 1}, "kind": {"enum": ["ENTRY_PROPOSAL", "PLAN_UPDATE", "HOLD", "NO_ACTION"]},
+        "instrument_id": {"$ref": "#/$defs/NullableId"}, "context_refs": {"$ref": "#/$defs/ContextRefs"},
+        "evidence_ids": {"$ref": "#/$defs/Ids"}, "reason": {"$ref": "#/$defs/Text"}, "thesis": {"$ref": "#/$defs/NullableText"},
+        "invalidation_conditions": {"$ref": "#/$defs/Texts"}, "uncertainties": {"$ref": "#/$defs/Texts"}
+      },
+      "required": ["schema_version", "kind", "instrument_id", "context_refs", "evidence_ids", "reason", "thesis", "invalidation_conditions", "uncertainties"]
+    },
+    "EntryRange": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"currency": {"$ref": "#/$defs/Currency"}, "minimum": {"$ref": "#/$defs/Decimal"}, "maximum": {"$ref": "#/$defs/Decimal"}},
+      "required": ["currency", "minimum", "maximum"]
+    },
+    "Trailing": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"activation_net_fraction": {"$ref": "#/$defs/Decimal"}, "distance_fraction": {"$ref": "#/$defs/Decimal"}},
+      "required": ["activation_net_fraction", "distance_fraction"]
+    },
+    "ExceptionalCatalyst": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "claim_ids": {"$ref": "#/$defs/Ids"}, "reason": {"$ref": "#/$defs/Text"}, "expires_at": {"$ref": "#/$defs/Time"},
+        "primary_evidence_ids": {"$ref": "#/$defs/Ids"}, "independent_lineage_ids": {"$ref": "#/$defs/Ids"}
+      },
+      "required": ["claim_ids", "reason", "expires_at", "primary_evidence_ids", "independent_lineage_ids"]
+    },
+    "Thresholds": {
+      "type": "object",
+      "properties": {
+        "currency": {"$ref": "#/$defs/Currency"}, "stop_price": {"$ref": "#/$defs/Decimal"}, "target_net_fraction": {"$ref": "#/$defs/Decimal"},
+        "target_price_hint": {"$ref": "#/$defs/NullableDecimal"}, "trailing": {"$ref": "#/$defs/Trailing"}, "holding_deadline_session": {"$ref": "#/$defs/Id"},
+        "exceptional_catalyst": {"anyOf": [{"$ref": "#/$defs/ExceptionalCatalyst"}, {"type": "null"}]}
+      },
+      "required": ["currency", "stop_price", "target_net_fraction", "target_price_hint", "trailing", "holding_deadline_session", "exceptional_catalyst"]
+    },
+    "EntryProposal": {
+      "allOf": [
+        {"$ref": "#/$defs/CommonProposal"}, {"$ref": "#/$defs/Thresholds"},
+        {"properties": {"kind": {"const": "ENTRY_PROPOSAL"}, "instrument_id": {"$ref": "#/$defs/Id"}, "entry_range": {"$ref": "#/$defs/EntryRange"}}, "required": ["entry_range"]}
+      ],
+      "unevaluatedProperties": false
+    },
+    "PlanUpdate": {
+      "allOf": [
+        {"$ref": "#/$defs/CommonProposal"}, {"$ref": "#/$defs/Thresholds"},
+        {"properties": {"kind": {"const": "PLAN_UPDATE"}, "instrument_id": {"$ref": "#/$defs/Id"}, "position_id": {"$ref": "#/$defs/Id"}, "expected_plan_version": {"type": "integer", "minimum": 1}}, "required": ["position_id", "expected_plan_version"]}
+      ],
+      "unevaluatedProperties": false
+    },
+    "Hold": {
+      "allOf": [
+        {"$ref": "#/$defs/CommonProposal"},
+        {"properties": {"kind": {"const": "HOLD"}, "instrument_id": {"$ref": "#/$defs/Id"}, "position_id": {"$ref": "#/$defs/Id"}, "expected_plan_version": {"type": "integer", "minimum": 1}}, "required": ["position_id", "expected_plan_version"]}
+      ],
+      "unevaluatedProperties": false
+    },
+    "NoAction": {"allOf": [{"$ref": "#/$defs/CommonProposal"}, {"properties": {"kind": {"const": "NO_ACTION"}}}], "unevaluatedProperties": false},
+    "ProposalBody": {"oneOf": [{"$ref": "#/$defs/EntryProposal"}, {"$ref": "#/$defs/PlanUpdate"}, {"$ref": "#/$defs/Hold"}, {"$ref": "#/$defs/NoAction"}]},
+    "Final": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "protocol_version": {"const": 1}, "message_type": {"const": "FINAL"}, "reply": {"$ref": "#/$defs/Reply"},
+        "research": {"anyOf": [{"$ref": "#/$defs/Research"}, {"type": "null"}]}, "proposal": {"anyOf": [{"$ref": "#/$defs/ProposalBody"}, {"type": "null"}]}
+      },
+      "required": ["protocol_version", "message_type", "reply", "research", "proposal"],
+      "allOf": [
+        {"if": {"properties": {"reply": {"properties": {"status": {"enum": ["NEEDS_INPUT", "INCOMPLETE"]}}}}}, "then": {"properties": {"proposal": {"type": "null"}}}},
+        {"if": {"properties": {"proposal": {"type": "object", "properties": {"kind": {"const": "ENTRY_PROPOSAL"}}, "required": ["kind"]}}}, "then": {"properties": {"research": {"allOf": [{"$ref": "#/$defs/Research"}, {"properties": {"workflow_status": {"const": "FINAL"}, "entry_readiness": {"$ref": "#/$defs/EntryReadiness"}}}]}}}}
+      ]
+    },
+    "ToolError": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"code": {"$ref": "#/$defs/Id"}, "message": {"$ref": "#/$defs/Text"}, "retryable": {"type": "boolean"}},
+      "required": ["code", "message", "retryable"]
+    },
+    "ToolMeta": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "as_of": {"$ref": "#/$defs/NullableTime"}, "snapshot_id": {"$ref": "#/$defs/NullableId"}, "source_ids": {"$ref": "#/$defs/Ids"},
+        "freshness": {"enum": ["CURRENT", "STALE", "UNKNOWN"]}, "truncated": {"type": "boolean"},
+        "next_cursor": {"anyOf": [{"type": "string", "maxLength": 2000}, {"type": "null"}]}
+      },
+      "required": ["as_of", "snapshot_id", "source_ids", "freshness", "truncated", "next_cursor"]
+    },
+    "ToolResult": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "call_id": {"$ref": "#/$defs/Id"}, "tool": {"type": "string", "maxLength": 96},
+        "status": {"enum": ["OK", "PARTIAL", "STALE", "ERROR", "DENIED", "UNAVAILABLE", "CANCELLED"]},
+        "data": {"type": ["object", "array", "null"]}, "error": {"anyOf": [{"$ref": "#/$defs/ToolError"}, {"type": "null"}]}, "meta": {"$ref": "#/$defs/ToolMeta"}
+      },
+      "required": ["call_id", "tool", "status", "data", "error", "meta"],
+      "if": {"properties": {"status": {"const": "OK"}}}, "then": {"properties": {"error": {"type": "null"}}}, "else": {"properties": {"error": {"$ref": "#/$defs/ToolError"}}}
+    },
+    "ToolResults": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"protocol_version": {"const": 1}, "message_type": {"const": "TOOL_RESULTS"}, "results": {"type": "array", "items": {"$ref": "#/$defs/ToolResult"}, "minItems": 1, "maxItems": 4}},
+      "required": ["protocol_version", "message_type", "results"]
+    },
+    "ApplicationProposalEnvelope": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "envelope_version": {"const": 1}, "proposal_id": {"$ref": "#/$defs/Id"}, "run_id": {"$ref": "#/$defs/Id"}, "session_id": {"$ref": "#/$defs/Id"},
+        "policy_version": {"type": "integer", "minimum": 1}, "context_manifest_id": {"$ref": "#/$defs/Id"}, "account_snapshot_id": {"$ref": "#/$defs/NullableId"},
+        "research_dossier_id": {"$ref": "#/$defs/NullableId"}, "created_at": {"$ref": "#/$defs/Time"}, "valid_until": {"$ref": "#/$defs/Time"}, "body": {"$ref": "#/$defs/ProposalBody"}
+      },
+      "required": ["envelope_version", "proposal_id", "run_id", "session_id", "policy_version", "context_manifest_id", "account_snapshot_id", "research_dossier_id", "created_at", "valid_until", "body"]
+    }
+  }
+}

@@ -1,0 +1,281 @@
+catalog_version: 1
+bundle_version: "2.0.1"
+taxonomy:
+  system: GICS
+  reviewed_at: "2026-10-31"
+  subsector_level: industry_group
+  sector_count: 11
+  subsector_count: 25
+# Deployment approval binds this catalog and every file to generated content hashes.
+# Metadata is not proof of source verification, readiness or runtime implementation.
+skills:
+  - name: market-research
+    path: market-research/SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: search-planning
+    path: search-planning/SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: news-analysis
+    path: news-analysis/SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: source-comparison
+    path: source-comparison/SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: entry-readiness
+    path: entry-readiness/SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: position-review
+    path: position-review/SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: conversation-and-tools
+    path: conversation-and-tools/SKILL.md
+    version: "1.0.1"
+    kind: workflow
+  - name: uncertainty-and-incidents
+    path: uncertainty-and-incidents/SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: memory-and-review
+    path: memory-and-review/SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: sector-selection
+    path: sector-selection.SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: company-profile
+    path: company-profile.SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: relationship-analysis
+    path: relationship-analysis.SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: influential-people
+    path: influential-people.SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: holding-watchdog
+    path: holding-watchdog.SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: opportunity-comparison
+    path: opportunity-comparison.SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: perpetual-review
+    path: perpetual-review.SKILL.md
+    version: "1.0.0"
+    kind: workflow
+  - name: sector-energy
+    path: sectors/10-energy.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "10"
+  - name: sector-materials
+    path: sectors/15-materials.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "15"
+  - name: sector-industrials
+    path: sectors/20-industrials.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "20"
+  - name: sector-consumer-discretionary
+    path: sectors/25-consumer-discretionary.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "25"
+  - name: sector-consumer-staples
+    path: sectors/30-consumer-staples.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "30"
+  - name: sector-health-care
+    path: sectors/35-health-care.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "35"
+  - name: sector-financials
+    path: sectors/40-financials.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "40"
+  - name: sector-information-technology
+    path: sectors/45-information-technology.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "45"
+  - name: sector-communication-services
+    path: sectors/50-communication-services.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "50"
+  - name: sector-utilities
+    path: sectors/55-utilities.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "55"
+  - name: sector-real-estate
+    path: sectors/60-real-estate.SKILL.md
+    version: "1.0.0"
+    kind: sector
+    gics_code: "60"
+  - name: subsector-energy
+    path: subsectors/1010-energy.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "1010"
+    parent_code: "10"
+  - name: subsector-materials
+    path: subsectors/1510-materials.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "1510"
+    parent_code: "15"
+  - name: subsector-capital-goods
+    path: subsectors/2010-capital-goods.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "2010"
+    parent_code: "20"
+  - name: subsector-commercial-professional-services
+    path: subsectors/2020-commercial-professional-services.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "2020"
+    parent_code: "20"
+  - name: subsector-transportation
+    path: subsectors/2030-transportation.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "2030"
+    parent_code: "20"
+  - name: subsector-automobiles-components
+    path: subsectors/2510-automobiles-components.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "2510"
+    parent_code: "25"
+  - name: subsector-consumer-durables-apparel
+    path: subsectors/2520-consumer-durables-apparel.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "2520"
+    parent_code: "25"
+  - name: subsector-consumer-services
+    path: subsectors/2530-consumer-services.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "2530"
+    parent_code: "25"
+  - name: subsector-discretionary-distribution-retail
+    path: subsectors/2550-discretionary-distribution-retail.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "2550"
+    parent_code: "25"
+  - name: subsector-staples-distribution-retail
+    path: subsectors/3010-staples-distribution-retail.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "3010"
+    parent_code: "30"
+  - name: subsector-food-beverage-tobacco
+    path: subsectors/3020-food-beverage-tobacco.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "3020"
+    parent_code: "30"
+  - name: subsector-household-personal-products
+    path: subsectors/3030-household-personal-products.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "3030"
+    parent_code: "30"
+  - name: subsector-health-care-equipment-services
+    path: subsectors/3510-health-care-equipment-services.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "3510"
+    parent_code: "35"
+  - name: subsector-pharma-biotech-life-sciences
+    path: subsectors/3520-pharma-biotech-life-sciences.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "3520"
+    parent_code: "35"
+  - name: subsector-banks
+    path: subsectors/4010-banks.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "4010"
+    parent_code: "40"
+  - name: subsector-financial-services
+    path: subsectors/4020-financial-services.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "4020"
+    parent_code: "40"
+  - name: subsector-insurance
+    path: subsectors/4030-insurance.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "4030"
+    parent_code: "40"
+  - name: subsector-software-services
+    path: subsectors/4510-software-services.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "4510"
+    parent_code: "45"
+  - name: subsector-technology-hardware-equipment
+    path: subsectors/4520-technology-hardware-equipment.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "4520"
+    parent_code: "45"
+  - name: subsector-semiconductors-equipment
+    path: subsectors/4530-semiconductors-equipment.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "4530"
+    parent_code: "45"
+  - name: subsector-telecommunication-services
+    path: subsectors/5010-telecommunication-services.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "5010"
+    parent_code: "50"
+  - name: subsector-media-entertainment
+    path: subsectors/5020-media-entertainment.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "5020"
+    parent_code: "50"
+  - name: subsector-utilities
+    path: subsectors/5510-utilities.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "5510"
+    parent_code: "55"
+  - name: subsector-equity-reits
+    path: subsectors/6010-equity-reits.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "6010"
+    parent_code: "60"
+  - name: subsector-real-estate-management-development
+    path: subsectors/6020-real-estate-management-development.SKILL.md
+    version: "1.0.0"
+    kind: subsector
+    gics_code: "6020"
+    parent_code: "60"
+

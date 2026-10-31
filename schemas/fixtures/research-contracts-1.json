@@ -1,0 +1,48 @@
+{
+  "artifact": {
+    "artifact_version": 1,
+    "kind": "SCREENING",
+    "as_of": "2026-10-30T14:00:00Z",
+    "evidence_ids": [
+      "evidence_01"
+    ],
+    "blockers": [],
+    "stage": "SUBSECTORS",
+    "prior_screening_id": "sector_scan_01",
+    "universe_snapshot_id": "universe_01",
+    "market_snapshot_id": "market_snapshot_05",
+    "rankings": [
+      {
+        "gics_code": "4510",
+        "calculation_id": "priority_4510",
+        "coverage_status": "COMPLETE",
+        "reason": "Verified customer demand and current economics support further software research."
+      },
+      {
+        "gics_code": "4520",
+        "calculation_id": "priority_4520",
+        "coverage_status": "COMPLETE",
+        "reason": "Hardware evidence is mixed."
+      },
+      {
+        "gics_code": "4530",
+        "calculation_id": null,
+        "coverage_status": "PARTIAL",
+        "reason": "Current restriction and customer context is unresolved."
+      }
+    ],
+    "selected_sector_code": "45",
+    "selected_subsector_code": "4510",
+    "operating_branch": "Enterprise software",
+    "candidate_instrument_ids": [
+      "instrument_03"
+    ],
+    "peer_instrument_ids": [
+      "instrument_07"
+    ],
+    "finalist_instrument_id": null,
+    "exclusions": [
+      "No semiconductor candidate is finalized while material restriction context is missing."
+    ]
+  }
+}

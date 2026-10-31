@@ -1,0 +1,8 @@
+{
+  "config_version": 1,
+  "environment": "live",
+  "account_id": "live_t212_example",
+  "broker_account_id": 123456,
+  "base_currency": "EUR",
+  "timeout_seconds": 10
+}

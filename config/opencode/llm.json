@@ -1,0 +1,21 @@
+{
+  "base_url": "https://opencode.ai/inference/go/openai/v1",
+  "model": "glm-5.2",
+  "api_key_env": "OPENCODE_API_KEY",
+  "stream": true,
+  "limits": {
+    "max_model_turns": 6,
+    "max_tool_rounds": 4,
+    "max_tool_calls": 12,
+    "deadline_seconds": 120,
+    "provider_timeout_seconds": 30,
+    "tool_timeout_seconds": 15,
+    "context_window_tokens": 128000,
+    "max_output_tokens": 4096,
+    "max_run_tokens": 400000,
+    "max_session_tokens": 2000000,
+    "max_tool_result_bytes": 1500,
+    "max_tool_input_bytes": 6000,
+    "native_tools": true
+  }
+}

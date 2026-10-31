@@ -1,0 +1,11 @@
+{
+  "protocol_version": 1,
+  "message_type": "TOOL_REQUEST",
+  "tool_calls": [
+    {
+      "call_id": "call_2",
+      "tool": "calculator.entry_budget",
+      "arguments": {"account_snapshot_id": "account_snapshot_04"}
+    }
+  ]
+}

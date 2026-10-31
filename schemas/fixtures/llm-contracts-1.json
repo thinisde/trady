@@ -1,0 +1,47 @@
+{
+  "protocol_version": 1,
+  "message_type": "FINAL",
+  "reply": {
+    "status": "INCOMPLETE",
+    "text": "The product announcement is readable, but all returned coverage repeats the issuer. Independent confirmation is missing; no entry is proposed.",
+    "evidence_ids": ["evidence_01"], "snapshot_ids": [], "questions": []
+  },
+  "research": {
+    "schema_version": 2,
+    "focus": null,
+    "scope": {"question": "Is the example product a verified new catalyst?", "instrument_ids": ["instrument_03"], "as_of": "2026-10-30T14:00:00Z"},
+    "workflow_status": "BLOCKED",
+    "search_log": [
+      {
+        "source_id": "news_api_01", "query": "Example issuer product launch confirmation",
+        "filters": {"instrument_ids": ["instrument_03"], "start_at": "2026-10-30T00:00:00Z", "end_at": null, "source_domains": []},
+        "tool_call_ids": ["call_news_01"], "result_item_ids": ["primary_item_01", "copied_item_02"],
+        "coverage_status": "PARTIAL", "gaps": ["No independent factual confirmation found in the bounded results."]
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "claim_01", "instrument_id": "instrument_03", "statement": "The issuer announced a product launch.", "claim_type": "FACT",
+        "published_at": "2026-10-30T13:00:00Z", "event_at": "2026-10-30T13:00:00Z", "materiality": "DIRECT",
+        "support_item_ids": ["primary_item_01", "copied_item_02"], "contradiction_item_ids": [], "primary_verification_ids": ["verification_01"],
+        "unknowns": ["Independent confirmation of commercial availability."]
+      }
+    ],
+    "source_comparison": [
+      {
+        "claim_id": "claim_01", "primary_item_ids": ["primary_item_01"], "independent_lineage_ids": [],
+        "agreed_facts": ["The issuer published the announcement."], "disputed_facts": [], "resolution_evidence_ids": [],
+        "unresolved_material_conflicts": [], "coverage_status": "PARTIAL"
+      }
+    ],
+    "skill_findings": [
+      {"skill_name": "source-comparison", "skill_version": "1.0.0", "status": "BLOCKED", "artifact_refs": ["#/research/source_comparison"], "blockers": ["Independent reporting lineage missing."]}
+    ],
+    "entry_readiness": {
+      "checks": [{"code": "INDEPENDENT_COMPARISON", "status": "FAIL", "evidence_refs": ["verification_01"]}],
+      "confidence_calculation_id": null, "economics_calculation_id": null, "blockers": ["Research is not finalized."]
+    },
+    "review": null
+  },
+  "proposal": null
+}

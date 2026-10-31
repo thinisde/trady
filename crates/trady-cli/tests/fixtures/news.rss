@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Offline market fixture</title>
+<item><guid>fixture-release-1</guid><title>Fixture company release</title>
+<link>https://example.com/release?utm_source=fixture</link>
+<source>Fixture publisher</source><pubDate>Fri, 30 Oct 2026 12:00:00 GMT</pubDate>
+<description>Offline example, not verified evidence.</description></item>
+</channel></rss>

@@ -1,0 +1,26 @@
+{
+  "config_version": 1,
+  "mode": "paper",
+  "account_id": "paper_demo",
+  "base_currency": "EUR",
+  "policy": {
+    "version": 1,
+    "entry_cash_fraction": "0.98",
+    "confidence_entry_min": 90,
+    "max_target_fraction": "0.10",
+    "exceptional_targets_enabled": false,
+    "max_initial_loss_fraction": "0.02",
+    "min_reward_to_risk": "1.50",
+    "max_holding_sessions": 5,
+    "leverage": false,
+    "add_to_position": false,
+    "rotation_enabled": false
+  },
+  "capabilities": {
+    "cash_account": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+    "instrument": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+    "fractional_orders": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+    "protective_orders": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+    "quotes": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null}
+  }
+}

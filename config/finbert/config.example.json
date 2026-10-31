@@ -1,0 +1,7 @@
+{
+  "config_version": 1,
+  "enabled": false,
+  "endpoint": "http://127.0.0.1:8091/",
+  "model_revision": "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031",
+  "timeout_seconds": 30
+}

@@ -1,0 +1,14 @@
+{
+  "config_version": 1,
+  "access": {
+    "allowed_user_ids": [],
+    "allowed_chat_ids": []
+  },
+  "foundation_config": "paper.json",
+  "trading212_config": null,
+  "state_directory": "../var/telegram",
+  "poll_timeout_seconds": 20,
+  "refresh_interval_seconds": 60,
+  "stale_after_seconds": 120,
+  "notifications": true
+}

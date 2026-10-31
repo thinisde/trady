@@ -1,0 +1,7 @@
+# Merge with compose.yaml after the pinned weights have been cached.
+services:
+  finbert:
+    environment:
+      FINBERT_LOCAL_FILES_ONLY: "true"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"

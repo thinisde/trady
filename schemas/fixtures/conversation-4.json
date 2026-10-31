@@ -1,0 +1,21 @@
+{
+  "protocol_version": 1,
+  "message_type": "TOOL_RESULTS",
+  "results": [
+    {
+      "call_id": "call_2",
+      "tool": "calculator.entry_budget",
+      "status": "OK",
+      "data": {"currency": "EUR", "max_entry_total": "49.00", "minimum_retained_cash": "1.00"},
+      "error": null,
+      "meta": {
+        "as_of": "2026-10-30T14:00:01Z",
+        "snapshot_id": "account_snapshot_04",
+        "source_ids": ["broker_account_sync", "policy_version_07"],
+        "freshness": "CURRENT",
+        "truncated": false,
+        "next_cursor": null
+      }
+    }
+  ]
+}

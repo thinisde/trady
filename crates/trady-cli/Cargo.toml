@@ -1,0 +1,25 @@
+[package]
+name = "trady-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "trady"
+path = "src/main.rs"
+
+[dependencies]
+trady-domain.workspace = true
+trady-policy.workspace = true
+trady-application.workspace = true
+trady-storage.workspace = true
+trady-adapters.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+ctrlc.workspace = true
+
+[lints]
+workspace = true

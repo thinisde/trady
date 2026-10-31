@@ -1,0 +1,13 @@
+{
+  "protocol_version": 1,
+  "message_type": "FINAL",
+  "reply": {
+    "status": "ANSWER",
+    "text": "The synchronized spendable balance is EUR 50.00. A future eligible entry has a total-cost budget of EUR 49.00, retaining at least EUR 1.00. Research and high-confidence readiness must pass before entry.",
+    "evidence_ids": [],
+    "snapshot_ids": ["account_snapshot_04"],
+    "questions": []
+  },
+  "research": null,
+  "proposal": null
+}
