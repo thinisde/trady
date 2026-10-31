@@ -1,6 +1,7 @@
 //! Provider-neutral, validated identifiers and execution observations.
 
 pub mod research;
+pub mod screening;
 pub mod sentiment;
 
 use chrono::{DateTime, Utc};
