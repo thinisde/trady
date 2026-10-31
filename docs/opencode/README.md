@@ -22,6 +22,10 @@ Requests identify Trady with its user agent and send the persisted conversation 
 in `x-opencode-session`, as required by Go for routing and prompt caching. The ID
 stays the same across tool rounds and resumed conversation runs.
 
+## Proposed strict model governance for new research agents
+
+The [OpenCodeGo-only LLM extensions](../v1/llm-features/README.md) add a [model allowlist and escalation specification](../v1/llm-features/model-routing-and-governance.md). The owner-selected future deployment rule is **only** `deepseek-v4.1-flash` by default; `deepseek-v4.1-pro` is reserved for explicitly justified complex work **after verifying that exact model ID on OpenCodeGo**. No other generative model/provider or automatic fallback is permitted by that proposed policy. The current adapter accepts arbitrary explicitly configured model strings and therefore **does not yet enforce** the proposed allowlist; the initial configuration remains Flash-pinned. A model-name mismatch must fail closed, not silently substitute the currently advertised `deepseek-v4-pro`.
+
 ## Interface
 
 Supply `OPENCODE_API_KEY` and the local `TRADY_ANALYST_DSN` through the service

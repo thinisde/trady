@@ -29,6 +29,7 @@ for the initial offline Rust foundation.
   context manifests, approved skills and bounded tool execution.
 - [v1 specification](./v1/README.md): current requirements, Rust architecture, research sources, trading policy, Telegram, memory, multi-round tools, runtime skills, operations and acceptance criteria.
 - [Ten proposed market intelligence features](./v1/features/README.md): separate optional designs for options, coordination, event surprise, short interest, insiders, cross-asset state, alternative attention, accounting anomalies, order books and tax scenarios.
+- [Twelve proposed OpenCodeGo LLM features](./v1/llm-features/README.md): adversarial committee, falsification, historical analogies, earnings-call analysis, causal chains, research budgets, counterfactuals, narrative drift, multi-horizon reviews, incident analysis, credibility and stress cases. Includes [strict Flash/Pro model governance](./v1/llm-features/model-routing-and-governance.md).
 - [Original v1.1 input](./v1/v1.1.md): preserved historical design, superseded by the current v1 decisions where requirements differ.
 - [Offline foundation](./foundation.md): working commands, evidence, acceptance coverage and remaining work.
 - [X and news reading](./news.md): bounded source adapters, registry, durable observations, commands and remaining coverage gaps.
