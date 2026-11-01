@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-31",
+  "run_kind": "live_integrations_demo_broker_read_only",
+  "full_production_workflow_completed": false,
+  "entry_authorized": false,
+  "broker": {
+    "environment": "demo",
+    "before_observed_at": "2026-10-31T20:11:49.692906249Z",
+    "after_observed_at": "2026-10-31T20:19:20.173708555Z",
+    "cash": {"amount": "5000.00", "currency": "EUR"},
+    "positions": 0,
+    "pending_orders": 0,
+    "state_unchanged": true,
+    "order_mutations_performed_by_run": 0,
+    "interfaces": ["Trading212Reader", "recording_only_shadow_runner"]
+  },
+  "calculations": {
+    "allocation_fraction": "0.98",
+    "maximum_entry_spend_before_other_constraints_eur": "4900.0000",
+    "minimum_unallocated_cash_eur": "100.0000",
+    "stock_selected": null,
+    "buy_limit": null,
+    "stop_trigger": null,
+    "stop_limit_price": null,
+    "target_sell_limit": null,
+    "quantity": null,
+    "production_calculator_reached": false,
+    "nulls_mean": "Unavailable diagnostic fields; native planner stopped before calculation."
+  },
+  "shadow": {
+    "cycles": 1,
+    "order_mutations": 0,
+    "status": "blocked",
+    "reason": "trading input provider unavailable",
+    "cycle_hash": "184ec99a922f2bbbb8ca1c7403a2377bdd0046bf80819e0e15eed6531773aaf0",
+    "configuration_blockers": [
+      "approved_model_registry_empty",
+      "universe_source_disabled",
+      "approved_skill_hashes_missing",
+      "approved_formula_unavailable"
+    ],
+    "additional_readiness_gaps": [
+      "unknown_broker_capabilities",
+      "no_verified_open_exchange_session",
+      "source_language_metadata_missing",
+      "source_evidence_older_than_24_hours"
+    ]
+  },
+  "finbert": {
+    "container": "trady-sentiment-finbert-1",
+    "healthy": true,
+    "left_running": true,
+    "health_endpoint": "http://127.0.0.1:8091/health",
+    "model_id": "ProsusAI/finbert",
+    "model_revision": "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031",
+    "scored_at": "2026-10-31T20:16:12.773142+00:00",
+    "production_sentiment_readiness": false,
+    "native_assessment_error": "sentiment requires distinct, current English evidence with available context",
+    "kind": "container_inference_on_actual_historical_source_text",
+    "predictions": [
+      {
+        "item_id": "23f3387db8d9cfe073d020a9c0c133f2fe5b2f7e31bd691363d96b35826eb52e",
+        "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/orders20261029a.htm",
+        "published_at": "2026-10-29T20:30:00Z",
+        "text": "Federal Reserve Board announces approval of application by The Bank of Nova Scotia",
+        "text_sha256": "bbb80d188f4dce4831af2ceb1414713ca7bf392da7b4f2de6d1f1dd4cac28eab",
+        "probabilities": {"negative": "0.027076375", "neutral": "0.879452109", "positive": "0.093471549"},
+        "truncated": false
+      },
+      {
+        "item_id": "d41f85a06055f9390c9da9ab277962ff2ae34e91181f36c0b9290dbafbf8116f",
+        "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm",
+        "published_at": "2026-10-28T18:00:00Z",
+        "text": "Federal Reserve issues FOMC statement",
+        "text_sha256": "08600faaa1aa24c58ff36f849d3eda66adceb0bef62f00e74aece293cfbc1b18",
+        "probabilities": {"negative": "0.074908398", "neutral": "0.899334848", "positive": "0.025756782"},
+        "truncated": false
+      },
+      {
+        "item_id": "6f735f58594a299c2651bc0b88a8f1e9872702a7783c75b237aef7bfb7d81c01",
+        "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20261016a.htm",
+        "published_at": "2026-10-16T15:00:00Z",
+        "text": "Federal Reserve Board announces termination of enforcement actions with Gardner Bancshares, Inc. and Small Business Bank",
+        "text_sha256": "878741d0cb27e2bcb54b5e260502869066c7703063a7af48a99384f356ff7f0e",
+        "probabilities": {"negative": "0.922517955", "neutral": "0.063065670", "positive": "0.014416309"},
+        "truncated": false
+      }
+    ]
+  },
+  "telegram": {
+    "private_owner_verified": true,
+    "native_monitor_messages_delivered": 1,
+    "native_monitor_commands_recorded": 0,
+    "native_monitor_pending_deliveries": 0,
+    "final_summary_delivered": true,
+    "final_summary_sent_at": "2026-10-31T20:20:41.981781+00:00",
+    "continuous_polling_left_running": false
+  },
+  "opencode_go": {
+    "model": "deepseek-v4.1-flash",
+    "model_verified_in_persisted_session": true,
+    "session_id": "session_0febd2ff56f74cadb9b800e9facab9be",
+    "run_id": "run_d17786e76526477f98c8788465a3995e",
+    "run_status": "COMPLETED",
+    "charged_tokens": 12574,
+    "tool_calls": 0,
+    "proposal": null,
+    "reply_recorded_in": "live-demo-run-2026-10-31.md"
+  },
+  "x": {
+    "native_cost_gate_used": true,
+    "identity_lookup_succeeded": true,
+    "counts_measurements": 2,
+    "latest_counts_total_posts": 8,
+    "post_reads_returned": 8,
+    "posts_stored": 0,
+    "collection_status": "UNAVAILABLE",
+    "collection_gap": "x_repost_exclusion_not_verified",
+    "cost_estimate_microusd": 100000,
+    "ordinary_microusd": 40000,
+    "support_microusd": 60000,
+    "ceiling_microusd": 250000,
+    "uncertain_cost_reservations": 0,
+    "estimate_scope": "This isolated diagnostic run only; not cumulative app spend or final invoice.",
+    "external_model_processing": false
+  },
+  "api_health": {
+    "checked_at": "2026-10-31T20:11:49.689321236Z",
+    "network_requests": 13,
+    "healthy": ["sec", "fred", "twelve_data", "finnhub", "alpha_vantage", "fmp", "coingecko", "tiingo", "massive", "google_news", "publisher_rss", "telegram"],
+    "failed": [{"provider": "gdelt", "code": "http_transport_failed", "http_status": null}],
+    "separate_cost_gate": ["x"],
+    "offline_only": ["yfinance"]
+  },
+  "research": {
+    "source_id": "demo_fed_press_bounded",
+    "collected_items": 10,
+    "status": "PARTIAL",
+    "gaps": ["rss_snapshot_not_full_history", "feed_item_budget_exhausted_no_history_cursor", "page_budget_exhausted"],
+    "primary_source_verification": false,
+    "financial_collectors_activated": false,
+    "optional_intelligence_features_activated": 0
+  },
+  "validation": {
+    "build_passed": true,
+    "workspace": {"passed": 506, "failed": 0, "ignored": 21},
+    "separate_database_run": {"passed": 21, "failed": 0, "ignored": 0, "migration": 10},
+    "finbert_python": {"passed": 6, "failed": 0},
+    "broker_comparison_passed": true
+  },
+  "credential_rotation_outstanding": true
+}

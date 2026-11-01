@@ -14,7 +14,7 @@ import sys
 from bindings import (FOUNDATIONS, SCOPE, THEOREMS, adapter_sources, proof_sources, rust_sources, safety_hash,
                       sha, strict_json, theorem_bindings, toolchain_tree, value_hash, verify_revision)
 from fixtures import Fixture
-from parity import run_fixtures
+from parity import run_fixtures, run_malformed_fixtures
 
 MAX = 4 * 1024 * 1024
 
@@ -103,8 +103,9 @@ def main():
         run_fixtures(args.project, args.rust, only=[witness])
         common.update(axioms=axioms, theorems=list(THEOREMS), witness_count=2, toolchain_hash=toolchain_hash)
     else:
-        common["cases"] = [{"rust": case["rust"], "lean": case["lean"]}
-                           for case in run_fixtures(args.project, args.rust, [witness])]
+        cases = run_fixtures(args.project, args.rust, [witness])
+        malformed = run_malformed_fixtures(args.project, args.rust)
+        common["cases"] = [{"rust": case["rust"], "lean": case["lean"]} for case in [*cases, *malformed]]
     verify_lock(args.project, args.lake, args.rust, lock)
     print(json.dumps({"schema_version": 1, "input_hash": request["input_hash"], "payload": common}, separators=(",", ":")))
 

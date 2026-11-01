@@ -5,8 +5,10 @@ import json
 import math
 import os
 import pathlib
+import stat
 import sys
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from fractions import Fraction
 from .common import canonical, decimal_string, integer, no_gate_assertions, number, numeric_margin, pinned_json, rational_json, ratio, require, rounded_lower, sha, strict_json, timestamp, unique, valid_hash
@@ -200,27 +202,68 @@ def evaluate(request, lock, bundle, search, shadow, now=None):
     return payload, diagnostics
 
 
-def write_artifact(directory, content):
+@contextmanager
+def diagnostics_directory(directory):
+    """Open a private output directory without following any path symlinks."""
     directory = pathlib.Path(directory)
-    require(directory.is_absolute() and not directory.is_symlink(), "absolute private diagnostics directory required")
-    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-    require(directory.stat().st_mode & 0o022 == 0, "writable-by-other diagnostics directory")
+    require(directory.is_absolute() and ".." not in directory.parts,
+            "absolute private diagnostics directory required")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    descriptor = os.open(directory.anchor, flags)
+    try:
+        for part in directory.parts[1:]:
+            parent = os.fstat(descriptor)
+            # Root-owned sticky /tmp is safe for private children; ordinary
+            # writable ancestors could redirect an otherwise valid output path.
+            require(parent.st_uid in (0, os.geteuid()) and
+                    (parent.st_mode & 0o022 == 0 or parent.st_mode & stat.S_ISVTX),
+                    "unsafe diagnostics directory ancestor")
+            try:
+                child = os.open(part, flags, dir_fd=descriptor)
+            except FileNotFoundError:
+                try:
+                    os.mkdir(part, mode=0o700, dir_fd=descriptor)
+                except FileExistsError:
+                    pass
+                child = os.open(part, flags, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        meta = os.fstat(descriptor)
+        require(meta.st_uid == os.geteuid() and stat.S_IMODE(meta.st_mode) == 0o700,
+                "diagnostics directory requires evaluator ownership and exact mode 0700")
+        yield descriptor
+        current = directory.stat(follow_symlinks=False)
+        final = os.fstat(descriptor)
+        require((current.st_dev, current.st_ino) == (meta.st_dev, meta.st_ino)
+                and final.st_uid == os.geteuid() and stat.S_IMODE(final.st_mode) == 0o700,
+                "diagnostics directory changed during use")
+    finally:
+        os.close(descriptor)
+
+
+def write_artifact(directory, content):
     data = canonical(content)
     require(len(data) <= 32 * 1024 * 1024, "diagnostics size budget exceeded")
     digest = hashlib.sha256(data).hexdigest()
-    target = directory / digest
-    try:
-        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    except FileExistsError:
-        require(not target.is_symlink() and target.read_bytes() == data, "immutable diagnostics tampered")
-    else:
-        with os.fdopen(fd, "wb") as destination:
-            destination.write(data); destination.flush(); os.fsync(destination.fileno())
-        fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+    with diagnostics_directory(directory) as directory_fd:
         try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+            fd = os.open(digest, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                         0o600, dir_fd=directory_fd)
+        except FileExistsError:
+            fd = os.open(digest, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC,
+                         dir_fd=directory_fd)
+            with os.fdopen(fd, "rb") as existing:
+                meta = os.fstat(existing.fileno())
+                require(stat.S_ISREG(meta.st_mode) and meta.st_uid == os.geteuid()
+                        and stat.S_IMODE(meta.st_mode) == 0o600 and meta.st_nlink == 1,
+                        "immutable diagnostics identity or mode invalid")
+                require(existing.read(32 * 1024 * 1024 + 1) == data, "immutable diagnostics tampered")
+        else:
+            with os.fdopen(fd, "wb") as destination:
+                require(stat.S_IMODE(os.fstat(destination.fileno()).st_mode) == 0o600,
+                        "diagnostics file requires exact mode 0600")
+                destination.write(data); destination.flush(); os.fsync(destination.fileno())
+            os.fsync(directory_fd)
     return digest
 
 

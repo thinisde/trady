@@ -1,6 +1,6 @@
-# Order-book microstructure and entry-quality intelligence (proposed)
+# Order-book microstructure and entry-quality intelligence (research implementation)
 
-Status: new feature design, 2026-10-31. Documentation only. No Level 2 data entitlement, exchange connection, order-book engine or real-time execution authority is shipped.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research. The [bounded book builder](../../../crates/trady-adapters/src/intelligence/book.rs) handles snapshots/deltas, gaps, recovery epochs, depth capacity and freshness. [Policy](../../../crates/trady-policy/src/intelligence/microstructure.rs) computes displayed-depth metrics, compatible dynamics and elapsed-window markouts. The [shared service](./implementation-report.md) exposes approved research context. Level 2 entitlements, exchange subscriptions, route validation and predictive calibration remain separate gates.
 
 ## Purpose and difference from existing execution
 

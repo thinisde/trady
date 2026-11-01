@@ -1,5 +1,7 @@
 //! Private wire types. Decimal JSON tokens never pass through binary floating point.
 
+use super::{BrokerFill, BrokerFillWalletImpact, BrokerTax};
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as _};
 use serde_json::value::RawValue;
@@ -76,14 +78,19 @@ pub(super) struct Cash {
 
 #[derive(Deserialize)]
 pub(super) struct Instrument {
-    pub ticker: InstrumentId,
+    pub ticker: String,
     pub currency: Currency,
+}
+impl Instrument {
+    pub fn instrument_id(&self) -> BrokerResult<InstrumentId> {
+        InstrumentId::new(self.ticker.clone()).map_err(|_| invalid())
+    }
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct InstrumentMetadata {
-    pub ticker: InstrumentId,
+    pub ticker: String,
     pub currency_code: Currency,
     pub isin: String,
     #[serde(rename = "type")]
@@ -111,7 +118,7 @@ impl PositionDto {
             return Err(invalid());
         }
         Ok(Position {
-            instrument_id: self.instrument.ticker,
+            instrument_id: self.instrument.instrument_id()?,
             quantity: self.quantity.0,
         })
     }
@@ -121,7 +128,7 @@ impl PositionDto {
 #[serde(rename_all = "camelCase")]
 pub(super) struct Order {
     pub id: i64,
-    ticker: Option<InstrumentId>,
+    ticker: Option<String>,
     instrument: Option<Instrument>,
     quantity: Number,
     filled_quantity: Number,
@@ -146,7 +153,7 @@ impl Order {
         {
             return Err(invalid());
         }
-        let instrument_id = self
+        let ticker = self
             .ticker
             .as_ref()
             .or_else(|| self.instrument.as_ref().map(|i| &i.ticker))
@@ -154,12 +161,13 @@ impl Order {
         if self
             .instrument
             .as_ref()
-            .is_some_and(|i| &i.ticker != instrument_id)
+            .is_some_and(|i| &i.ticker != ticker)
             || (self.side == Side::Buy
                 && (self.quantity.0 < Decimal::ZERO || self.filled_quantity.0 < Decimal::ZERO))
         {
             return Err(invalid());
         }
+        let instrument_id = InstrumentId::new(ticker.clone()).map_err(|_| invalid())?;
         let quantity = self.quantity.0.abs();
         let filled_quantity = self.filled_quantity.0.abs();
         let status = match self.status.as_str() {
@@ -315,4 +323,149 @@ fn continuation<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Er
 #[derive(Deserialize)]
 pub(super) struct HistoryItem {
     pub order: Order,
+    pub fill: Option<Fill>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct Fill {
+    pub id: Option<i64>,
+    pub filled_at: Option<DateTime<Utc>>,
+    pub price: Option<Number>,
+    pub quantity: Option<Number>,
+    pub trading_method: Option<String>,
+    #[serde(rename = "type")]
+    pub fill_type: Option<String>,
+    pub wallet_impact: Option<FillWalletImpact>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct FillWalletImpact {
+    pub currency: Option<Currency>,
+    pub fx_rate: Option<Number>,
+    pub net_value: Option<Number>,
+    pub realised_profit_loss: Option<Number>,
+    #[serde(default)]
+    pub taxes: Vec<Tax>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct Tax {
+    pub charged_at: Option<DateTime<Utc>>,
+    pub currency: Option<Currency>,
+    pub name: Option<String>,
+    pub quantity: Option<Number>,
+}
+
+impl Fill {
+    pub fn normalize(&self, order: &BrokerOrder) -> BrokerResult<BrokerFill> {
+        if self.fill_type.as_deref().is_some_and(|fill_type| {
+            !matches!(
+                fill_type,
+                "TRADE"
+                    | "STOCK_SPLIT"
+                    | "STOCK_DISTRIBUTION"
+                    | "FOP"
+                    | "FOP_CORRECTION"
+                    | "CUSTOM_STOCK_DISTRIBUTION"
+                    | "EQUITY_RIGHTS"
+                    | "SCRIP_STOCK_DIVIDENDS"
+                    | "STOCK_DIVIDENDS"
+                    | "STOCK_ACQUISITION"
+                    | "CASH_AND_STOCK_ACQUISITION"
+                    | "SPIN_OFF"
+            )
+        }) {
+            return Err(invalid());
+        }
+        let is_trade = self
+            .fill_type
+            .as_deref()
+            .is_none_or(|fill_type| fill_type == "TRADE");
+        if self.id.is_some_and(|id| id <= 0)
+            || (is_trade
+                && self.quantity.as_ref().is_some_and(|quantity| {
+                    quantity.0 <= Decimal::ZERO || quantity.0 > order.quantity
+                }))
+            || (is_trade
+                && self
+                    .price
+                    .as_ref()
+                    .is_some_and(|price| price.0 <= Decimal::ZERO))
+            || self
+                .trading_method
+                .as_deref()
+                .is_some_and(|method| !matches!(method, "TOTV" | "OTC"))
+        {
+            return Err(invalid());
+        }
+        let wallet_impact = self
+            .wallet_impact
+            .as_ref()
+            .map(FillWalletImpact::normalize)
+            .transpose()?;
+        Ok(BrokerFill {
+            broker_order_id: order.broker_order_id.clone(),
+            instrument_id: order.instrument_id.clone(),
+            id: self.id,
+            filled_at: self.filled_at,
+            price: self.price.map(|value| value.0),
+            quantity: self.quantity.map(|value| value.0),
+            trading_method: self.trading_method.clone(),
+            fill_type: self.fill_type.clone(),
+            wallet_impact,
+        })
+    }
+}
+
+impl FillWalletImpact {
+    fn normalize(&self) -> BrokerResult<BrokerFillWalletImpact> {
+        if self
+            .fx_rate
+            .as_ref()
+            .is_some_and(|fx_rate| fx_rate.0 <= Decimal::ZERO)
+        {
+            return Err(invalid());
+        }
+        let taxes = self
+            .taxes
+            .iter()
+            .map(Tax::normalize)
+            .collect::<BrokerResult<Vec<_>>>()?;
+        Ok(BrokerFillWalletImpact {
+            currency: self.currency.clone(),
+            fx_rate: self.fx_rate.map(|value| value.0),
+            net_value: self.net_value.map(|value| value.0),
+            realised_profit_loss: self.realised_profit_loss.map(|value| value.0),
+            taxes,
+        })
+    }
+}
+
+impl Tax {
+    fn normalize(&self) -> BrokerResult<BrokerTax> {
+        let name = self.name.clone().ok_or_else(invalid)?;
+        if !matches!(
+            name.as_str(),
+            "COMMISSION_TURNOVER"
+                | "CURRENCY_CONVERSION_FEE"
+                | "FINRA_FEE"
+                | "FRENCH_TRANSACTION_TAX"
+                | "PTM_LEVY"
+                | "STAMP_DUTY"
+                | "STAMP_DUTY_RESERVE_TAX"
+                | "TRANSACTION_FEE"
+        ) {
+            return Err(invalid());
+        }
+        let quantity = self.quantity.ok_or_else(invalid)?.0;
+        Ok(BrokerTax {
+            charged_at: self.charged_at,
+            currency: self.currency.clone().ok_or_else(invalid)?,
+            name,
+            quantity,
+        })
+    }
 }

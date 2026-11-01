@@ -1,6 +1,7 @@
 //! Provider-neutral, validated identifiers and execution observations.
 
 pub mod financial;
+pub mod intelligence;
 pub mod perpetual;
 pub mod prediction;
 pub mod research;

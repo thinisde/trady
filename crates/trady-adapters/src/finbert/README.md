@@ -43,6 +43,8 @@ loads model weights.
 
 ## Verification
 
+Run `cargo test --workspace --locked` from the repository root.
+
 Run `cargo test -p trady-adapters --locked` from the repository root.
 The package has no `finbert` integration-test target. Adapter verification uses
 offline fixtures and does not require launching the model service.

@@ -8,12 +8,44 @@ from the foundation startup probes and paper demonstrations. Its private
 [analyst worker](./autonomous_worker.rs) runs screening and native inference in a
 separate child process.
 
+These handlers belong to the binary's private module tree. Their `pub`,
+`pub(crate)` and `pub(super)` items support internal composition; the crate
+declares the `trady` binary and no library target (`[main.rs:run]`).
+
 ## Interface
+
+`[entry_demo.rs:run]` exposes `demo-entry --directory ABSOLUTE_DIRECTORY`.
+It calls the native limit calculator with bundled synthetic inputs and a fixed
+fixture clock, then submits only to the recording-only `ShadowBroker`. Its
+`Unsupported` response is required before success. Results carry
+`SIMULATION_ONLY`, `FIXTURE`, `production_approved=false` and
+`entry_authorized=false`; credentials, HTTP clients and databases are unused.
+Private immutable observation/proposal files live under `simulation-only`;
+identical reruns reuse the proposal digest without adding a duplicate intent.
+Relative paths and extra runtime/broker options are rejected. See the
+[simulation guide](../../../docs/autonomous.md#simulated-entry).
+
+- `[intelligence.rs:run]`: `intelligence status`, `assess`, `tax-scenarios`,
+  `replay`, `import`, `read`, `invalidate` and `purge`. Assess/replay are offline;
+  database operations require the analyst role and migrations through 11. Replay reports
+  accepted and rejected events explicitly. Tax remains ephemeral and owner-only.
+- `[opencode/mod.rs:chat]` accepts `--intelligence-config FILE`. Enabled non-tax
+  tools use a new ephemeral conversation and reject `--session`/`--resume`;
+  ordinary chat remains durable. See the [operating guide](../../../docs/v1/features/implementation-report.md).
+
+`[api_health.rs:run]` exposes `api-health [--online] [--provider NAME]`, with
+metadata-only default behavior and explicit bounded GET diagnostics.
+`[stock_report.rs:run]` exposes `research-report FILE [--as-of RFC3339]` over
+bounded strict JSON. Both return `entry_authorized=false`; the latter has no
+network or database effects. See [health checks](../../../docs/api-health.md)
+and [stock reports](../../../docs/stock-reports.md).
 
 `[weekly.rs:run]` exposes real `weekly check|run|export|forecast|bridge` commands;
 `arithmetic-bridge` and `formula-bridge` support executable Lean/Rust parity. `[release.rs:run]`
 exposes candidate, independent verification, scoped evidence, explicit owner
 approval, compare-and-swap advancement, inspection and ACTIVE formula export.
+`[weekly.rs:read]`, `option`, `exact_options` and `parse_time` are crate-visible
+bounded JSON, exact-option and RFC3339 helpers shared by command modules.
 
 `[financial.rs:run]` exposes reviewed provider collection, rights-aware snapshots
 and status through the [financial-data contract](../../../docs/financial-data.md).
@@ -71,11 +103,37 @@ trady autonomous recover-order --config FILE --intent ID --broker-order ID
 Each model entry has `manifest` and `artifact_path`; artifact paths resolve from
 the deployment file's directory. The shipped
 [example](../../../config/autonomous.example.json) is disabled and has no approved artifacts.
-`check` validates configuration/artifacts and reports disabled runtime/universe,
-empty model/skill registries and missing/invalid active formula as blockers.
+`[autonomous.rs:configuration_check]` validates configuration/artifacts and reports
+disabled runtime/universe, empty model/skill registries, an empty owner instrument
+allowlist and missing/invalid active formula as blockers. It returns
+`configuration_ready`, `required_actions`, `entry_controls_enabled` and
+`order_submission_policy`; configuration checks always report `entry_authorized=false`.
+It also reports `approved_input_service_unconfigured` for a placeholder input
+endpoint and `live_release_expired` when time-sensitive trading validation fails
+(`[autonomous.rs:configuration_check]`).
+It reports `entry_capabilities_unverified` and lists each unusable cash-account,
+instrument, protective-order or quote capability in `unverified_entry_capabilities`.
+These match the policy's unconditional entry capability checks; fractional-order
+support is checked separately when sizing requires it. Evidence must be verified,
+nonempty and unexpired. The command does not make broker capability probes.
 Optional fields are `analyst_socket`, `shadow_directory` and `release_candidate`.
 Live requires the socket and exact release candidate; local native model hashes
 must match its model map. Expired native artifacts are excluded from inference.
+
+`[autonomous_shadow.rs:run]` applies the same preflight before loading credentials
+or constructing broker/input clients. An incomplete deployment returns
+`shadow_blocked` with zero market cycles, all required actions and a private
+immutable configuration audit. Shadow retains its recording-only broker path.
+
+`[autonomous.rs:run]` routes `check` through `configuration_check`; the shadow
+runner also calls that preflight. Broker-bound run and recovery enter the
+executor path directly, with new-entry gates enforced by `AutonomousTrader`.
+
+`[broker_read.rs:snapshot]` wraps only `Trading212Reader` observations for both
+native `t212 snapshot` and shadow runs. It retries only known rate-limit failures,
+at most three attempts with at most thirty total seconds of backoff. It respects
+`Retry-After`, stops on shutdown and does not retry other errors or unknown outcomes.
+Broker mutation clients do not use this helper.
 
 `[autonomous.rs:holding_advice]` uses `TRADY_ANALYST_DSN`. `holding --position ID`
 reads an executor-attested holding. `review-holding --request FILE` reads at most
@@ -192,7 +250,7 @@ diagnostic with `deployment_eligible:false`.
   `TRADY_ANALYST_DSN` only for the child compatibility path. The external analyst
   service loads its own DSN. Optional input authentication uses
   `TRADY_TRADING_INPUTS_TOKEN`, all through the central credential loader.
-  Database-backed paths require migrations 1–9; startup does not migrate. Database transport
+  Database-backed paths require migrations 1–11; startup does not migrate. Database transport
   uses verified remote TLS or explicit local plaintext with restricted roles.
 - `[autonomous.rs:run]` wires Trading 212 demo/paper or live. Shadow uses a
   separate namespace and read-only broker reader, without an executor DSN,
@@ -206,11 +264,16 @@ diagnostic with `deployment_eligible:false`.
   reports `entry_authorized=false`; it does not establish operational readiness.
   Demo/paper and live runs, including `--once`, can submit real broker orders. Unknown outcomes
   remain blocked until exact-ID observation/recovery; they are not replayed.
+- `[autonomous_shadow.rs:run]` requires an absolute shadow journal path and checks
+  Unix directory permissions. `[autonomous_shadow.rs:record]` exclusively creates
+  immutable cycle files with mode 0600 on Unix.
 - `[autonomous_worker.rs:WorkerProcess]` starts the current executable with a
   cleared environment and anonymous pipes. The child receives the analyst DSN
   and service token, with no broker/executor credential or credential-store load.
-  Pipe readers/writers use bounded queues. A request has a 30-second monotonic
-  deadline, including first-worker initialization; shutdown cancels its wait.
+  Pipe readers/writers use bounded queues. `[autonomous_worker.rs:WorkerProcess::exchange]`
+  starts its 30-second monotonic reply deadline after process launch, I/O-thread
+  setup and request enqueue; remaining child initialization shares that wait.
+  Shutdown cancels the wait.
   Timeout, malformed output or a mismatched snapshot terminates and reaps the
   child before a later cycle can start a replacement. Entry validation still
   checks the current quote, FX, account, formula, evidence and release gates.
@@ -233,6 +296,12 @@ the state and satisfy twenty real sessions plus fresh readiness before ACTIVE.
 Weekly store lease release is attempted after `run_weekly` returns, including its
 error path (`[weekly.rs:run]`).
 
+`[intelligence.rs:run]` and `[intelligence.rs:repository]` use analyst PostgreSQL
+for import, read, invalidate and purge. Invalidation requests content erasure for
+deletion or rights/entitlement changes; purge removes expired content.
+`[intelligence.rs:replay]` uses an in-memory repository, while assessment consumes
+local input without provider access.
+
 `[financial.rs:run]` status inspects the central credential store without network
 access. Every non-status financial command connects as the analyst and
 synchronizes the registry before its specific work.
@@ -240,8 +309,10 @@ synchronizes the registry before its specific work.
 Explicit `sentiment score` reads files/time and posts permitted normalized text to
 the configured FinBERT service. It prints JSON and makes no database or broker writes.
 
-OpenCode chat performs model HTTP calls and analyst-role session writes. Sessions
-can be listed/read/closed without model credentials; closure retains audit history.
+OpenCode chat performs model HTTP calls. Durable chat writes analyst-owned
+sessions; enabled intelligence tools instead require a fresh in-memory session
+(`[opencode/mod.rs:chat]`). Durable sessions can be listed/read/closed without
+model credentials; closure retains audit history.
 
 News commands can perform read-only provider HTTPS calls and analyst-role PostgreSQL
 writes/reads/content purges. `status` and offline `parse-feed` need neither credentials
@@ -272,6 +343,10 @@ to the live deployment release. Deployment must also run
 retention cleanup when the runtime/child is absent. Recovery reads exact broker facts and updates the journal
 without submitting an order or requiring analyst credentials/model loading.
 
+`[autonomous_worker.rs:RetentionWorker::start]` purges before accepting work;
+startup purge failure aborts worker construction. Service loops also check that
+the retention worker remains alive.
+
 Continuous demo/paper and live execution prints cycle failures, renews its fence and retries
 after the configured interval; renewal failure terminates it. `--once` attempts
 one cycle and propagates cycle errors. Argument and setup validation precedes
@@ -291,7 +366,7 @@ failure after that reservation can consume the session's slot
 
 ## Verification
 
-Run `cargo test -p trady-cli --test weekly_cli` for arithmetic CLI and malformed
+Run `cargo test -p trady-cli --test weekly_cli --locked` for arithmetic CLI and malformed
 input gates, plus the root disposable PostgreSQL checks for durable lifecycle
 semantics. No proof or historical performance is inferred from these fixtures.
 

@@ -29,6 +29,12 @@ Perpetual and universe screening supply scoped advisory/research observations.
   typed execution transport with caller-established authority.
 - `[src/contracts.rs:Contracts]`, `ValidatedDocument`, `parse_json`,
   `parse_json_bounded`: strict embedded-schema and duplicate-free JSON boundaries.
+- `[src/intelligence.rs:IntelligenceConfig]`, `IntelligenceRepository`, `ingest`,
+  `read`, `assess_ephemeral`: reviewed rights/provenance, immutable vintages,
+  retention and erasure boundaries for research intelligence.
+- `[src/stock_report.rs:generate]`: offline evidence-linked US/EU reports.
+  Financial period/unit consistency and source-content truth remain caller
+  obligations; report generation has no provider/database effects.
 - `[src/financial.rs:FinancialConfig]`, `FinancialProvider`, `FinancialRepository`,
   `collect`, `snapshot`, `signals`, `model_features`: bounded research-only data
   collection and rights-aware numerical projections.
@@ -46,7 +52,8 @@ Perpetual and universe screening supply scoped advisory/research observations.
 - `[src/research.rs:NewsSource]`, `ResearchRepository`, `ResearchConfig`,
   `collect_source`: bounded registry-driven research collection and durable progress.
 - `[src/harness.rs:AgentHarness]`, `RunInput`, `LlmProvider`, `ToolExecutor`,
-  `SessionRepository`: synchronous generation/tool orchestration and durable sessions.
+  `SessionRepository`: synchronous generation/tool orchestration with durable
+  sessions or required ephemeral storage.
 - `[src/perpetual.rs:PerpetualRepository]`, `PerpetualAdvisor`, `assess`,
   `validate_record`, `validate_review_for_scenario`, `record_review`:
   scenario/model-bound advice and reviews; repositories enforce immutable bindings.
@@ -63,7 +70,9 @@ Perpetual and universe screening supply scoped advisory/research observations.
 
 `[src/lib.rs:FoundationConfig::validate]` accepts version 1 paper configuration only.
 `[src/lib.rs:BrokerInformationPort]` and `BrokerPort` expose no order submission or
-cancellation. Concrete storage/provider implementations remain outside this crate.
+cancellation. Concrete PostgreSQL/provider implementations remain outside this
+crate. `[src/model_lab/journal.rs:EvaluationJournal]` and `write_immutable` provide
+local artifact and holdout persistence within the crate.
 
 The separate `[src/broker.rs:BrokerExecutionPort]` exposes typed submission and
 cancellation for an executor. Requests confer no authority: durable intent/fencing,
@@ -92,11 +101,23 @@ disabled automatic paid fallback. `[src/financial.rs:FinancialRepository]` and
 reservations. `[src/research_jobs.rs:check_dependencies]` checks supplied metadata;
 repositories/callers resolve current source rights and provenance.
 
+`[src/intelligence.rs:ingest]` rejects tax before repository access;
+`[src/intelligence.rs:assess_ephemeral]` keeps tax owner-only and ephemeral.
+`[src/harness.rs:SessionRepository::is_ephemeral]` and
+`[src/harness.rs:ToolExecutor::requires_ephemeral_session]` enforce the
+intelligence conversation storage boundary, while `ToolExecutor::validate_context`
+rechecks retained research before every model request.
+
 ## Side Effects
 
 `[src/lib.rs:reconcile_account]` invokes supplied broker, repository and clock ports.
 `[src/harness.rs:AgentHarness]` invokes supplied provider, tool and session-repository
-ports, streams generated text and persists context/run/tool state.
+ports, streams generated text and records context/run/tool state through the
+selected repository; persistence depends on that repository.
+`[src/intelligence.rs:ingest]` registers sources and stores observations/corrections;
+`[src/intelligence.rs:read]` purges expired content and stores assessments only
+when the referenced sources permit derived storage. `assess_ephemeral` and
+`[src/stock_report.rs:generate]` compute without repository/provider access.
 `[src/financial.rs:collect]`, `[src/research.rs:collect_source]`,
 `[src/research_jobs.rs:score_sentiment_job]` and
 `[src/x_monitoring.rs:measure_x_counts]` invoke supplied collection/inference and

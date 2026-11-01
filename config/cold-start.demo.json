@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "account": {
+    "account_id": "paper_cold_start_eur",
+    "base_currency": "EUR",
+    "environment": "demo",
+    "owner_id": "cold_start_owner"
+  },
+  "broker": {
+    "timeout_seconds": 10,
+    "broker_account_id": null
+  },
+  "market_data": {
+    "history_path": "var/research-training/2026-11-01/history/history.json",
+    "provider": "Twelve Data",
+    "source_permissions": "research-only-import-recorded-2026-11-01",
+    "expected_symbols": [
+      "MSFT_US_EQ",
+      "JPM_US_EQ",
+      "JNJ_US_EQ",
+      "XOM_US_EQ",
+      "PG_US_EQ"
+    ]
+  },
+  "universe": {
+    "source_id": "trading212_metadata_dynamic_research",
+    "source_url": "https://demo.trading212.com/api/v0/equity/metadata/instruments",
+    "candidate_limit": 5,
+    "preferred_symbols": ["XOM", "PG", "MSFT", "JPM", "JNJ"],
+    "excluded_symbols": [],
+    "selection_mode": "LLM_NEWS_X_RESEARCH_WITH_BROKER_INTERSECTION",
+    "rights_reference": "broker-metadata-read-and-current-research-rights-required"
+  },
+  "risk": {
+    "entry_cash_fraction": "0.02",
+    "max_initial_loss_fraction": "0.01",
+    "max_order_value": {"amount": "50.00", "currency": "EUR"},
+    "max_daily_orders": 1,
+    "require_protection": true
+  },
+  "artifacts": {
+    "directory": "var/cold-start"
+  },
+  "inputs": {
+    "config_version": 1,
+    "base_url": "https://inputs.trady.example/v1/",
+    "allowed_hosts": ["inputs.trady.example"],
+    "screening": {
+      "owner_id": "cold_start_owner",
+      "run_id": "runtime_cold_start",
+      "owner_allowlist": [],
+      "policy": {
+        "max_membership_age_seconds": 86400,
+        "max_broker_age_seconds": 600,
+        "max_quote_age_seconds": 10,
+        "max_priority_age_seconds": 3600,
+        "max_timing_age_seconds": 60,
+        "minimum_seconds_to_close": 1800,
+        "max_spread_bps": "20",
+        "max_round_trip_cost_bps": "50",
+        "minimum_daily_notional": "1000000",
+        "max_order_participation_bps": "10",
+        "candidate_limit": 5,
+        "peer_limit": 2
+      }
+    }
+  },
+  "research_artifacts": {
+    "dataset_report": "var/research-training/2026-11-01/dataset/dataset-report.json",
+    "candidate_model": "var/research-training/2026-11-01/model/candidate.json",
+    "native_model": "var/research-training/2026-11-01/model/native-model.json",
+    "evaluation_report": "var/research-training/2026-11-01/model/holdout-report.json"
+  },
+  "review": {
+    "enabled": true,
+    "config_path": "config/opencode/llm.json"
+  },
+  "capability_evidence_path": "var/cold-start/capability-evidence/capability-review-xom-20261101.json"
+}

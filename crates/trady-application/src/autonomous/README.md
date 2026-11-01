@@ -69,6 +69,11 @@ native reviews before target activation and normalizes remaining exit charges.
   `net_proceeds(quantity, price, now)`.
   `validate_refreshed_exit_costs(current, now)` requires unchanged fees/FX rate
   and a current conversion observation before cross-currency final entry.
+- `[readiness.rs:EntryCandidate::scenario_hash]` binds proposal/account/snapshot/
+  policy/instrument/currency, entry and exit economics, holding terms, dossier ID,
+  screening ID, formula and deadline. The full dossier, sentiment reference,
+  confidence inputs, exceptional flag and advisor receipt have separate validation
+  checks and are not direct fields of this hash.
 
 ## Invariants
 
@@ -157,6 +162,9 @@ native reviews before target activation and normalizes remaining exit charges.
   application-side reference validation cannot replace that atomic check.
   Policy rejection can return `Ok(PlanActivation)` with `activated=false` and
   the evaluated old state; application binding failures can return `Err` first.
+  Holding activation calls `validate_dossier`, scenario-bound review validation
+  and holding-policy activation. Full entry-candidate validation and formula
+  replay belong to the separate new-entry path.
 - `[mod.rs:recover_order]` accepts an unused 1–128-character ASCII alphanumeric/
   underscore broker ID for an attempted unbound intent. Fresh exact-ID facts
   must match account/instrument/side/quantity, original mode/currency and nonregressing

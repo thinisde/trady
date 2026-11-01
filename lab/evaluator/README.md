@@ -30,6 +30,17 @@ The worker entrypoint, supplied as an unstarted deployment unit, is:
 `evaluate.py --lock ABSOLUTE_FILE` supports direct TEST_ONLY checks. It rejects
 PRODUCTION locks. The worker reads only its root-owned lock and three pinned
 root-owned input files. The lab identity cannot read those files or worker state.
+`[transport.py:serve]` requires a dedicated Linux process. Before reading the lock
+or sealed inputs, `[isolation.py:worker_process]` rejects existing threads and
+inherited sockets/rings; root-owned read-only regular descriptors and ordinary
+stdio are allowed, with connected stdout/stderr restricted to systemd's journal.
+After binding its listener, `[isolation.py:isolate_worker]` installs a mandatory
+libseccomp filter across all threads and descendants: new sockets, socket pairs,
+outbound `connect`, and all three `io_uring` syscalls return EPERM. Unsupported
+architectures terminate the process. Accepted connections still support the
+existing bounded request/reply protocol. Startup uses only local synthetic
+sockets to check the denial; missing Linux/procfs, `libseccomp.so.2`, filter/TSYNC
+support or a failed self-test blocks the worker. There is no TEST_ONLY bypass.
 The client verifies the socket and parent owner against the fixed worker UID.
 IPC uses bounded four-byte length-prefixed JSON, a 4 MiB message limit and
 120-second socket deadlines. The outer Rust runner adds a wall/CPU/memory/output
@@ -77,7 +88,7 @@ The deployment-owned lock has these required fields:
 | `bindings` | Exact `input_hash`, `run_id`, `plan_hash`, `parameters_hash`, `dataset_hash`, `candidate_id`, `account_id`, `mode` |
 | `policy` | Frozen evaluator settings below |
 | `artifacts` | `dataset`, `search`, `shadow`, each `{path,sha256}`; absolute regular non-symlink file, root owner, no group/other write |
-| `diagnostics_directory` | Absolute private worker output directory |
+| `diagnostics_directory` | Absolute worker-owned directory with exact mode 0700; no symlink components or `..` |
 
 The dataset artifact is a normalized evaluation bundle. Its content hash is
 separate from `manifest.dataset_hash`: that latter hash is SHA256 of the frozen
@@ -273,6 +284,14 @@ It is TEST_ONLY and must never be installed as production data.
 
 ## Invariants
 
+- `[transport.py:serve]` binds the IPC listener before
+  `[isolation.py:isolate_worker]` denies new sockets and outbound connections.
+  It reads no lock, dataset, search or shadow file until installation and local
+  self-tests pass. Workers run separately from clients, with no weaker test mode.
+- `[run.py:diagnostics_directory]` requires evaluator ownership and exact mode
+  0700 for new and existing outputs. Descriptor-relative access, no symlink
+  traversal and identity checks protect writes/reuse; an unsafe directory is
+  rejected without changing its owner or permissions.
 - `[observations.py:validate_fits]` requires separate train/calibration/development
   intervals purged and embargoed for
   the frozen outcome horizon plus publication delay. Feature/label availability,
@@ -290,7 +309,9 @@ It is TEST_ONLY and must never be installed as production data.
   expiry is required even for an early or pending label. Missing future sessions
   are not inferred from weekdays or a seconds-only duration.
 - `[statistics.py:objective]` matches the application: median fold mean log return, less
-  maximum fold drawdown, nearest-rank IQR instability and complexity penalties.
+  maximum fold drawdown, fixed-index IQR instability and complexity penalties.
+  For sorted fold means, the IQR is
+  `means[3*(n-1)//4] - means[(n-1)//4]`.
   Session returns include idle sessions and actual costs, without a second
   subtraction. Equal-length contiguous outer folds retain the continuous account.
 - `[statistics.py:paired_bounds]` moves paired circular session blocks for all strategies and stresses together;
@@ -311,8 +332,10 @@ It is TEST_ONLY and must never be installed as production data.
   Two tails × four events × payoff groups × trials × looks determine correction.
   Group sums, resampled conditional means, empirical quantiles, probabilities,
   downside, uncertainty and frozen complexity penalties remain exact fractions.
-  Missing support abstains. Each ENTER requires `utility - numeric_margin` to
-  exceed the cash hurdle strictly, even with all utility penalty weights zero.
+  Missing support leaves utility unavailable and fails support gates; the scorer
+  does not rewrite an ENTER decision to ABSTAIN. Each ENTER requires
+  `utility - numeric_margin` to exceed the cash hurdle strictly, even with all
+  utility penalty weights zero.
   Exact utility equal to the hurdle or the guarded hurdle does not pass.
 - `[predictions.py:score_predictions]` compares exact multiclass Brier against the exact empirical
   training-count prior; reliability bin assignment, ECE, older/newer class
@@ -373,10 +396,25 @@ It is TEST_ONLY and must never be installed as production data.
 evaluation; retries with identical frozen bindings are allowed, while a different
 candidate/request cannot reuse the exposure. `[run.py:write_artifact]` writes
 SHA256-addressed diagnostic reports using exclusive 0600 files with file/directory
-fsync. `[transport.py:serve]` reads fixed sealed files; state stays private to the evaluator identity. It
+fsync. `[run.py:diagnostics_directory]` opens every path component without
+following symlinks, creates missing directories with requested mode 0700, and
+requires the final directory's effective-UID ownership and exact mode 0700,
+including for existing directories. Unsafe modes/owners are rejected without
+chmod/chown repair. Ancestors must be root/evaluator-owned and either nonwritable
+by others or sticky; descriptor-relative writes cannot be redirected by replacing
+the validated path. A changed directory identity/mode rejects the result.
+Reused reports must be identical, evaluator-owned, singly linked regular 0600
+files; symlinks, FIFOs and other file types reject. The umask must preserve owner
+permissions. `[transport.py:serve]` validates the diagnostics directory at startup
+and reads fixed sealed files only after installing isolation; state stays private
+to the evaluator identity. It
 accepts only the independently frozen request; no data-selection/peek endpoint
 exists. The client sends/receives bounded Unix IPC and emits only the typed helper
 reply. Both paths have no provider calls, order mutations or database handle.
+The worker's kernel filter prevents connecting to PostgreSQL Unix sockets at any
+filesystem or abstract address, independently of socket directory permissions.
+It also refuses inherited connected database descriptors; accepted lab IPC uses
+ordinary `recv`, so ancillary file descriptors are not imported.
 
 `[observations.py:equity_series]` and `[run.py:evaluate]` produce return/risk/fill
 metrics, gross sector attribution and a separate `unallocated_execution_costs`
@@ -387,6 +425,8 @@ actual stdout/receipts. A trusted auditor can resolve the worker diagnostic hash
 from that original stdout; lab access to sealed diagnostics is not required.
 
 ## Verification
+
+Run `cargo test --workspace --locked` from the repository root for workspace verification.
 
 Run `python3 -B -m unittest discover -s lab/tests -v` (154 tests at the round-five
 repair checkpoint). Tests cover numerical
@@ -431,3 +471,12 @@ independent EGM verification found no actionable findings in the payoff identity
 and session boundary repairs.
 The executable pin tests require root-owned temporary files and skip explicitly
 when run without the ability to create those files.
+
+`test_evaluator_security.py` covers exact existing-directory modes/ownership,
+symlink/rename races, private report reuse, a synthetic PostgreSQL-named Unix
+socket, native/abstract outbound denial, `io_uring` denial, thread synchronization,
+inherited sockets/stdio and startup failure before sealed-file access. It uses
+only subprocess-local filters and temporary fixtures under
+`/tmp/trady-remediation-20261031/evaluator/`. The existing worker IPC regression
+also uses a subprocess so it exercises the same irreversible filter without
+restricting the test client. No real database is opened.

@@ -21,6 +21,10 @@ do not certify readiness or grant permission to place orders.
   Requests use `kind` tags `FORMULA`/`DECIMAL`; replies use `status` tags
   `ACCEPTED`/`DECIMAL`/`REJECTED`. `[proof_bridge.rs:Operation]` supports
   `Add`, `Sub`, `Mul`, `Div`, `Rem`, `Floor` and `Ceil`.
+  Their wire names are `ADD`, `SUB`, `MUL`, `DIV`, `REM`, `FLOOR` and `CEIL`.
+- `[proof_bridge.rs:canonical]` normalizes successful decimal values; the
+  [workspace dependency](../../../../Cargo.toml) enables `rust_decimal`'s
+  `serde-str` feature for their string wire representation.
 - [Parent policy contract](../README.md) documents the shared economics helpers.
 
 ## Invariants
@@ -30,6 +34,12 @@ parameter envelope, 1 through the policy's maximum holding sessions, ATR lookbac
 2–252 and bar duration 60–86,400 seconds. `[mod.rs:FormulaEnvelope::validate]`
 checks policy validity, an entry allowance at most 1%, positive ordered stop-ATR
 bounds up to 10 and positive target bounds within the policy ceiling.
+
+`[mod.rs:FormulaFamily]` is matched against supplied evidence; it does not select
+a different arithmetic branch. `[mod.rs:FormulaEvidence]` supplies ATR and signal
+eligibility, and `[mod.rs:calculate_limits]` requires
+`completed_bars > atr_lookback`. The public records reject unknown deserialized
+fields; deserialization does not invoke their numeric or temporal validators.
 
 `[mod.rs:calculate_limits]` checks fresh account/quote/FX and unexpired inputs,
 matching causal completed-bar evidence and supplied sentiment/score constraints.
@@ -51,6 +61,19 @@ protection assumptions must be established by callers; this function does not
 verify their provenance, execute a calendar or establish live broker capability.
 Returned validity is capped by input, quote, account, FX and bar deadlines.
 
+`[mod.rs:calculate_limits]` first calls `size_entry` with the original quote,
+then repeats sizing with its tick-rounded buy limit as the ask; either rejection
+propagates. The buy limit rounds down from the lesser of the entry-range maximum
+and the ask plus the configured allowance. The stop trigger rounds up from that
+buy limit minus the ATR multiple. Stop-distance checks use `quote.bid -
+stop_trigger`: strictly greater than `noise_distance` and at least
+`minimum_stop_distance`.
+
+`[mod.rs:calculate_limits]` also requires the supplied
+`max_account_risk_fraction` to be positive and at most
+`policy.max_initial_loss_fraction`. The final modeled loss must satisfy both
+the spendable-cash risk cap and the policy loss cap against acquisition cost.
+
 `[mod.rs:CalculatedLimits::authority]` is the returned `FORMULA_V1` string tag.
 It is not a permission, durable execution acceptance or owner policy relaxation.
 
@@ -62,12 +85,14 @@ CLI serialization and process execution belong to its callers.
 
 ## Verification
 
+Run `cargo test --workspace --locked` from the repository root for workspace verification.
+
 Run `cargo test -p trady-policy --locked` and
 `cargo clippy -p trady-policy --all-targets --locked -- -D warnings` from the
 repository root. Formula-specific evidence/provenance and runtime activation are
 separate integration responsibilities.
 
-`tests/limits.rs:allocation_rounding_at_decimal_boundaries_never_spends_past_cash`
+`../../tests/limits.rs:allocation_rounding_at_decimal_boundaries_never_spends_past_cash`
 retains maximum-magnitude, 28-place and smallest-unit allocation regressions.
 The offline `lab/proofs` project proves the reference acceptance checks and runs
 exact Lean/production/simulation-adapter parity under its explicit translation

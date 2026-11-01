@@ -1,0 +1,271 @@
+{
+  "entity_id": "synthetic_stock",
+  "evidence": [
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "492f809d09ad7c4ef52ced185349aafccb25a453b7931683bee169dc47e19a32",
+      "currency": "USD",
+      "entity_id": "synthetic_stock",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_annual_statement",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "492f809d09ad7c4ef52ced185349aafccb25a453b7931683bee169dc47e19a32",
+      "currency": "USD",
+      "entity_id": "synthetic_stock",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_lot_statement",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "492f809d09ad7c4ef52ced185349aafccb25a453b7931683bee169dc47e19a32",
+      "currency": "USD",
+      "entity_id": "synthetic_stock",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_no_action_mark",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "492f809d09ad7c4ef52ced185349aafccb25a453b7931683bee169dc47e19a32",
+      "currency": "USD",
+      "entity_id": "synthetic_stock",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_rule_source",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "492f809d09ad7c4ef52ced185349aafccb25a453b7931683bee169dc47e19a32",
+      "currency": "USD",
+      "entity_id": "synthetic_stock",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_statement",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "492f809d09ad7c4ef52ced185349aafccb25a453b7931683bee169dc47e19a32",
+      "currency": "USD",
+      "entity_id": "synthetic_stock",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_target_assumption",
+      "unit": "normalized_research",
+      "venue": null
+    }
+  ],
+  "observation_id": "fixture_observation",
+  "payload": {
+    "feature": "TAX",
+    "input": {
+      "annual_state": {
+        "available_at": "2026-10-31T12:00:00Z",
+        "confirmed_allowance": "0",
+        "confirmed_loss_carryforward": "0",
+        "gross_dividends": "0",
+        "gross_stock_gains": "0",
+        "owner_confirmed": true,
+        "statement_reference": "synthetic_annual_statement",
+        "stock_losses": "0",
+        "unknown_reason": null,
+        "withholding": []
+      },
+      "annual_state_unavailable_reason": null,
+      "assessment_tax_date": "2026-10-31",
+      "assumptions_reference": "synthetic_no_action_mark",
+      "comparison_horizon": "2026-11-10T14:00:00Z",
+      "comparison_tax_date": "2026-11-10",
+      "context": {
+        "account_treatment_owner_confirmed": true,
+        "account_wrapper": "synthetic_wrapper",
+        "broker_entity": "synthetic_broker",
+        "confirmed_at": "2026-10-31T12:00:00Z",
+        "jurisdiction": "SYNTHETIC",
+        "residence_owner_confirmed": true,
+        "statement_as_of": "2026-10-30T12:00:00Z",
+        "statement_reference": "synthetic_statement",
+        "tax_currency": "EUR",
+        "tax_year": 2026,
+        "valid_until": "2026-12-31T00:00:00Z"
+      },
+      "context_unavailable_reason": null,
+      "hold_to_target": {
+        "assumptions_reference": "synthetic_target_assumption",
+        "broker_cash": null,
+        "currency": "EUR",
+        "disposal_fx": null,
+        "disposal_id": "synthetic_target",
+        "disposed_at": "2026-11-10T14:00:00Z",
+        "quantity": "1",
+        "remaining_position_value_tax_currency": "0",
+        "sale_fees": "1",
+        "selected_lot_ids": [],
+        "slippage_and_fx_charges": "0",
+        "tax_valuation_date": "2026-11-10",
+        "unit_proceeds": "100",
+        "withholding": null,
+        "withholding_confirmed_absent": true,
+        "withholding_unavailable_reason": null
+      },
+      "hold_to_target_unavailable_reason": null,
+      "instrument_id": "synthetic_stock",
+      "lots": [
+        {
+          "acquired_at": "2026-01-10T00:00:00Z",
+          "acquisition_fees": "1",
+          "acquisition_fx": null,
+          "available_at": "2026-01-11T00:00:00Z",
+          "broker_confirmed": true,
+          "currency": "EUR",
+          "instrument_id": "synthetic_stock",
+          "lot_id": "synthetic_lot",
+          "quantity": "1",
+          "statement_reference": "synthetic_lot_statement",
+          "tax_valuation_date": "2026-01-10",
+          "unit_cost": "80"
+        }
+      ],
+      "lots_unavailable_reason": null,
+      "no_action_value_tax_currency": "100",
+      "no_action_value_unavailable_reason": null,
+      "rules": {
+        "account_wrapper": "synthetic_wrapper",
+        "acquisition_disposal_date_fx_approved": true,
+        "acquisition_fees_in_basis": true,
+        "allowance_allocation": "GAINS_THEN_DIVIDENDS",
+        "available_at": "2025-12-02T00:00:00Z",
+        "broker_entity": "synthetic_broker",
+        "carryforward_permitted": true,
+        "dividend_rate": {
+          "central": "0.25",
+          "lower": "0.25",
+          "upper": "0.25"
+        },
+        "effective_from": "2026-01-01T00:00:00Z",
+        "effective_until": "2027-01-01T00:00:00Z",
+        "excess_withholding_refundable": true,
+        "gains_rate": {
+          "central": "0.25",
+          "lower": "0.25",
+          "upper": "0.25"
+        },
+        "jurisdiction": "SYNTHETIC",
+        "linear_scenario_supported": true,
+        "loss_treatment": "GAINS_THEN_DIVIDENDS",
+        "lot_method": "FIFO",
+        "owner_approved": true,
+        "owner_reviewed_at": "2025-12-03T00:00:00Z",
+        "sale_costs_deductible": true,
+        "source_published_at": "2025-12-01T00:00:00Z",
+        "source_reference": "synthetic_rule_source",
+        "specific_identification_permitted": false,
+        "tax_currency": "EUR",
+        "tax_year": 2026,
+        "version": "synthetic_rules_v1",
+        "withholding_credit_permitted": true
+      },
+      "rules_unavailable_reason": null,
+      "safety": {
+        "confidence_gate": 90,
+        "entry_slot_available": true,
+        "exit_latched": false,
+        "leverage_enabled": false,
+        "original_stop": "75",
+        "original_target": "100",
+        "protective_exit_active": false,
+        "replacement_path_approved": false,
+        "replacement_risk_valid": false
+      },
+      "sell_replace": null,
+      "sell_replace_unavailable_reason": "synthetic fixture does not compare replacement",
+      "splits": []
+    }
+  },
+  "payload_hash": "492f809d09ad7c4ef52ced185349aafccb25a453b7931683bee169dc47e19a32",
+  "schema_version": 1,
+  "scope": {
+    "account_id": "paper_synthetic",
+    "owner_id": "synthetic_owner"
+  },
+  "supersedes": null
+}

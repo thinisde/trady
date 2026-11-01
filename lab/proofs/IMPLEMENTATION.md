@@ -1,5 +1,10 @@
 # FORMULA_V1 implementation and verification handoff
 
+This is a historical checkpoint. Later parser, account-input and helper fixes,
+along with regenerated verification pins, are recorded in the
+[audit remediation](../../docs/audit-2026-10-31/remediation.md).
+The counts and digests below describe the earlier source revision.
+
 Checkpoint: 2026-10-31. The implementation is frozen after the successful clean
 24-theorem/647-case/10-negative run with the corrected SQL inventory. Its scope
 is `FORMULA_V1`: the complete typed checked-decimal

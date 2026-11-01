@@ -1,0 +1,49 @@
+{
+  "cross_asset_context": {},
+  "enabled": [
+    "EVENT"
+  ],
+  "entity_aliases": {},
+  "max_input_bytes": 1048576,
+  "max_query_records": 128,
+  "schema_version": 1,
+  "scope": {
+    "account_id": "paper_synthetic",
+    "owner_id": "synthetic_owner"
+  },
+  "sources": [
+    {
+      "audit_markers": true,
+      "capability": {
+        "credit_cost": 1,
+        "evidence_reference": "synthetic_fixture_not_vendor_entitlement",
+        "reviewed_at": "2025-10-30T15:40:00Z",
+        "revision": "synthetic_rights_v1",
+        "status": "VERIFIED",
+        "valid_until": "2027-10-30T15:40:00Z"
+      },
+      "derived_storage": true,
+      "enabled": true,
+      "entity_ids": [
+        "issuer"
+      ],
+      "features": [
+        "EVENT"
+      ],
+      "mapping_reference": "synthetic_fixture_mapping",
+      "provider": "synthetic_only",
+      "rights": {
+        "display": true,
+        "export": false,
+        "external_llm": false,
+        "local_inference": true,
+        "model_training": false,
+        "normalized_storage": true,
+        "retention_hours": 8760,
+        "terms_reference": "synthetic-fixture-only"
+      },
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source"
+    }
+  ]
+}

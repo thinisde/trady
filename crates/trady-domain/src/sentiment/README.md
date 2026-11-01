@@ -12,6 +12,8 @@ The public module remains `trady_domain::sentiment`; see the
   `SentimentBatch`: request and response records with decimal probabilities.
 - `[mod.rs:SentimentEvidence]`, `SentimentAssessment`: correlated observations
   and caller-supplied scoring time.
+  `[mod.rs:SentimentDocument::text]` carries the raw request text; predictions
+  and evidence retain identity and probabilities without a raw-text field.
   `[mod.rs:SentimentPrediction]` carries `truncated`; evidence carries `lineage_id`,
   `observed_at` and `expires_at` alongside item/text identity and probabilities.
 - `[mod.rs:SENTIMENT_VERSION]`, `FINBERT_MODEL`, `FINBERT_REVISION`,
@@ -27,7 +29,7 @@ The public module remains `trady_domain::sentiment`; see the
 `[mod.rs:SentimentAssessment]` supports
 serialization only, with public fields. Record construction alone does not
 validate permissions, correlation, probability bounds, freshness or authority;
-the application and policy enforce those checks.
+application and policy callers are responsible for those checks.
 
 ## Side Effects
 

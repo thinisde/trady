@@ -156,6 +156,8 @@ tools, each version `1.0.0`:
 
 ## Verification
 
+Run `cargo test --workspace --locked` from the repository root.
+
 Run from the repository root:
 
 ```sh

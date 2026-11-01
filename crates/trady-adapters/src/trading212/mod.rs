@@ -11,10 +11,11 @@ mod autonomous_tests;
 mod tests;
 
 use crate::{SystemClock, credentials::CredentialStore};
-use chrono::Duration as TimeDelta;
+use chrono::{DateTime, Duration as TimeDelta, Utc};
 use dto::{AccountSummary, History, InstrumentMetadata, Order, PositionDto, invalid};
 use http::{Bucket, Http};
 use reqwest::Method;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -128,12 +129,56 @@ impl fmt::Debug for Credentials {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BrokerInstrument {
     pub instrument_id: InstrumentId,
     pub currency: Currency,
     pub isin: String,
     pub kind: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstrumentCatalog {
+    pub instruments: Vec<BrokerInstrument>,
+    /// Provider rows whose ticker cannot be represented by `InstrumentId`.
+    /// These rows are excluded from the typed catalog and never become order
+    /// candidates.
+    pub rejected_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BrokerTax {
+    pub charged_at: Option<DateTime<Utc>>,
+    pub currency: Currency,
+    pub name: String,
+    pub quantity: Decimal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BrokerFillWalletImpact {
+    pub currency: Option<Currency>,
+    pub fx_rate: Option<Decimal>,
+    pub net_value: Option<Decimal>,
+    pub realised_profit_loss: Option<Decimal>,
+    pub taxes: Vec<BrokerTax>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BrokerFill {
+    pub broker_order_id: String,
+    pub instrument_id: InstrumentId,
+    pub id: Option<i64>,
+    pub filled_at: Option<DateTime<Utc>>,
+    pub price: Option<Decimal>,
+    pub quantity: Option<Decimal>,
+    pub trading_method: Option<String>,
+    #[serde(rename = "type")]
+    pub fill_type: Option<String>,
+    pub wallet_impact: Option<BrokerFillWalletImpact>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -146,6 +191,8 @@ pub struct HistoryQuery {
 pub struct HistoryPage {
     /// Total order quantities, not the per-fill quantities in history records.
     pub orders: Vec<BrokerOrder>,
+    /// Individual fill records returned alongside historical orders.
+    pub fills: Vec<BrokerFill>,
     pub next_cursor: Option<i64>,
 }
 
@@ -155,11 +202,22 @@ pub struct Trading212Reader<C: Clock = SystemClock> {
     http: Http,
     clock: C,
     bound_at: Option<Instant>,
-    metadata: Option<(Instant, BTreeMap<InstrumentId, BrokerInstrument>)>,
+    metadata: Option<(Instant, BTreeMap<InstrumentId, BrokerInstrument>, usize)>,
 }
 impl Trading212Reader<SystemClock> {
     pub fn new(config: Trading212Config, credentials: Credentials) -> BrokerResult<Self> {
         Self::with_clock(config, credentials, SystemClock)
+    }
+
+    /// Build a reader immediately after `discover_account` has validated the
+    /// provider-owned account and currency. The binding is valid for the same
+    /// short observation window as a normal account read, so metadata and
+    /// history reads do not issue a redundant account request and trip the
+    /// broker's one-summary-per-five-seconds bucket.
+    pub fn new_bound(config: Trading212Config, credentials: Credentials) -> BrokerResult<Self> {
+        let mut reader = Self::new(config, credentials)?;
+        reader.bound_at = Some(Instant::now());
+        Ok(reader)
     }
 }
 impl<C: Clock> Trading212Reader<C> {
@@ -181,6 +239,35 @@ impl<C: Clock> Trading212Reader<C> {
 
     pub fn config(&self) -> &Trading212Config {
         &self.config
+    }
+
+    /// Read the provider-owned account identity before a cold-start config has
+    /// a broker account number. The caller must bind the returned ID into a
+    /// fresh, normally validated reader before reading positions or history.
+    /// This method deliberately does not infer any order or execution
+    /// capability from the account response.
+    pub fn discover_account(&mut self) -> BrokerResult<(i64, Currency, Money)> {
+        let summary: AccountSummary = self.http.json(
+            Bucket::Summary,
+            Method::GET,
+            &format!("{API}/account/summary"),
+            None,
+        )?;
+        if summary.id <= 0
+            || summary.currency != self.config.base_currency
+            || summary.cash.available_to_trade.0 < rust_decimal::Decimal::ZERO
+        {
+            return Err(BrokerFailure::new(BrokerFailureKind::AccountMismatch));
+        }
+        self.bound_at = Some(Instant::now());
+        Ok((
+            summary.id,
+            summary.currency.clone(),
+            Money {
+                amount: summary.cash.available_to_trade.0,
+                currency: summary.currency,
+            },
+        ))
     }
 
     /// Checks the actual broker account number and primary currency on every call.
@@ -245,12 +332,14 @@ impl<C: Clock> Trading212Reader<C> {
     }
 
     /// Caches the provider's metadata for ten minutes. This is not capability evidence.
-    pub fn instruments(&mut self) -> BrokerResult<Vec<BrokerInstrument>> {
+    /// Rows with provider tickers outside the domain identifier grammar are
+    /// excluded and counted; valid rows remain available to the caller.
+    pub fn instruments_with_rejections(&mut self) -> BrokerResult<InstrumentCatalog> {
         self.ensure_binding()?;
         if self
             .metadata
             .as_ref()
-            .is_none_or(|(at, _)| at.elapsed() >= Duration::from_secs(600))
+            .is_none_or(|(at, _, _)| at.elapsed() >= Duration::from_secs(600))
         {
             let rows: Vec<InstrumentMetadata> = self.http.json(
                 Bucket::Instruments,
@@ -259,8 +348,15 @@ impl<C: Clock> Trading212Reader<C> {
                 None,
             )?;
             let mut metadata = BTreeMap::new();
+            let mut rejected_count = 0;
             for row in rows {
-                let id = row.ticker;
+                let id = match InstrumentId::new(row.ticker) {
+                    Ok(id) => id,
+                    Err(_) => {
+                        rejected_count += 1;
+                        continue;
+                    }
+                };
                 let instrument = BrokerInstrument {
                     instrument_id: id.clone(),
                     currency: row.currency_code,
@@ -271,16 +367,17 @@ impl<C: Clock> Trading212Reader<C> {
                     return Err(invalid());
                 }
             }
-            self.metadata = Some((Instant::now(), metadata));
+            self.metadata = Some((Instant::now(), metadata, rejected_count));
         }
-        Ok(self
-            .metadata
-            .as_ref()
-            .ok_or_else(invalid)?
-            .1
-            .values()
-            .cloned()
-            .collect())
+        let (_, metadata, rejected_count) = self.metadata.as_ref().ok_or_else(invalid)?;
+        Ok(InstrumentCatalog {
+            instruments: metadata.values().cloned().collect(),
+            rejected_count: *rejected_count,
+        })
+    }
+
+    pub fn instruments(&mut self) -> BrokerResult<Vec<BrokerInstrument>> {
+        Ok(self.instruments_with_rejections()?.instruments)
     }
 
     pub fn historical_orders(&mut self, query: &HistoryQuery) -> BrokerResult<HistoryPage> {
@@ -304,6 +401,8 @@ impl<C: Clock> Trading212Reader<C> {
             .map(|path| next_cursor(&path, query))
             .transpose()?;
         let mut orders = BTreeMap::new();
+        let mut fills_with_id = BTreeMap::new();
+        let mut fills_without_id = Vec::new();
         for row in history.items {
             let order = row.order.normalize()?;
             if query
@@ -318,9 +417,46 @@ impl<C: Clock> Trading212Reader<C> {
             {
                 return Err(invalid());
             }
+            if let Some(fill) = row.fill {
+                let fill = fill.normalize(&order)?;
+                if let Some(id) = fill.id {
+                    if let Some(previous) = fills_with_id.insert(id, fill.clone())
+                        && previous != fill
+                    {
+                        return Err(invalid());
+                    }
+                } else if !fills_without_id.contains(&fill) {
+                    fills_without_id.push(fill);
+                }
+            }
+        }
+        let mut fills: Vec<_> = fills_with_id.into_values().collect();
+        fills.extend(fills_without_id);
+        let mut filled_by_order = BTreeMap::<String, Decimal>::new();
+        for fill in &fills {
+            if fill
+                .fill_type
+                .as_deref()
+                .is_none_or(|fill_type| fill_type == "TRADE")
+                && let Some(quantity) = fill.quantity
+            {
+                let total = filled_by_order
+                    .entry(fill.broker_order_id.clone())
+                    .or_insert(Decimal::ZERO);
+                *total += quantity;
+            }
+        }
+        for (broker_order_id, total) in filled_by_order {
+            if orders
+                .get(&broker_order_id)
+                .is_some_and(|order| total > order.filled_quantity)
+            {
+                return Err(invalid());
+            }
         }
         Ok(HistoryPage {
             orders: orders.into_values().collect(),
+            fills,
             next_cursor,
         })
     }

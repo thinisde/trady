@@ -17,6 +17,7 @@ from bindings import (FOUNDATIONS, PARAMETER_FIELDS, POLICY_FIELDS, THEOREMS, ad
                       rust_struct_hash, value_hash, verify_revision)
 from check import audit_axioms
 from fixtures import baseline
+from parity import malformed_wire_fixtures
 from pin import prepare
 
 
@@ -86,13 +87,16 @@ def main():
         for stage in ["proof", "parity"]:
             arguments[2] = stage
             result = subprocess.run(arguments, input=json.dumps(request), text=True, capture_output=True,
-                                    timeout=180, check=False)
+                                    timeout=300, check=False)
             if result.returncode:
                 raise RuntimeError("clean " + stage + " failed: " + result.stderr[:1000])
             envelopes[stage] = json.loads(result.stdout)
             reports[stage] = envelopes[stage]["payload"]
         if set(reports["proof"]["theorems"]) != set(THEOREMS):
             raise AssertionError("kernel theorem inventory differs")
+        malformed_count = sum(case["rust"].get("status") == "PARSE_REJECTED" for case in reports["parity"]["cases"])
+        if malformed_count != len(list(malformed_wire_fixtures())):
+            raise AssertionError("malformed-input execution evidence is incomplete")
         for mutation in [
             lambda r: r["trial"].update(candidate_id="different_candidate"),
             lambda r: r["trial"]["parameters"].update(stop_atr_multiple="3"),
@@ -146,6 +150,7 @@ def main():
         summary = {"scope": reports["proof"]["scope"], "clean_build": True,
                           "theorem_count": len(THEOREMS), "axioms": reports["proof"]["axioms"],
                           "parity_case_count": len(reports["parity"]["cases"]), "negative_checks": negative_count,
+                          "malformed_input_case_count": malformed_count,
                           "source_pin_count": len(lock["sources"]), "rust_source_pin_count": len(lock["rust_sources"]),
                           "migration_source_pin_count": len(migration_sources),
                           "safety_sha256": lock["safety_sha256"], "rust_sha256": lock["rust_sha256"],

@@ -1,6 +1,6 @@
-# Alternative attention intelligence (proposed)
+# Alternative attention intelligence (research implementation)
 
-Status: new feature design, 2026-10-31. Disabled and rights-dependent. No Google Trends, Wikimedia or Reddit adapter is shipped by this proposal.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research and rights-dependent. [Policy](../../../crates/trady-policy/src/intelligence/attention.rs) checks audited entity mappings and compatible query scales, calculates robust median/MAD surprise and source-availability timing, and preserves missingness. Reviewed normalized imports use the [shared service](./implementation-report.md). Direct Google Trends, Wikimedia and Reddit collection adapters and predictive calibration remain separate work.
 
 ## Purpose and novelty
 

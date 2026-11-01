@@ -19,6 +19,9 @@ use trady_domain::{Mode, research::*, sentiment::FINBERT_REVISION};
 use trady_storage::{migrate, research::PgResearchRepository, research_jobs::PgResearchJobs};
 
 fn dsn(role: &str) -> String {
+    if let Ok(value) = std::env::var(format!("{}_DSN", role.to_ascii_uppercase())) {
+        return value;
+    }
     format!(
         "host=127.0.0.1 port={} user={role} dbname=trady",
         std::env::var("TRADY_TEST_PORT").unwrap()

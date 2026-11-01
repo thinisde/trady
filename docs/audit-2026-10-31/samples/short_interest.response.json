@@ -1,0 +1,125 @@
+{
+  "name": "short_interest",
+  "command": [
+    "target/debug/trady",
+    "intelligence",
+    "assess",
+    "--config",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/short_interest.config.json",
+    "--input",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/short_interest.observation.json",
+    "--as-of",
+    "2026-10-30T20:00:00Z"
+  ],
+  "exit": 0,
+  "response": {
+    "assessment_id": "intel_48f79eaad8314622ce4493b64f6bc49c7e074a2c1367ae5bd4db6bd23b088c01",
+    "calibration": "RESEARCH_ONLY_UNCALIBRATED",
+    "computed_at": "2026-10-31T21:49:12.832652951Z",
+    "decision_at": "2026-10-30T20:00:00Z",
+    "entity_id": "synthetic_issuer_42",
+    "entry_authorized": false,
+    "evidence": [
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-30T19:59:59Z",
+        "complete": true,
+        "content_hash": "ca9fa1e517f8b61e53ba909585cc1578de12f91f63f2889f180f16514cc76c5c",
+        "currency": "USD",
+        "entity_id": "synthetic_issuer_42",
+        "expires_at": "2026-11-06T20:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-29T20:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-30T19:59:58Z",
+        "received_at": "2026-10-30T20:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "synthetic_short_interest_v1",
+        "unit": "normalized_research",
+        "venue": null
+      }
+    ],
+    "expires_at": "2026-11-06T20:00:00Z",
+    "feature": "SHORT_INTEREST",
+    "feature_version": "trady-intelligence-v1",
+    "input_hash": "ca9fa1e517f8b61e53ba909585cc1578de12f91f63f2889f180f16514cc76c5c",
+    "observation_id": "fixture_observation",
+    "reasons": [
+      "uncalibrated_research_no_expected_return_or_order_authority"
+    ],
+    "registry_hash": "2dc2f7fb1850d57e84902673f23c3fdc3bafae139d5add5f534b734022cb179e",
+    "result": {
+      "assessment": {
+        "at": "2026-10-30T20:00:00Z",
+        "average_daily_volume_shares": "1500000",
+        "average_volume_completed_sessions": 20,
+        "average_volume_scope": "CONSOLIDATED",
+        "average_volume_venue": null,
+        "average_volume_window_end": "2026-10-29",
+        "average_volume_window_start": "2026-09-30",
+        "borrow_fee_annualized_fraction": null,
+        "borrow_fee_historical_percentile": null,
+        "borrow_fee_historical_range": null,
+        "borrow_hard_to_borrow": null,
+        "borrow_methodology": null,
+        "borrow_shares_on_loan": null,
+        "borrow_utilization_fraction": null,
+        "flags": [
+          "HIGH_REPORTED_SHORT_TO_FLOAT",
+          "ELEVATED_VOLUME_BASED_DAYS_TO_COVER"
+        ],
+        "float_effective_date": "2026-10-15",
+        "float_methodology": "synthetic_verified_free_float",
+        "issues": [
+          {
+            "field": "reported_position_change_shares",
+            "reason": "no earlier available settlement release",
+            "source_refs": []
+          },
+          {
+            "field": "borrow",
+            "reason": "licensed borrow context is missing, stale or unpublished",
+            "source_refs": []
+          },
+          {
+            "field": "market_context",
+            "reason": "gap/volume/volatility context missing, stale or unpublished",
+            "source_refs": []
+          }
+        ],
+        "opening_gap_fraction": null,
+        "publication_lag_calendar_days": 11,
+        "realized_volatility_annualized": null,
+        "realized_volatility_method": null,
+        "relative_volume": null,
+        "release_vintage": "synthetic_original",
+        "report_age_seconds": 345600,
+        "report_available_at": "2026-10-26T20:00:00Z",
+        "report_published_at": "2026-10-26T20:00:00Z",
+        "reported_position_change_fraction": null,
+        "reported_position_change_shares": null,
+        "reported_shares_short": "6000000",
+        "settlement_date": "2026-10-15",
+        "short_to_float_fraction": "0.20",
+        "source_refs": [
+          "synthetic_short_interest_v1"
+        ],
+        "status": "PARTIAL",
+        "verified_float_shares": "30000000",
+        "volume_based_days_to_cover": "4"
+      },
+      "feature": "SHORT_INTEREST"
+    },
+    "schema_version": 1,
+    "scope": {
+      "account_id": "paper_synthetic",
+      "owner_id": "synthetic_owner"
+    },
+    "status": "PARTIAL"
+  },
+  "error": ""
+}

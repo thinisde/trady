@@ -1,0 +1,91 @@
+{
+  "entity_id": "synthetic_issuer_42",
+  "evidence": [
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T19:59:59Z",
+      "complete": true,
+      "content_hash": "ca9fa1e517f8b61e53ba909585cc1578de12f91f63f2889f180f16514cc76c5c",
+      "currency": "USD",
+      "entity_id": "synthetic_issuer_42",
+      "expires_at": "2026-11-06T20:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T20:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T19:59:58Z",
+      "received_at": "2026-10-30T20:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_short_interest_v1",
+      "unit": "normalized_research",
+      "venue": null
+    }
+  ],
+  "observation_id": "fixture_observation",
+  "payload": {
+    "feature": "SHORT_INTEREST",
+    "input": {
+      "adjustment_basis": "synthetic_split_v1",
+      "average_volume": {
+        "adjustment_basis": "synthetic_split_v1",
+        "available_at": "2026-10-30T08:00:00Z",
+        "completed_sessions": 20,
+        "daily_shares": "1500000",
+        "published_at": "2026-10-30T08:00:00Z",
+        "scope": "CONSOLIDATED",
+        "source_ref": "synthetic_short_interest_v1",
+        "venue": null,
+        "window_end": "2026-10-29",
+        "window_start": "2026-09-30"
+      },
+      "borrow": null,
+      "borrow_history": [],
+      "float": {
+        "adjustment_basis": "synthetic_split_v1",
+        "available_at": "2026-10-25T20:00:00Z",
+        "effective_date": "2026-10-15",
+        "exclusions": "synthetic_restricted_shares",
+        "issued_shares": "40000000",
+        "methodology": "synthetic_verified_free_float",
+        "published_at": "2026-10-25T20:00:00Z",
+        "shares": "30000000",
+        "source_ref": "synthetic_short_interest_v1"
+      },
+      "history_start": "2025-10-30T20:00:00Z",
+      "issuer_id": "synthetic_issuer_42",
+      "market_context": null,
+      "max_context_age_seconds": 86400,
+      "max_report_age_seconds": 2592000,
+      "reports": [
+        {
+          "adjustment_basis": "synthetic_split_v1",
+          "available_at": "2026-10-26T20:00:00Z",
+          "ingested_at": "2026-10-26T20:00:00Z",
+          "metric": "REPORTED_OUTSTANDING_POSITIONS",
+          "published_at": "2026-10-26T20:00:00Z",
+          "release_vintage": "synthetic_original",
+          "settlement_date": "2026-10-15",
+          "shares_short": "6000000",
+          "source_ref": "synthetic_short_interest_v1"
+        }
+      ],
+      "thresholds": {
+        "absolute_gap_fraction": "0.05",
+        "days_to_cover": "4",
+        "realized_volatility_annualized": "1",
+        "relative_volume": "2",
+        "short_to_float_fraction": "0.20"
+      }
+    }
+  },
+  "payload_hash": "ca9fa1e517f8b61e53ba909585cc1578de12f91f63f2889f180f16514cc76c5c",
+  "schema_version": 1,
+  "scope": {
+    "account_id": "paper_synthetic",
+    "owner_id": "synthetic_owner"
+  },
+  "supersedes": null
+}

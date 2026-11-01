@@ -1,0 +1,379 @@
+{
+  "schema_version": 1,
+  "classification": "SIMULATION_ONLY",
+  "status": "SIMULATED_ENTRY_RECORDED_DEPLOYMENT_INPUTS_NOT_FOUND",
+  "recorded_at": "2026-11-01T00:37:26Z",
+  "native_run": {
+    "account_risk_fraction": "0.01",
+    "after_snapshot": {
+      "account_id": "shadow_simulated_entry",
+      "mode": "shadow",
+      "observed_at": "2026-10-30T14:00:00Z",
+      "orders": [],
+      "positions": [],
+      "snapshot_id": "simulation_account_1",
+      "spendable_cash": {
+        "amount": "5000",
+        "currency": "EUR"
+      }
+    },
+    "broker_order_api_calls": 0,
+    "calculation": {
+      "account_risk": {
+        "amount": "48.9500000000000000000000000",
+        "currency": "EUR"
+      },
+      "account_snapshot_id": "simulation_account_1",
+      "acquisition_cost": {
+        "amount": "4899.8950000000000000000000000",
+        "currency": "EUR"
+      },
+      "authority": "FORMULA_V1",
+      "budget": {
+        "amount": "4900.00",
+        "currency": "EUR"
+      },
+      "buy_limit": "100.100",
+      "calculated_at": "2026-10-30T14:00:00Z",
+      "evidence_snapshot_id": "simulation_volatility_1",
+      "holding_deadline_at": "2026-11-02T14:00:00Z",
+      "market_snapshot_id": "simulation_market_1",
+      "max_holding_sessions": 3,
+      "planned_loss_fraction": "0.00999000999000999000999001",
+      "proceeds_at_stop": {
+        "amount": "4850.9450000000000000000000000",
+        "currency": "EUR"
+      },
+      "proceeds_at_target": {
+        "amount": "5047.2345000000000000000000000",
+        "currency": "EUR"
+      },
+      "quantity": "48.950000000000000000000000000",
+      "reward_to_risk": "3.01",
+      "stop_trigger": "99.100",
+      "target_net_fraction": "0.03",
+      "target_rounding_overshoot": "0.0000699300699300699300699301",
+      "target_sell_limit": "103.110",
+      "valid_until": "2026-10-30T14:00:10Z"
+    },
+    "classification": "SIMULATION_ONLY",
+    "entry_authorized": false,
+    "executed_at": "2026-11-01T00:34:12.928318660Z",
+    "formula_envelope": {
+      "max_entry_allowance_fraction": "0.005",
+      "max_stop_atr_multiple": "4",
+      "max_target_net_fraction": "0.03",
+      "min_stop_atr_multiple": "1",
+      "min_target_net_fraction": "0.01"
+    },
+    "formula_parameters": {
+      "atr_lookback": 14,
+      "bar_seconds": 60,
+      "entry_allowance_fraction": "0.001",
+      "family": "TREND",
+      "max_holding_sessions": 3,
+      "stop_atr_multiple": "2",
+      "target_net_fraction": "0.03",
+      "version": 1
+    },
+    "input": {
+      "account": {
+        "account_id": "shadow_simulated_entry",
+        "mode": "shadow",
+        "observed_at": "2026-10-30T14:00:00Z",
+        "orders": [],
+        "positions": [],
+        "snapshot_id": "simulation_account_1",
+        "spendable_cash": {
+          "amount": "5000",
+          "currency": "EUR"
+        }
+      },
+      "entry_costs": {
+        "fixed": {
+          "amount": "0",
+          "currency": "EUR"
+        },
+        "fx": null,
+        "rate": "0",
+        "uncertainty": {
+          "amount": "0",
+          "currency": "EUR"
+        }
+      },
+      "entry_range": {
+        "currency": "EUR",
+        "maximum": "101",
+        "minimum": "99"
+      },
+      "evidence": {
+        "atr": "0.5",
+        "atr_lookback": 14,
+        "available_at": "2026-10-30T13:59:30Z",
+        "bar_seconds": 60,
+        "base_confidence_score": 100,
+        "completed_bars": 30,
+        "confidence_score": 100,
+        "exceptional_verified": false,
+        "family": "TREND",
+        "last_completed_at": "2026-10-30T13:59:15Z",
+        "minimum_stop_distance": "0.01",
+        "noise_distance": "0.1",
+        "sentiment_entry_allowed": true,
+        "sentiment_target_ceiling": "0.03",
+        "signal_eligible": true,
+        "snapshot_id": "simulation_volatility_1",
+        "valid_until": "2026-10-30T14:05:00Z"
+      },
+      "exit_costs": {
+        "fixed": {
+          "amount": "0",
+          "currency": "EUR"
+        },
+        "fx": null,
+        "rate": "0",
+        "uncertainty": {
+          "amount": "0",
+          "currency": "EUR"
+        }
+      },
+      "holding_deadline_at": "2026-11-02T14:00:00Z",
+      "market_snapshot_id": "simulation_market_1",
+      "quote": {
+        "ask": "100",
+        "bid": "99.99",
+        "currency": "EUR",
+        "instrument_id": "SIMULATED_STOCK",
+        "observed_at": "2026-10-30T14:00:00Z",
+        "received_at": "2026-10-30T14:00:00Z",
+        "tradable": true
+      },
+      "rules": {
+        "currency_unit": "0.01",
+        "minimum_quantity": "0.01",
+        "price_tick": "0.01",
+        "quantity_step": "0.01"
+      },
+      "valid_until": "2026-10-30T14:05:00Z"
+    },
+    "intent_hash": "312cb91a0e8621135c333750afe0a5d96ac90e0323964dad72511a97df6d8f19",
+    "network_clients_constructed": 0,
+    "note": "Synthetic inputs verify calculation and local order recording only. No fitted-model, source, formula-release or live-readiness approval is supplied.",
+    "order_mutations": 0,
+    "policy": {
+      "add_to_position": false,
+      "confidence_entry_min": 90,
+      "entry_cash_fraction": "0.98",
+      "exceptional_targets_enabled": false,
+      "leverage": false,
+      "max_holding_sessions": 5,
+      "max_initial_loss_fraction": "0.02",
+      "max_target_fraction": "0.10",
+      "min_reward_to_risk": "1.5",
+      "rotation_enabled": false,
+      "version": 1
+    },
+    "production_approved": false,
+    "proposal_record": "/tmp/trady-simulated-entry-20261101/simulation-only/intent_simulation_entry_1.json",
+    "recording_directory": "/tmp/trady-simulated-entry-20261101/simulation-only",
+    "request": {
+      "account_id": "shadow_simulated_entry",
+      "instrument_currency": "EUR",
+      "instrument_id": "SIMULATED_STOCK",
+      "intent_id": "simulation_entry_1",
+      "kind": {
+        "Limit": {
+          "price": "100.100",
+          "time_in_force": "Day"
+        }
+      },
+      "quantity": "48.950000000000000000000000000",
+      "side": "BUY"
+    },
+    "schema_version": 1,
+    "simulated_account_unchanged": true,
+    "simulated_entry_generated": true,
+    "simulation_clock": "2026-10-30T14:00:00Z",
+    "source": {
+      "description": "SIMULATION_ONLY: synthetic account, quote, costs, volatility and confidence; no deployment approval",
+      "kind": "FIXTURE"
+    },
+    "status": "simulated_entry_recorded",
+    "submission_result": "SUPPRESSED_BY_SHADOW_BROKER"
+  },
+  "deployment_inputs": {
+    "status": "NOT_FOUND_IN_SEARCHED_LOCATIONS",
+    "entry_authorized": false,
+    "search_scope": {
+      "json_files_inspected": 1027,
+      "roots_inspected": 25,
+      "locations": [
+        "/thinisde/trady (including ignored files)",
+        "24 existing /tmp/trady* roots",
+        "local deployment filesystem paths",
+        "local Git worktrees",
+        "Trady system services and listeners",
+        "local diagnostic PostgreSQL release/research/execution registries"
+      ],
+      "artifact_filename_check": "Repository native-model, manifest, authority and allowlist filename scan found only test/example candidates.",
+      "absent_paths": [
+        "/etc/trady",
+        "/opt/trady",
+        "/var/lib/trady",
+        "/thinisde/trady/var",
+        "/thinisde/trady/models",
+        "/thinisde/trady/artifacts",
+        "/var/lib/trady-lab",
+        "/var/lib/trady-analyst",
+        "/var/lib/trady-executor",
+        "/var/lib/trady-gateway",
+        "/var/lib/trady-evaluator",
+        "/run/trady-analyst",
+        "/root/.config/trady"
+      ],
+      "git_worktrees": [
+        "/thinisde/trady"
+      ],
+      "limitation": "Findings apply to accessible local locations and registries. They do not establish that no bundle exists on an unconfigured external system."
+    },
+    "runtime_configs_inspected": [
+      "config/autonomous.example.json",
+      "config/autonomous.pending.json",
+      "config/autonomous.demo-no-submit.json",
+      "/tmp/trady-live-demo-20261031/shadow.json"
+    ],
+    "findings": [
+      {
+        "input": "inputs_service",
+        "status": "NOT_FOUND",
+        "paths": [
+          "services/inputs/config.example.json"
+        ],
+        "runtime_fields": [
+          "inputs.base_url",
+          "inputs.allowed_hosts"
+        ],
+        "evidence": {
+          "example_listener": "127.0.0.1:8787",
+          "listener_found": false,
+          "runtime_url": "https://approved-inputs.example.invalid/v1/",
+          "sources": 0,
+          "reviewers": 0,
+          "accounts": 0,
+          "model": null
+        }
+      },
+      {
+        "input": "approved_native_model",
+        "status": "NOT_FOUND",
+        "runtime_fields": [
+          "models"
+        ],
+        "evidence": {
+          "configured_models": 0,
+          "note": "Test-only model fixtures and the separate FinBERT sentiment service are not approved native execution models."
+        }
+      },
+      {
+        "input": "formula_authority",
+        "status": "NOT_FOUND",
+        "runtime_fields": [
+          "trading.limits_authority"
+        ],
+        "evidence": {
+          "configured_authority": null,
+          "release_candidates": 0,
+          "release_evidence": 0,
+          "active_releases": 0,
+          "note": "Bundled FORMULA_V1 code and proof sources do not supply deployment-scoped approval."
+        }
+      },
+      {
+        "input": "approved_skill_hashes",
+        "status": "NOT_FOUND",
+        "runtime_fields": [
+          "trading.approved_skills"
+        ],
+        "evidence": {
+          "configured_pins": 0,
+          "note": "Skill source/catalog availability does not constitute reviewed deployment pins."
+        }
+      },
+      {
+        "input": "owner_instrument_list",
+        "status": "NOT_FOUND",
+        "runtime_fields": [
+          "inputs.screening.owner_allowlist"
+        ],
+        "evidence": {
+          "configured_instruments": 0,
+          "note": "The screening universe example is not an owner-approved allowlist."
+        }
+      }
+    ],
+    "registry": {
+      "container": "trady-live-demo-db-20261031",
+      "database": "trady",
+      "access": "read_only",
+      "counts": {
+        "active_releases": 0,
+        "financial_sources": 0,
+        "model_sessions": 1,
+        "release_candidates": 0,
+        "release_evidence": 0,
+        "runtime_accounts": 0
+      },
+      "tables": [
+        "release.candidates",
+        "release.evidence",
+        "execution.autonomous_accounts",
+        "research.model_sessions",
+        "research.financial_sources"
+      ],
+      "note": "The one research.model_sessions row stores conversation/provider/skills metadata; it is not a fitted native-model registry."
+    },
+    "pending_requirements_manifest": "config/deployment.pending.json",
+    "secret_handling": "Credential values are excluded. Existing secrets remain in the private config/credentials.local.json store (0600)."
+  },
+  "verification": {
+    "checks": [
+      {
+        "command": "cargo test --locked -p trady-cli",
+        "status": "PASSED",
+        "passed": 46,
+        "failed": 0,
+        "ignored": 3
+      },
+      {
+        "command": "cargo clippy --locked -p trady-cli --all-targets -- -D warnings",
+        "status": "PASSED"
+      },
+      {
+        "command": "cargo fmt --all -- --check",
+        "status": "PASSED"
+      },
+      {
+        "command": "python3 scripts/verify-assets.py",
+        "status": "PASSED",
+        "canonical_json_assets": 11,
+        "skill_records": 52,
+        "markdown_files": 198,
+        "local_links": 1498
+      },
+      {
+        "command": "git diff --check",
+        "status": "PASSED"
+      },
+      {
+        "check": "Saved native proposal canonical SHA-256, fixture labels and 0700/0600 permissions",
+        "status": "PASSED"
+      }
+    ],
+    "test_scope": "Current checks cover the CLI changes. Earlier broader remediation checks remain in their historical reports."
+  },
+  "reproduction": {
+    "command": "env -i /thinisde/trady/target/debug/trady demo-entry --directory /tmp/trady-simulated-entry-20261101",
+    "uses_credentials": false,
+    "network_clients": 0
+  }
+}

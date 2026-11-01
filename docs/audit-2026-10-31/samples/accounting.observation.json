@@ -1,0 +1,259 @@
+{
+  "entity_id": "issuer",
+  "evidence": [
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "sec:filing#a0",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "sec:filing#a1",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "sec:filing#ni",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-31T13:59:59Z",
+      "complete": true,
+      "content_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-07T14:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-30T14:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-31T13:59:58Z",
+      "received_at": "2026-10-31T14:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "sec:filing#ocf",
+      "unit": "normalized_research",
+      "venue": null
+    }
+  ],
+  "observation_id": "fixture_observation",
+  "payload": {
+    "feature": "ACCOUNTING",
+    "input": {
+      "accounting_basis": "GAAP",
+      "cohort": {
+        "industry_id": "manufacturer",
+        "inventory_relevant": true,
+        "model_revision": "industry-v1"
+      },
+      "comparability_issues": [],
+      "comparison_period": {
+        "end": "2025-09-30",
+        "fiscal_label": "2025-Q3",
+        "fiscal_weeks": 13,
+        "kind": "QUARTER",
+        "start": "2025-07-01"
+      },
+      "consolidated_scope": "consolidated",
+      "crosswalk_revision": "crosswalk-v1",
+      "current_period": {
+        "end": "2026-09-30",
+        "fiscal_label": "2026-Q3",
+        "fiscal_weeks": 13,
+        "kind": "QUARTER",
+        "start": "2026-07-01"
+      },
+      "facts": [
+        {
+          "accounting_basis": "GAAP",
+          "available_at": "2026-10-30T21:00:00Z",
+          "concept": "NET_INCOME",
+          "consolidated_scope": "consolidated",
+          "crosswalk_revision": "crosswalk-v1",
+          "fact_id": "ni",
+          "filed_at": "2026-10-30T21:00:00Z",
+          "filing_accession": "filing",
+          "issuer_id": "issuer",
+          "label_as_filed": "NetIncome",
+          "missing_reason": null,
+          "period": {
+            "end": "2026-09-30",
+            "fiscal_label": "2026-Q3",
+            "fiscal_weeks": 13,
+            "kind": "QUARTER",
+            "start": "2026-07-01"
+          },
+          "revision_of": null,
+          "share_adjustment": null,
+          "source_ref": "sec:filing#ni",
+          "source_text_offset": 10,
+          "taxonomy_tag": "us-gaap:NetIncome",
+          "unit": {
+            "currency": "USD",
+            "measure": "currency",
+            "scale": "1"
+          },
+          "value": "20"
+        },
+        {
+          "accounting_basis": "GAAP",
+          "available_at": "2026-10-30T21:00:00Z",
+          "concept": "OPERATING_CASH_FLOW",
+          "consolidated_scope": "consolidated",
+          "crosswalk_revision": "crosswalk-v1",
+          "fact_id": "ocf",
+          "filed_at": "2026-10-30T21:00:00Z",
+          "filing_accession": "filing",
+          "issuer_id": "issuer",
+          "label_as_filed": "OperatingCashFlow",
+          "missing_reason": null,
+          "period": {
+            "end": "2026-09-30",
+            "fiscal_label": "2026-Q3",
+            "fiscal_weeks": 13,
+            "kind": "QUARTER",
+            "start": "2026-07-01"
+          },
+          "revision_of": null,
+          "share_adjustment": null,
+          "source_ref": "sec:filing#ocf",
+          "source_text_offset": 10,
+          "taxonomy_tag": "us-gaap:OperatingCashFlow",
+          "unit": {
+            "currency": "USD",
+            "measure": "currency",
+            "scale": "1"
+          },
+          "value": "10"
+        },
+        {
+          "accounting_basis": "GAAP",
+          "available_at": "2026-10-30T21:00:00Z",
+          "concept": "ASSETS",
+          "consolidated_scope": "consolidated",
+          "crosswalk_revision": "crosswalk-v1",
+          "fact_id": "a0",
+          "filed_at": "2026-10-30T21:00:00Z",
+          "filing_accession": "filing",
+          "issuer_id": "issuer",
+          "label_as_filed": "Assets",
+          "missing_reason": null,
+          "period": {
+            "end": "2026-06-30",
+            "fiscal_label": "2026-06-30",
+            "fiscal_weeks": null,
+            "kind": "INSTANT",
+            "start": null
+          },
+          "revision_of": null,
+          "share_adjustment": null,
+          "source_ref": "sec:filing#a0",
+          "source_text_offset": 10,
+          "taxonomy_tag": "us-gaap:Assets",
+          "unit": {
+            "currency": "USD",
+            "measure": "currency",
+            "scale": "1"
+          },
+          "value": "100"
+        },
+        {
+          "accounting_basis": "GAAP",
+          "available_at": "2026-10-30T21:00:00Z",
+          "concept": "ASSETS",
+          "consolidated_scope": "consolidated",
+          "crosswalk_revision": "crosswalk-v1",
+          "fact_id": "a1",
+          "filed_at": "2026-10-30T21:00:00Z",
+          "filing_accession": "filing",
+          "issuer_id": "issuer",
+          "label_as_filed": "Assets",
+          "missing_reason": null,
+          "period": {
+            "end": "2026-09-30",
+            "fiscal_label": "2026-09-30",
+            "fiscal_weeks": null,
+            "kind": "INSTANT",
+            "start": null
+          },
+          "revision_of": null,
+          "share_adjustment": null,
+          "source_ref": "sec:filing#a1",
+          "source_text_offset": 10,
+          "taxonomy_tag": "us-gaap:Assets",
+          "unit": {
+            "currency": "USD",
+            "measure": "currency",
+            "scale": "1"
+          },
+          "value": "100"
+        }
+      ],
+      "issuer_id": "issuer",
+      "minimum_cohort_size": 2,
+      "minimum_denominator": "0.01",
+      "peers": []
+    }
+  },
+  "payload_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+  "schema_version": 1,
+  "scope": {
+    "account_id": "paper_synthetic",
+    "owner_id": "synthetic_owner"
+  },
+  "supersedes": null
+}

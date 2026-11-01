@@ -1,6 +1,6 @@
-# Market expectations versus realized surprise (proposed)
+# Market expectations versus realized surprise (research implementation)
 
-Status: new feature design, 2026-10-31. Documentation only: no consensus feed, event study, expected-return calibration or production authority is implemented.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research. [Policy](../../../crates/trady-policy/src/intelligence/event.rs) compares explicitly frozen pre-release estimates with compatible actuals and observed reactions, exposing confounders, revision lineage and unavailable estimates. Approved normalized inputs and historical replay use the [shared service](./implementation-report.md). A consensus subscription, historical calibration and production promotion remain separate gates.
 
 ## Purpose and distinction
 

@@ -1,0 +1,80 @@
+{
+  "issuer_cik": "0000000042",
+  "window_start": "2026-10-27T21:00:00Z",
+  "window_end": "2026-10-30T21:00:00Z",
+  "reporting_currency": "USD",
+  "minimum_cluster_value": "100",
+  "minimum_distinct_buyers": 2,
+  "coverage": "PARTIAL",
+  "coverage_reason": "exempt_insiders_not_covered",
+  "filings": [
+    {
+      "issuer_cik": "0000000042",
+      "issuer_name_as_filed": null,
+      "issuer_trading_symbol": null,
+      "accession": "synthetic-accession",
+      "form": "FORM4",
+      "filed_at": "2026-10-30T21:00:00Z",
+      "available_at": "2026-10-30T21:00:00Z",
+      "period_of_report": "2026-10-30",
+      "original_submission_date": null,
+      "amendment_of": null,
+      "plan_checkbox": null,
+      "owners": [
+        {
+          "owner_id": "synthetic-owner",
+          "name_as_filed": null,
+          "is_director": true,
+          "is_officer": null,
+          "is_ten_percent_owner": null,
+          "is_other": null,
+          "officer_title": null,
+          "other_relationship": null,
+          "missing_reasons": []
+        }
+      ],
+      "transactions": [
+        {
+          "line_id": "synthetic-line",
+          "economic_id": "synthetic-line",
+          "owner_ids": [
+            "synthetic-owner"
+          ],
+          "table": "NON_DERIVATIVE",
+          "security_title": "Common",
+          "transaction_date": "2026-10-30",
+          "transaction_code": "P",
+          "acquired_or_disposed": "A",
+          "shares": "10",
+          "quantity_unit": "shares",
+          "price_per_unit": "20",
+          "transaction_currency": "USD",
+          "direct_or_indirect": "D",
+          "nature_of_ownership": null,
+          "shares_owned_following": null,
+          "conversion_or_exercise_price": null,
+          "exercise_date": null,
+          "expiration_date": null,
+          "underlying_security": null,
+          "underlying_shares": null,
+          "footnote_ids": [],
+          "plan_annotation": "NO_PLAN_DISCLOSED_AFTER_REVIEW",
+          "cash_market_confirmed": true,
+          "review_reference": "review:footnotes",
+          "split_adjustment": null,
+          "supersedes": null,
+          "source_ref": "sec:fixture#line",
+          "source_byte_start": 1,
+          "source_byte_end": 10,
+          "missing_reasons": []
+        }
+      ],
+      "holdings": [],
+      "footnotes": [],
+      "remarks": null,
+      "source_ref": "sec:fixture",
+      "source_content_hash": "hash",
+      "missing_reasons": []
+    }
+  ]
+}

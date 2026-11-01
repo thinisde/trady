@@ -1,0 +1,178 @@
+{
+  "name": "tax",
+  "command": [
+    "target/debug/trady",
+    "intelligence",
+    "tax-scenarios",
+    "--config",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/tax.config.json",
+    "--input",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/tax.observation.json",
+    "--as-of",
+    "2026-10-31T14:00:00Z"
+  ],
+  "exit": 0,
+  "response": {
+    "assessment_id": "intel_d89b7577c3cb7d9ebbd0fde096cd8bfb16f429abd4aecbc94df3b6658349c01c",
+    "calibration": "RESEARCH_ONLY_UNCALIBRATED",
+    "computed_at": "2026-10-31T21:49:12.891196043Z",
+    "decision_at": "2026-10-31T14:00:00Z",
+    "entity_id": "synthetic_stock",
+    "entry_authorized": false,
+    "evidence": [],
+    "expires_at": "2026-11-07T14:00:00Z",
+    "feature": "TAX",
+    "feature_version": "trady-intelligence-v1",
+    "input_hash": "492f809d09ad7c4ef52ced185349aafccb25a453b7931683bee169dc47e19a32",
+    "observation_id": "fixture_observation",
+    "reasons": [
+      "uncalibrated_research_no_expected_return_or_order_authority"
+    ],
+    "registry_hash": "21f5fe6c44b58ce84ffdb53a1a4b87eb87524662793dc28960b1be2ce08c8701",
+    "result": {
+      "assessment": {
+        "assessed_at": "2026-10-31T14:00:00Z",
+        "assumptions": {
+          "acquisition_disposal_date_fx_approved": true,
+          "acquisition_fees_in_basis": true,
+          "allowance_allocation": "GAINS_THEN_DIVIDENDS",
+          "assessment_tax_date": "2026-10-31",
+          "baseline_gross_dividends": "0",
+          "baseline_gross_stock_gains": "0",
+          "baseline_stock_losses": "0",
+          "carryforward_permitted": true,
+          "comparison_tax_date": "2026-11-10",
+          "confirmed_allowance": "0",
+          "confirmed_loss_carryforward": "0",
+          "dividend_rate": {
+            "central": "0.25",
+            "lower": "0.25",
+            "upper": "0.25"
+          },
+          "excess_withholding_refundable": true,
+          "fx_observations_and_assumptions": [],
+          "gains_rate": {
+            "central": "0.25",
+            "lower": "0.25",
+            "upper": "0.25"
+          },
+          "loss_treatment": "GAINS_THEN_DIVIDENDS",
+          "lot_method": "FIFO",
+          "rule_effective_from": "2026-01-01T00:00:00Z",
+          "rule_effective_until": "2027-01-01T00:00:00Z",
+          "rule_owner_reviewed_at": "2025-12-03T00:00:00Z",
+          "rule_source_published_at": "2025-12-01T00:00:00Z",
+          "rule_source_reference": "synthetic_rule_source",
+          "rule_version": "synthetic_rules_v1",
+          "sale_costs_deductible": true,
+          "tax_currency": "EUR",
+          "withholding_credit_permitted": true
+        },
+        "hold_to_target": {
+          "after_tax_value_tax_currency": {
+            "central": "94.50",
+            "lower": "94.50",
+            "upper": "94.50"
+          },
+          "assumptions_reference": "synthetic_target_assumption",
+          "estimated_annual_liability": {
+            "central": "4.50",
+            "lower": "4.50",
+            "upper": "4.50"
+          },
+          "immediate_sale_cash_tax_currency": "99",
+          "incremental_annual_settlement": {
+            "central": "4.50",
+            "lower": "4.50",
+            "upper": "4.50"
+          },
+          "incremental_final_liability": {
+            "central": "4.50",
+            "lower": "4.50",
+            "upper": "4.50"
+          },
+          "kind": "HOLD_TO_TARGET",
+          "lot_allocations": [
+            {
+              "consumed_basis_tax_currency": "81",
+              "lot_id": "synthetic_lot",
+              "remaining_basis_tax_currency": "0",
+              "remaining_quantity": "0",
+              "sold_quantity": "1"
+            }
+          ],
+          "pre_tax_value_tax_currency": "99",
+          "realized_gain_tax_currency": "18",
+          "withholding_tax_currency": "0"
+        },
+        "limitations": [
+          "owner-configured linear tax illustrations; no legal inference, tax advice or order authority",
+          "after-tax ranges conservatively propagate rate uncertainty; no timing/deferral value is invented",
+          "replacement terminal values are supplied scenarios, not forecasts or expected-return signals",
+          "replacement terminal value is an unrealized mark; subsequent replacement-sale tax is not modeled"
+        ],
+        "no_action": {
+          "after_tax_value_tax_currency": {
+            "central": "100",
+            "lower": "100",
+            "upper": "100"
+          },
+          "assumptions_reference": "synthetic_no_action_mark",
+          "estimated_annual_liability": {
+            "central": "0",
+            "lower": "0",
+            "upper": "0"
+          },
+          "immediate_sale_cash_tax_currency": "0",
+          "incremental_annual_settlement": {
+            "central": "0",
+            "lower": "0",
+            "upper": "0"
+          },
+          "incremental_final_liability": {
+            "central": "0",
+            "lower": "0",
+            "upper": "0"
+          },
+          "kind": "NO_ACTION",
+          "lot_allocations": [
+            {
+              "consumed_basis_tax_currency": "0",
+              "lot_id": "synthetic_lot",
+              "remaining_basis_tax_currency": "81",
+              "remaining_quantity": "1",
+              "sold_quantity": "0"
+            }
+          ],
+          "pre_tax_value_tax_currency": "100",
+          "realized_gain_tax_currency": "0",
+          "withholding_tax_currency": "0"
+        },
+        "preserved_safety": {
+          "confidence_gate": 90,
+          "entry_slot_available": true,
+          "exit_latched": false,
+          "leverage_enabled": false,
+          "original_stop": "75",
+          "original_target": "100",
+          "protective_exit_active": false,
+          "replacement_path_approved": false,
+          "replacement_risk_valid": false
+        },
+        "sell_replace": null,
+        "status": "PARTIAL",
+        "unavailable_reasons": [
+          "sell/replace scenario unavailable"
+        ]
+      },
+      "feature": "TAX"
+    },
+    "schema_version": 1,
+    "scope": {
+      "account_id": "paper_synthetic",
+      "owner_id": "synthetic_owner"
+    },
+    "status": "PARTIAL"
+  },
+  "error": ""
+}

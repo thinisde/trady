@@ -29,6 +29,12 @@ Both service and client credentials must contain the same private bearer value:
 existing client. The server uses the central credential loader. Secrets never
 belong in registry JSON, source URLs, CLI arguments or review notes.
 
+`[http.rs:HttpServer::bind]` accepts only a 32–256 character printable bearer
+token, validates the service configuration, and binds the configured loopback
+address. `[http.rs:HttpServer::serve_until]` uses the configured fixed worker
+count and a queue sized to twice that count; non-loopback peers are discarded,
+busy queues return `503 SERVICE_BUSY`, and worker/listener failures fail closed.
+
 | Method/path | Actual Rust wire contract |
 | --- | --- |
 | `GET /session/{account}` | `SessionPacket` with verified calendar times and actual account opening equity/cumulative deposits/withdrawals; `session:null` only outside an explicitly covered session. |
@@ -42,6 +48,12 @@ Unknown/missing/stale/conflicting/unapproved inputs return a bounded sanitized
 error. There is no neutral forecast, fabricated constituent list or fallback
 financial history. The HTTP read credential cannot import, review, mutate accounts
 or select a model path.
+
+`[http.rs:InputsService::respond]` accepts only the exact two-segment routes below
+and `GET`/`POST` methods. It rejects malformed paths and prediction/account
+mismatches, caps request paths at 512 bytes, and maps validation, storage and
+model failures to `503 VERIFIED_INPUT_UNAVAILABLE` without disclosing source text,
+account data, paths, tokens or upstream response bodies.
 
 ### Operator imports
 
@@ -202,7 +214,11 @@ License retention and real prospective/independent evidence remain mandatory.
 
 ## Side Effects
 
-Explicit import/review/output commands write private synchronized immutable files.
+`[mod.rs:InputsService::open]` reads the operator-pinned model bundle when one is
+configured and opens the import store. Explicit import/review/output commands
+write private synchronized immutable files; `[http.rs:HttpServer::serve_until]`
+starts bounded worker threads and accepts authenticated loopback HTTP reads until
+the supplied stop flag is set.
 Evaluation durably consumes a sealed interval before scoring. Pruning removes
 expired licensed source content and keeps non-content identity/hash tombstones.
 Explicit `serve` binds loopback and runs bounded workers until shutdown; it is an

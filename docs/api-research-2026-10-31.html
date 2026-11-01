@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trady API checks and stock research · 31 October 2026</title>
+<style>
+body{margin:0;color:var(--foreground,#202827);font:14px/1.55 var(--font-sans,system-ui,sans-serif)}
+h2{font-size:22px;line-height:1.3;letter-spacing:-.35px;margin:0 0 8px}
+h3{font-size:16px;margin:24px 0 8px}p{margin:8px 0}.muted,small{color:var(--muted-foreground,#65716c)}
+a{color:var(--link,#5b99ce);text-decoration:underline;text-underline-offset:2px}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.metric,.scenario{background:var(--secondary,#f1f4f1);border-radius:var(--radius,8px);padding:15px}
+.metric strong{display:block;font-size:25px;line-height:1.2}.metric span{display:block;font-size:12px;margin-top:6px}
+.notice{padding:14px;border:1px solid var(--border,#d9dfdb);border-radius:var(--radius,8px);margin:14px 0}
+.pass{color:var(--success,#2c9b70)}.pending{color:var(--warning,#b98427)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 8px 10px 0;text-align:left;border-bottom:1px solid var(--border,#d9dfdb);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted-foreground,#65716c)}
+.number{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-right:14px}
+td small{display:block;font-size:11px;margin-top:3px}th:last-child,td:last-child{padding-right:0}
+details{padding:12px 0;border-bottom:1px solid var(--border,#d9dfdb)}summary{font-weight:600;cursor:pointer}
+pre{background:var(--code-background,#f2f4f3);padding:15px;border-radius:var(--radius,8px);white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.55 var(--font-mono,ui-monospace,monospace)}
+code{font:12px var(--font-mono,ui-monospace,monospace);overflow-wrap:anywhere}
+.scenario label{display:flex;justify-content:space-between;gap:10px;margin-top:10px}.scenario input{width:100%;margin:12px 0;accent-color:var(--primary,#42916e)}
+.scenario output{display:block;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums}
+.foot{font-size:12px;margin-top:18px}
+@media(max-width:480px){.metric{padding:12px}.metric strong{font-size:22px}td,th{padding:8px 6px 8px 0}.number{padding-right:8px}}
+</style></head><body>
+<h2>API checks and stock research</h2>
+<p class="muted">31 October 2026 · Broad US/EU stocks · Moderate risk · 6–12 months</p>
+<div class="metrics">
+<div class="metric"><strong>12 / 13</strong><span>API attempts returned valid HTTP 200</span></div>
+<div class="metric"><strong>498</strong><span>Rust tests passed · 20 DB tests reserved</span></div>
+<div class="metric"><strong>0</strong><span>Broker mutations or messages sent</span></div>
+</div>
+<div class="notice"><strong class="pending">GDELT remains unavailable.</strong> DNS resolved, but both HTTPS attempts failed. X kept its existing cost gate; yfinance remains an offline import. Collection settings stayed disabled.</div>
+<h3>Stocks to research next</h3>
+<p>Visa and SAP stand out for business quality. Visa's valuation premium needs review; Microsoft is conditional on cash conversion. Schneider and Sanofi need further inputs.</p>
+<table><thead><tr><th>Company / evidence</th><th class="number">Cash FCF margin</th><th>Research condition</th></tr></thead><tbody><tr><td><a href="https://www.sec.gov/Archives/edgar/data/1403161/000140316126000126/q42026earningsrelease.htm">Visa</a><small>V · US · FY2026</small></td><td class="number">48.05%</td><td>33.57× trailing EPS; review the valuation premium.</td></tr><tr><td><a href="https://www.sap.com/docs/download/investors/2026/sap-2026-q3-statement.pdf">SAP SE</a><small>SAP · EU · Q3 2026</small></td><td class="number">16.73%</td><td>Priority: track cloud backlog and cash delivery.</td></tr><tr><td><a href="https://www.sec.gov/Archives/edgar/data/789019/000119312526436133/msft-20260930.htm">Microsoft</a><small>MSFT · US · Q3 2026</small></td><td class="number">20.19%</td><td>Watch AI capex and cash conversion.</td></tr><tr><td><a href="https://www.se.com/ww/en/assets/pdf/release-Q3-revenues-2026">Schneider Electric</a><small>SU.PA · EU · Q3 2026</small></td><td class="number">—</td><td>Follow up: profit and cash inputs incomplete.</td></tr><tr><td><a href="https://www.sanofi.com/en/media-room/press-releases/2026/2026-10-30-06-30-00-3392028">Sanofi</a><small>SAN.PA · EU · Q3 2026</small></td><td class="number">22.63%</td><td>Follow up: statutory profit and valuation incomplete.</td></tr></tbody></table>
+<p class="muted">Visa uses annual figures; other rows use quarters. Cash-flow definitions differ. <a href="https://investor.visa.com/stock-information/quote-chart/default.aspx">Visa's issuer closing quote</a> is $413.59, implying 33.57× trailing P/E. The other four retain missing valuation inputs. No expected returns were generated. These are research candidates. Microsoft, SAP and Schneider share exposure to enterprise/AI investment.</p>
+<details><summary>Actual generated report excerpt</summary><pre>{
+  &quot;symbol&quot;: &quot;V&quot;,
+  &quot;fundamentals&quot;: &quot;SUPPORTED&quot;,
+  &quot;revenue_growth_pct&quot;: &quot;14.7575&quot;,
+  &quot;operating_margin_pct&quot;: &quot;61.2378&quot;,
+  &quot;free_cash_flow_margin_pct&quot;: &quot;48.0513&quot;,
+  &quot;pe_ttm&quot;: &quot;33.5706&quot;,
+  &quot;evidence_gaps&quot;: [],
+  &quot;valuation_review_required&quot;: true,
+  &quot;entry_authorized&quot;: false
+}</pre></details>
+<h3>Visa: illustrative multiple sensitivity</h3>
+<div class="scenario"><p>FY2026 diluted EPS: <strong>$12.32</strong>, from the <a href="https://www.sec.gov/Archives/edgar/data/1403161/000140316126000126/q42026earningsrelease.htm">company release</a>.</p>
+<label for="multiple"><span>Assumed trailing P/E</span><strong id="multiple-label">25×</strong></label>
+<input id="multiple" type="range" min="20" max="40" step="1" value="25" aria-describedby="scenario-note">
+<output id="scenario-value" for="multiple">$308.00</output>
+<p id="scenario-note" class="muted">EPS × an arbitrary assumed multiple. This is not a fair-value estimate, target price or current quote.</p></div>
+<details><summary>Other API results and timings</summary><table><thead><tr><th>API</th><th>HTTP</th><th>Result</th><th class="number">Latency</th></tr></thead><tbody><tr><td>sec</td><td class="pass">200</td><td>healthy</td><td class="number">68 ms</td></tr><tr><td>fred</td><td class="pass">200</td><td>healthy</td><td class="number">393 ms</td></tr><tr><td>twelve_data</td><td class="pass">200</td><td>healthy</td><td class="number">151 ms</td></tr><tr><td>finnhub</td><td class="pass">200</td><td>healthy</td><td class="number">310 ms</td></tr><tr><td>alpha_vantage</td><td class="pass">200</td><td>healthy</td><td class="number">140 ms</td></tr><tr><td>fmp</td><td class="pass">200</td><td>healthy</td><td class="number">495 ms</td></tr><tr><td>coingecko</td><td class="pass">200</td><td>healthy</td><td class="number">309 ms</td></tr><tr><td>tiingo</td><td class="pass">200</td><td>healthy</td><td class="number">185 ms</td></tr><tr><td>massive</td><td class="pass">200</td><td>healthy</td><td class="number">295 ms</td></tr><tr><td>gdelt</td><td class="muted">—</td><td>transport failed</td><td class="number">5003 ms</td></tr><tr><td>google_news</td><td class="pass">200</td><td>healthy</td><td class="number">60 ms</td></tr><tr><td>publisher_rss</td><td class="pass">200</td><td>healthy</td><td class="number">120 ms</td></tr><tr><td>telegram</td><td class="pass">200</td><td>healthy</td><td class="number">2460 ms</td></tr><tr><td>x</td><td class="muted">—</td><td>requires existing cost gate</td><td class="number">—</td></tr><tr><td>yfinance</td><td class="muted">—</td><td>offline import only</td><td class="number">—</td></tr></tbody></table>
+<p class="muted">13 initial diagnostic attempts plus one GDELT retest. Checks retain metadata only; credentials and response bodies are omitted. A successful check covers its diagnostic endpoint.</p></details>
+<details><summary>Two new commands</summary><pre>target/debug/trady api-health
+target/debug/trady api-health --online --provider fred
+target/debug/trady research-report docs/research-us-eu-2026-10-31.input.json --as-of 2026-10-31T19:38:05Z</pre><p class="muted">Health checks default to offline credential metadata. Stock report generation is offline and validates dated references, financial periods, currencies and evidence freshness.</p></details>
+<div class="notice"><strong>Verification:</strong> the latest workspace run passed all 498 tests, including the 10 new feature tests. Independent Decimal calculations matched the generated ratios. Build, feature formatting, asset and whitespace checks passed.</div>
+<p class="foot"><strong class="pending">Repository cleanup remains:</strong> strict Clippy and full-tree formatting flag concurrent intelligence code. A complete warning-level lint sweep found no diagnostics in the four new feature modules. The 20 database tests were not rerun in an isolated database for this extension.</p>
+<p class="foot muted">Exa research reviewed 65 result slots across three workstreams; selected evidence comes from issuer/SEC releases and central banks, dated by the cutoff. <a href="https://www.federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm">Fed</a> and <a href="https://www.ecb.europa.eu/press/press_conference/monetary-policy-statement/2026/html/ecb.is261029~5c5ffe99e5.en.html">ECB</a> held rates in late October; energy/inflation risks support checking cash generation and valuation. No stock entry was authorized, and deepseek-v4.1-flash remains pinned.</p>
+<script>
+const multiple=document.getElementById('multiple');
+function updateScenario(){const n=Number(multiple.value);document.getElementById('multiple-label').textContent=n+'×';document.getElementById('scenario-value').textContent=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(12.32*n);}
+multiple.addEventListener('input',updateScenario);updateScenario();
+console.log('API/research summary: 12 valid API responses; 498 passing Rust tests; 10 new tests included; GDELT transport failure and concurrent lint issues recorded.');
+</script></body></html>

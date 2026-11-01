@@ -23,7 +23,8 @@ they do not select executables, argv, paths, secrets or release tools.
 - Deployment composes `[mod.rs:HelperLab::evaluate]` with
   `lab/evaluate.py --socket FIXED_SOCKET --worker-uid FIXED_UID`, backed by
   the separately isolated `lab/evaluator_worker.py` and its
-  root-owned sealed lock. The lab cannot read sealed data or worker state.
+  root-owned sealed lock. Deployment isolation must prevent the lab from reading
+  sealed data or worker state.
 
 ## Invariants
 
@@ -32,7 +33,8 @@ they do not select executables, argv, paths, secrets or release tools.
   ownership without group/other write permission. Resolve interpreter symlinks
   before pinning.
 - `[runner.rs:HelperCommand::run_linux]` clears the inherited environment and
-  supplies only fixed `PATH`/`LANG`, without a broker or database argument.
+  supplies only fixed `PATH`/`LANG` and forwards deployment-configured arguments.
+  Broker/database argument exclusion depends on deployment review.
   `[runner.rs:HelperCommand::validate]` rejects the exact executable basenames
   `sh`, `bash`, `dash`, `zsh`, `env`, `sudo`, `su` and argument tokens
   `-c`, `--command`, `-e`, `--eval`. Only listed dependencies are pin-checked;
@@ -43,6 +45,9 @@ they do not select executables, argv, paths, secrets or release tools.
   required to contain descendants, including programs that detach themselves.
 - `[runner.rs:persist_artifact]` stores content-addressed stdout/stderr and receipts with
   exclusive creation, file/directory fsync and hash validation on retries.
+- `[runner.rs:HelperCommand::run]` validates the supplied `input_hash` as a
+  binding without requiring it to equal the request bytes' SHA256. The receipt
+  separately records the actual request-byte hash.
 - `[mod.rs:HelperLab::verify_candidate]` requires bound proof/parity hashes,
   theorem/axiom checks and 1–10,000 equal Rust/Lean result pairs.
   Scope `ARITHMETIC_CORE` cannot satisfy `FORMULA_V1` verification.
@@ -52,6 +57,12 @@ they do not select executables, argv, paths, secrets or release tools.
   digest, rather than the hash of the earlier integer-only file. The
   [proof contract](../../../../lab/proofs/README.md) documents exact pin generation
   and the remaining translation/compiler trust boundary.
+  `[mod.rs:HelperLab::verify_candidate]` and every `WeeklyLab` entry point call
+  `RunManifest::validate` with the current UTC time before invoking a helper.
+  This checks all required component hashes, run/account/mode identity and session
+  ordering, cutoff and deadline relationships. Verification retrieves
+  `lean_toolchain` and `rust_build` with checked map lookups; missing or malformed
+  prerequisites return errors before process execution or artifact creation.
 - `[mod.rs:HelperLab::evaluate]` validates run/dataset/plan binding; the
   production CLI places durable holdout claim/finish accounting around
   evaluation. Direct `HelperLab::evaluate` is an adapter call, not that boundary.
@@ -71,6 +82,12 @@ filesystem sandbox.
 
 ## Verification
 
+Run `cargo test --workspace --locked` from the repository root.
+
 Run `cargo test -p trady-adapters --test weekly_helpers --test shadow_recording --locked`.
 Timeout, descendant cleanup, output/input limits, environment isolation,
 tampering and misbound responses are exercised with explicitly synthetic tools.
+`direct_weekly_methods_reject_invalid_manifests_before_starting_any_helper` checks
+each missing/malformed required pin and invalid identity, mode, session, cutoff
+and deadline inputs through reconciliation, development, direct/trait verification
+and evaluation, and checks that no helper marker or artifacts are created.

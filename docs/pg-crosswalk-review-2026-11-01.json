@@ -1,0 +1,74 @@
+{
+  "entitlement_checks": {
+    "fmp_membership": "HTTP_402_NOT_ENTITLED",
+    "licensed_alternative": "NOT_SELECTED",
+    "massive_quotes": "HTTP_403_NOT_ENTITLED"
+  },
+  "independent_review": {
+    "reason": "The requested PGC_US_EQ mapping is false: the account-bound broker catalog identifies PGC_US_EQ as Peapack-Gladstone. The same catalog contains PG_US_EQ as Procter & Gamble with the requested ISIN. The historical key and broker key remain separate fields; no silent alias was applied.",
+    "reviewed_at": "2026-11-01T18:00:00Z",
+    "reviewer_id": "codex-auto-review",
+    "verdict": "REJECT"
+  },
+  "kind": "instrument_crosswalk_auto_review",
+  "observed_broker_record": {
+    "currency": "USD",
+    "instrument_id": "PGC_US_EQ",
+    "isin": "US7046991078",
+    "kind": "STOCK",
+    "name": "Peapack-Gladstone Financial Corp",
+    "short_name": "PGC",
+    "observed_at": "2026-11-01T18:00:00Z",
+    "source_artifact": "var/identity/t212-demo-metadata-20261101.json",
+    "source_artifact_sha256": "03ae2dc6133d2b47f93d511b99e4a313d79c65420f66d146c1d031825f887665",
+    "venue": null
+  },
+  "resolved_broker_candidate": {
+    "historical_symbol": "PG_US_EQ",
+    "broker_instrument_id": "PG_US_EQ",
+    "ticker": "PG",
+    "isin": "US7427181091",
+    "currency": "USD",
+    "venue": "XNYS",
+    "broker_catalog_added_on": "2018-07-12T07:10:14.000+03:00",
+    "source_hash": "03ae2dc6133d2b47f93d511b99e4a313d79c65420f66d146c1d031825f887665",
+    "status": "IDENTITY_MATCHED_EFFECTIVE_MEMBERSHIP_STILL_REQUIRED"
+  },
+  "public_identity_checks": {
+    "currency": {
+      "status": "CONSISTENT_WITH_BROKER_RECORD",
+      "value": "USD"
+    },
+    "effective_date": {
+      "status": "MISSING_CURRENT_MEMBERSHIP_EFFECTIVE_DATE",
+      "value": null
+    },
+    "isin": {
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1849336/000184933626000004/xslNPX-INFO-TABLE_X01/votetable_xml.xml",
+      "status": "MATCHED_PUBLIC_RECORD",
+      "value": "US7427181091"
+    },
+    "issuer_ticker_venue": {
+      "source_url": "https://us.pg.com/annualreport2022/2022_form_10k.pdf",
+      "status": "MATCHED_PUBLIC_RECORD",
+      "value": "PG / New York Stock Exchange"
+    }
+  },
+  "requested": {
+    "broker_instrument_id": "PGC_US_EQ",
+    "currency": "USD",
+    "effective_date": null,
+    "historical_symbol": "PG_US_EQ",
+    "isin": "US7427181091",
+    "source_hash": null,
+    "ticker": "PG",
+    "venue": "XNYS"
+  },
+  "required_next_evidence": [
+    "Licensed current membership/instrument export with provider rights and exact source hash",
+    "Current effective membership date and MIC/venue evidence for the resolved PG_US_EQ broker candidate",
+    "Independent review of the exact-content hash and the explicit PG_US_EQ-to-PG_US_EQ crosswalk; retain PGC_US_EQ as a rejected conflicting identity"
+  ],
+  "schema_version": 1,
+  "status": "REQUESTED_MAPPING_REJECTED_CORRECT_BROKER_ID_IDENTIFIED"
+}

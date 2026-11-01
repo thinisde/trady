@@ -8,6 +8,8 @@ input records, threshold previews and remaining automated integration.
 
 ## Interface
 
+- `[mod.rs:HELP]` and `run` are the module's public items. `Input` and
+  `read_bounded` are private implementation details.
 - `[mod.rs:HELP]`: command syntax, service enablement and authorization notes.
 - `[mod.rs:run]`: `sentiment status --config FILE` and
   `sentiment score --config FILE --input FILE`.

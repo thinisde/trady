@@ -12,6 +12,8 @@ Prediction advice grants no order or release authority.
 
 - `[mod.rs:FusionConfig]`, `FusionContext`, `FusionStatus`: approved source/model,
   calibration, age, uncertainty and scenario/horizon/regime configuration.
+  `[mod.rs:FusionConfig::validate]` and `[mod.rs:UtilityConfig::validate]`
+  explicitly validate their versioned configuration records.
 - `[mod.rs:PredictionFusionEngine]`: `new`, `config`, `fuse` and offline
   `fuse_ablation`. `FusedPrediction` exposes status, context, reason codes,
   duplicated lineages, dependence groups, maximum negative sentiment,
@@ -23,6 +25,10 @@ Prediction advice grants no order or release authority.
   `select_scenario(scenarios, config, now)` requires distinct scenario hashes and
   selects the best supported candidate strictly above cash or returns `NoTrade`.
   Equal best utilities retain the first candidate.
+  `[mod.rs:ScenarioUtility]` exposes `utility`, `expected_net_account_return`,
+  `expected_downside` and `scenario_hash` accessors. `[mod.rs:FusionStatus]`
+  serializes as `READY`/`ABSTAIN`; `[mod.rs:UtilitySelection]` uses the `decision`
+  tag with `CANDIDATE`/`NO_TRADE` variants.
 - `[history.rs:PredictionPerformance]`, `score_matured_predictions`: multiclass
   Brier score, scored/pending-or-censored counts and per-regime sample counts.
 - `[history.rs:ChronologicalSplit]`: `validate` checks separated training,
@@ -66,6 +72,26 @@ Prediction advice grants no order or release authority.
   checks `available_at <= label_end_at <= training_end_at`, with no separate
   label-publication-time argument; callers supply actual exchange-calendar label ends.
 
+- `[mod.rs:PredictionFusionEngine::fuse_ablation]` returns `Err` for an invalid
+  context/horizon or excessive input count. Prediction-level rejection generally
+  returns an `Abstain` result with reason codes.
+- `[mod.rs:PredictionFusionEngine::fuse_ablation]` checks duplicate identities
+  before excluding an ablated source. Changed content under an excluded source
+  can therefore still cause abstention. Every accepted non-drifted prediction
+  contributes its expiry and observed-time age deadline to validity, including
+  research, sentiment and quantitative inputs.
+- `[mod.rs:expected_utility]` requires payoffs available by the original decision
+  time, matching forecast identity, positive opening equity, a valid account
+  snapshot identifier and a forecast deadline within the comparison deadline.
+- `[history.rs:score_matured_predictions]` validates original identities and
+  originals before cutoff/payload filtering, and validates all supplied labels,
+  including unmatched labels. Future-generated and non-scenario originals enter
+  neither output count. Matched label compatibility is checked before label
+  availability or censoring, so an unavailable mismatched label still rejects.
+  Its Brier score averages the sum of all four squared class errors over scored
+  forecasts, without dividing by the number of classes. It returns `None` when
+  no forecast is scored; regime sample counts include only scored forecasts.
+
 ## Side Effects
 
 None. `[mod.rs:PredictionFusionEngine::fuse]`, `expected_utility`, `select_scenario`
@@ -74,6 +100,8 @@ time, return calculated records, and perform no network, filesystem, training,
 scheduling or broker I/O.
 
 ## Verification
+
+Run `cargo test --workspace --locked` from the repository root for workspace verification.
 
 Run `cargo test -p trady-policy --locked` and
 `cargo clippy -p trady-policy --all-targets --locked -- -D warnings` from the repository root.

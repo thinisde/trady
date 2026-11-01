@@ -24,6 +24,8 @@ Telegram polling/sending and broker snapshot acquisition belong to adapters.
 - `[gateway.rs:GatewayRequest]` carries bot/update/sender/chat IDs, scope and command.
   `[gateway.rs:OwnerControlRequest]` carries request/kind/scope, bot/owner/chat IDs,
   context/hash and request time; it has no local validator.
+- `[gateway.rs:OwnerControlKind]` has `PauseEntries`, `ResumeEntries` and
+  `ClosePosition`, serialized as `SCREAMING_SNAKE_CASE`.
 - `[gateway.rs:OwnerControlContext::binding_hash]` includes owner/account/policy, deployment
   mode, plan revision, holding ID/revision, instrument and exact quantity.
   Refresh timestamps are excluded; `validate` separately requires freshness.
@@ -39,8 +41,8 @@ Telegram polling/sending and broker snapshot acquisition belong to adapters.
   `Orders`, `Unsupported`; its parser is private. `CommandReply` carries reply data.
 - `[mod.rs:BrokerScope]`: account ID, mode and currency, configured independently
   of the foundation configuration.
-- `[mod.rs:Monitor]`: `new`, `observe`, `reply`, `render`. Construction takes
-  `(access, foundation, scope, stale_after_seconds, now)`. `render` returns text
+- `[mod.rs:Monitor]`: `new`, `new_for_gateway`, `observe`, `reply`, `render`.
+  Legacy construction takes `(access, foundation, scope, stale_after_seconds, now)`. `render` returns text
   directly; authorization is enforced by `reply`.
 
 ## Invariants

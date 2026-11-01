@@ -47,6 +47,16 @@ pub struct TradingInputsConfig {
     pub screening: ScreeningRequest,
 }
 impl TradingInputsConfig {
+    /// Reserved example hosts cannot provide approved deployment inputs.
+    pub fn uses_placeholder_endpoint(&self) -> bool {
+        Url::parse(&self.base_url).is_ok_and(|url| {
+            url.host_str().is_some_and(|host| {
+                let host = host.trim_end_matches('.');
+                host == "invalid" || host.ends_with(".invalid")
+            })
+        })
+    }
+
     pub fn validate(&self, trading: &TradingConfig) -> Result<()> {
         let url =
             Url::parse(&self.base_url).map_err(|_| Error("invalid trading input URL".into()))?;

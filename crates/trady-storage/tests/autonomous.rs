@@ -8,6 +8,9 @@ use trady_policy::Policy;
 use trady_storage::{autonomous::PgTradingJournal, migrate, trading_research::PgTradingResearch};
 
 fn dsn(role: &str) -> String {
+    if let Ok(value) = env::var(format!("{}_DSN", role.to_ascii_uppercase())) {
+        return value;
+    }
     format!(
         "host=127.0.0.1 port={} user={role} dbname=trady",
         env::var("TRADY_TEST_PORT").unwrap()

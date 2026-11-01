@@ -18,7 +18,7 @@ pub use x::XUser;
 pub use x_meter::MeteredHttp;
 
 pub const MAX_BODY_BYTES: usize = 2 * 1024 * 1024;
-pub const PARSER_VERSION: &str = "trady-news-1";
+pub const PARSER_VERSION: &str = "trady-news-2";
 
 pub struct SourceClient<T = SafeHttp> {
     transport: T,
@@ -367,6 +367,7 @@ fn item(source: &SourceConfig, draft: ItemDraft, now: DateTime<Utc>) -> Result<S
             &draft.summary,
             &draft.text,
             &draft.published_at,
+            &draft.language,
             &draft.social,
             &related_urls,
             &source.rights,

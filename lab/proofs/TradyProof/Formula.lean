@@ -14,7 +14,12 @@ abbrev Timestamp := Int
 def second : Int := 2000000000
 def nanosPerSecond : Int := 1000000000
 def minTimestamp : Int := -16669202457600000000000
-def maxTimestamp : Int := 16420533753598999999999
+def maxOrdinaryTimestamp : Int := 16420533753598999999999
+-- Chrono can parse the final day's second 60, beyond DateTime::MAX_UTC.
+def maxTimestamp : Int := 16420533753599999999999
+def validTimestamp (time : Timestamp) : Bool :=
+  decide (minTimestamp / second ≤ time / second ∧ time / second ≤ maxTimestamp / second ∧
+    (time % second < nanosPerSecond ∨ (time / second) % 60 = 59))
 def durationNanos (later earlier : Timestamp) : Int :=
   let laterSeconds := later / second
   let earlierSeconds := earlier / second
@@ -241,7 +246,27 @@ def validateParameters (p : Policy) (e : Envelope) (v : Parameters) : Checked
       change units v.target_net_fraction ≤ units p.max_target_fraction
       omega⟩
 
-def validateAccount (a : Account) : Checked Unit := do
+-- Production's identifier and currency newtypes admit ASCII only. After this
+-- check, character length and UTF-8 byte length coincide.
+def validIdentifier (value : String) : Bool :=
+  decide (0 < value.length ∧ value.length ≤ 96) && value.toList.all (fun c =>
+    decide (('A' ≤ c ∧ c ≤ 'Z') ∨ ('a' ≤ c ∧ c ≤ 'z') ∨
+      ('0' ≤ c ∧ c ≤ '9') ∨ c = '_' ∨ c = '-'))
+
+def validCurrency (value : String) : Bool :=
+  decide (value.length = 3) && value.toList.all (fun c => decide ('A' ≤ c ∧ c ≤ 'Z'))
+
+def validAccountInput (a : Account) : Bool :=
+  validIdentifier a.account_id && ["paper", "shadow", "live"].contains a.mode &&
+  validCurrency a.spendable_cash.currency &&
+  a.positions.all (fun p => validIdentifier p.instrument_id) &&
+  a.orders.all (fun o => validIdentifier o.instrument_id &&
+    (match o.client_intent_id with | none => true | some id => validIdentifier id) &&
+    ["BUY", "SELL"].contains o.side &&
+    ["OPEN", "PARTIALLY_FILLED", "FILLED", "CANCELLED", "REJECTED", "UNKNOWN"].contains o.status)
+
+def validateAccount (a : Account) : Checked (PLift (validAccountInput a = true)) := do
+  let hinput ← check (validAccountInput a = true) "invalid account input"
   let _ ← check (a.snapshot_id.isEmpty = false) "snapshot ID is required"
   let _ ← check (zero ≤ a.spendable_cash.amount) "negative spendable cash"
   let mut instruments : List String := []
@@ -261,6 +286,7 @@ def validateAccount (a : Account) : Checked Unit := do
     let _ ← check (o.status ≠ "PARTIALLY_FILLED" ∨
       (zero < o.filled_quantity ∧ o.filled_quantity < o.quantity))
       "partial order must have positive filled and remaining quantities"
+  return hinput
 
 def targetCeiling (score : Nat) (exceptional : Bool) (p : Policy) : Checked Decimal := do
   let _ ← validatePolicy p
@@ -387,6 +413,7 @@ def correctQuantity (quantity step acquisitionUnit entryFixed lossUnit fixedLoss
 -- silently stand in for the still-missing refinement of the Rust implementation.
 structure AcceptedChecks (r : Request) (o : Output) : Prop where
   policy : PolicyCaps r.policy
+  account_input : validAccountInput r.input.account = true
   quantity_positive : zero < o.quantity
   quantity_minimum : r.input.rules.minimum_quantity ≤ o.quantity
   affordable : o.acquisition_cost.amount ≤ o.budget.amount
@@ -432,7 +459,7 @@ def calculate (r : Request) : Checked {o // AcceptedChecks r o} := do
   let now := r.as_of
   let hv ← validateParameters p r.envelope v
   let hp ← validatePolicy p
-  let _ ← validateAccount i.account
+  let haccount ← validateAccount i.account
   let _ ← check (zero < r.max_account_risk_fraction ∧ r.max_account_risk_fraction ≤ p.max_initial_loss_fraction)
     "owner account-risk budget is missing or exceeds policy"
   let _ ← check (i.account.snapshot_id.isEmpty = false ∧ i.market_snapshot_id.isEmpty = false ∧
@@ -521,13 +548,13 @@ def calculate (r : Request) : Checked {o // AcceptedChecks r o} := do
   for (observed, age) in [(i.account.observed_at, 60), (i.quote.observed_at, 10),
       (i.quote.received_at, 10), (e.last_completed_at, v.bar_seconds)] do
     let expiry := addSeconds observed age
-    let _ ← check (minTimestamp ≤ expiry ∧ expiry ≤ maxTimestamp) "formula validity timestamp overflow"
+    let _ ← check (minTimestamp ≤ expiry ∧ expiry ≤ maxOrdinaryTimestamp) "formula validity timestamp overflow"
     validUntil := min validUntil expiry
   if i.quote.currency ≠ cash.currency then
     for fx in [i.entry_costs.fx, i.exit_costs.fx] do
       if let some fx := fx then
         let expiry := addSeconds fx.observed_at 60
-        let _ ← check (minTimestamp ≤ expiry ∧ expiry ≤ maxTimestamp) "formula FX validity timestamp overflow"
+        let _ ← check (minTimestamp ≤ expiry ∧ expiry ≤ maxOrdinaryTimestamp) "formula FX validity timestamp overflow"
         validUntil := min validUntil expiry
   let hlifetime ← check (now < validUntil) "no remaining valid formula input lifetime"
   let overshoot ← sub (← div reward cost) v.target_net_fraction
@@ -542,7 +569,8 @@ def calculate (r : Request) : Checked {o // AcceptedChecks r o} := do
     proceeds_at_target := ⟨targetProceeds, cash.currency⟩, planned_loss_fraction := planned,
     account_risk := ⟨loss, cash.currency⟩, reward_to_risk := ratio }
   return ⟨output, {
-    policy := hp.down, quantity_positive := hq.down.1, quantity_minimum := hq.down.2,
+    policy := hp.down, account_input := haccount.down,
+    quantity_positive := hq.down.1, quantity_minimum := hq.down.2,
     affordable := hfirst.down.1, entry_bounds := sized.property.entry_bounds,
     cash_budget := hfirst.down.2.1, cash_cost := hfirst.down.2.2.1,
     marketable := hmarket.down, allocation := sized.property.allocation,
@@ -580,6 +608,16 @@ theorem accepted_checks (r : Request) (o : Output) (h : evaluate r = .ok o) : Ac
     simp [hc, Except.map] at h
     subst o
     exact certified.property
+
+theorem accepted_account_input (r : Request) (o : Output) (h : evaluate r = .ok o) :
+    validAccountInput r.input.account = true := (accepted_checks r o h).account_input
+
+theorem invalid_account_input_cannot_accept (r : Request)
+    (h : validAccountInput r.input.account = false) : ¬ ∃ o, evaluate r = .ok o := by
+  intro ⟨o, accepted⟩
+  have valid := accepted_account_input r o accepted
+  rw [h] at valid
+  contradiction
 
 theorem accepted_stop_before_target (r : Request) (o : Output) (h : evaluate r = .ok o) :
     o.stop_trigger < o.target_sell_limit := by

@@ -72,6 +72,15 @@ impl HelperLab {
         plan: &ExperimentPlan,
         trial: &TrialRecord,
     ) -> Result<VerificationReport> {
+        run.validate(Utc::now())?;
+        let toolchain_hash = run
+            .component_hashes
+            .get("lean_toolchain")
+            .ok_or_else(|| Error("weekly manifest is missing a pinned component hash".into()))?;
+        let source_hash = run
+            .component_hashes
+            .get("rust_build")
+            .ok_or_else(|| Error("weekly manifest is missing a pinned component hash".into()))?;
         let hash = trial_input_hash(run, plan, trial)?;
         let request = request("verify", run, plan, trial, &hash)?;
         let (proof, proof_output): (ProofPayload, _) =
@@ -89,9 +98,9 @@ impl HelperLab {
                     .iter()
                     .all(|a| self.config.approved_axioms.contains(a))
                 && proof.witness_count > 0
-                && proof.toolchain_hash == run.component_hashes["lean_toolchain"]
+                && &proof.toolchain_hash == toolchain_hash
                 && proof.safety_hash == self.config.protected_safety_hash
-                && proof.source_hash == run.component_hashes["rust_build"]
+                && &proof.source_hash == source_hash
                 && parity.source_hash == proof.source_hash
                 && parity.safety_hash == proof.safety_hash
                 && !parity.cases.is_empty()
@@ -127,6 +136,7 @@ fn request(
 }
 impl WeeklyLab for HelperLab {
     fn reconcile(&mut self, run: &RunManifest) -> Result<ReconciledWeek> {
+        run.validate(Utc::now())?;
         let hash = digest(run)?;
         let request =
             json!({"schema_version":1,"stage":"reconcile","input_hash":hash,"manifest":run});
@@ -146,6 +156,7 @@ impl WeeklyLab for HelperLab {
         plan: &ExperimentPlan,
         trial: &TrialRecord,
     ) -> Result<DevelopmentReport> {
+        run.validate(Utc::now())?;
         let hash = trial_input_hash(run, plan, trial)?;
         let (payload, output): (DevelopmentPayload, _) = Self::invoke(
             &self.config.develop,
@@ -175,6 +186,7 @@ impl WeeklyLab for HelperLab {
         plan: &ExperimentPlan,
         trial: &TrialRecord,
     ) -> Result<IndependentEvaluation> {
+        run.validate(Utc::now())?;
         let hash = trial_input_hash(run, plan, trial)?;
         let (mut payload, output): (EvaluationPayload, _) = Self::invoke(
             &self.config.evaluate,

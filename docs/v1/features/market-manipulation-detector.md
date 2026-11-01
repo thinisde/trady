@@ -1,6 +1,6 @@
-# Suspected market-manipulation and coordinated-hype detector (proposed)
+# Suspected market-manipulation and coordinated-hype detector (research implementation)
 
-Status: new feature design, 2026-10-31. Documentation only. The term **suspected** is mandatory; this system cannot establish criminal intent, identify a trader or certify fraud.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research. [Policy](../../../crates/trady-policy/src/intelligence/coordination.rs) checks source-window coverage, activity baselines and dependent/reposted/deleted origins, returning unreliable-attention tiers and an optional suppression multiplier within [0,1]. Approved normalized observations use the [shared service](./implementation-report.md). The term **suspected** remains mandatory; this system cannot establish criminal intent, identify a trader or certify fraud. Automatic collection and trading-policy integration remain separate work.
 
 ## Purpose and delta from current plan
 
@@ -63,7 +63,7 @@ Manually label **behavioral** positives/negatives from permitted archival sample
 
 ## Operations and acceptance
 
-- Disabled until rights review and evidence-quality integration pass. Low coverage -> UNAVAILABLE, not NORMAL.
+- Results remain unavailable until source rights and evidence checks pass. Low coverage -> UNAVAILABLE, not NORMAL.
 - Rejected ingestion due to platform permissions -> diagnostic only, no substitute scrape.
 - A deleted original must retract linked features and preserve a non-content audit marker only where authorized.
 - Tests: official filing generates simultaneous independent discussion (not flagged as fraud); one botnet-like repeated claim does not increase independent confirmation; timestamp disorder, source limits, synthetic brigading, and spoofed retweet chains cannot produce positive confidence.

@@ -4,7 +4,7 @@ description: >-
   Handle Trady research gaps, conflicting claims, failed or stale tools, budget
   exhaustion and uncertain account/protection state without inventing readiness.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Uncertainty and incidents
@@ -32,4 +32,4 @@ Use a permitted independent source or narrower query when it can answer the miss
 
 Populate final JSON blockers, uncertainty and failed/unknown readiness checks with actual tool/evidence references. Use `NEEDS_INPUT` for an owner clarification that is necessary; use a no-action/incomplete outcome for missing external facts or expired bounds. Do not ask for a secret in model conversation or request policy relaxation to bypass an ordinary failed check.
 
-The application sends incident notifications; the model has no arbitrary messaging authority. Native protection and Rust exits remain active independently. Follow [operations](../../docs/v1/operations.md#incident-responses), [trading policy](../../docs/v1/strategy.md) and the [JSON protocol](../../docs/v1/llm-and-tools.md).
+Incident delivery requires a configured application notification transport and an actual delivery result; the model has no arbitrary messaging authority. In an execution-enabled deployment, native protection and Rust exits are executor responsibilities whose actual state must be verified. Record-only shadow mode activates neither broker protection nor exits and does not itself prove notification delivery. Follow [operations](../../docs/v1/operations.md#incident-responses), [trading policy](../../docs/v1/strategy.md) and the [JSON protocol](../../docs/v1/llm-and-tools.md).

@@ -1,5 +1,10 @@
 # Weekly lab, shadow/release and isolated deployment handoff
 
+This is a historical checkpoint. Subsequent evaluator isolation, executable
+integrity and storage fixes are recorded in the
+[audit remediation](../../docs/audit-2026-10-31/remediation.md), with new
+verification results and pins.
+
 Status: scoped implementation is stable, including the concrete sealed evaluator follow-up.
 Existing uncommitted work was preserved;
 no commit/push, installed service/timer, applied firewall, broker call or paid API

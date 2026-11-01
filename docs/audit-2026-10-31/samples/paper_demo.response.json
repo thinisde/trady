@@ -1,0 +1,30 @@
+{
+  "name": "paper_demo",
+  "command": [
+    "target/debug/trady",
+    "demo"
+  ],
+  "exit": 0,
+  "response": {
+    "account_id": "paper_memory_demo",
+    "cash": {
+      "amount": "1",
+      "currency": "EUR"
+    },
+    "duplicate_intent_created": false,
+    "entry_authorized": false,
+    "missing_response_state": "RECOVERY_REQUIRED",
+    "mode": "paper",
+    "note": "Offline fixture only. Protection and broker submission are not implemented.",
+    "positions": [
+      {
+        "instrument_id": "fixture_stock",
+        "quantity": "4.9"
+      }
+    ],
+    "reconciled_fill_state": "OPEN_UNPROTECTED",
+    "remaining_unresolved_intents": 0,
+    "storage": "memory"
+  },
+  "error": ""
+}

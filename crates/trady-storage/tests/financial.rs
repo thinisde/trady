@@ -11,6 +11,9 @@ use trady_domain::financial::*;
 use trady_storage::{financial::PgFinancialRepository, migrate};
 
 fn dsn(role: &str) -> String {
+    if let Ok(value) = std::env::var(format!("{}_DSN", role.to_ascii_uppercase())) {
+        return value;
+    }
     format!(
         "host=127.0.0.1 port={} user={role} dbname=trady",
         std::env::var("TRADY_TEST_PORT").unwrap()
@@ -217,6 +220,32 @@ fn durable_shared_credits_revisions_replay_retention_and_role_boundaries() {
     );
     let used:i64=analyst.query_one("SELECT used_credits FROM research.provider_budget_windows WHERE budget_key=$1 AND window_kind='month'",&[&Provider::Fred.budget_key()]).unwrap().get(0);
     assert_eq!(used, 5);
+    // Lowering a reviewed cap below already charged usage denies new work
+    // without refunding usage or violating the database credit bound.
+    let mut capped_source = source.clone();
+    capped_source.id = "fixture_financial_reduced_limit".into();
+    config.sources.push(capped_source.clone());
+    let mut reduced = account.clone();
+    reduced.limits = BudgetLimits {
+        per_minute: 3,
+        per_day: 3,
+        per_month: 3,
+    };
+    config.accounts[0] = reduced.clone();
+    repo.sync_registry(&config).unwrap();
+    assert!(
+        repo.reserve(
+            &capped_source,
+            &reduced,
+            &window,
+            t3 + Duration::seconds(182)
+        )
+        .unwrap()
+        .is_none()
+    );
+    let row=analyst.query_one("SELECT used_credits,credit_limit FROM research.provider_budget_windows WHERE budget_key=$1 AND window_kind='month'",&[&Provider::Fred.budget_key()]).unwrap();
+    assert_eq!(row.get::<_, i64>(0), 5);
+    assert_eq!(row.get::<_, i64>(1), 5);
     assert!(
         !repo.health().unwrap()["budgets"]
             .as_array()
@@ -273,4 +302,51 @@ fn durable_shared_credits_revisions_replay_retention_and_role_boundaries() {
         .unwrap()
         .get(0);
     assert_eq!(count, 0);
+}
+
+#[test]
+#[ignore = "requires isolated PostgreSQL; run python3 scripts/test-postgres.py"]
+fn financial_sql_enforces_credit_bounds_and_collection_statuses() {
+    assert_eq!(std::env::var("TRADY_TEST_ISOLATED").as_deref(), Ok("1"));
+    migrate(&dsn("trady_migrator")).unwrap();
+    let mut analyst = Client::connect(&dsn("trady_analyst"), NoTls).unwrap();
+    let key = trady_application::harness::new_id("credit_constraint");
+    assert!(analyst.execute("INSERT INTO research.provider_budget_windows VALUES($1,'month',date_trunc('month',clock_timestamp()),2,1)",&[&key]).is_err());
+    analyst.execute("INSERT INTO research.provider_budget_windows VALUES($1,'month',date_trunc('month',clock_timestamp()),2,2)",&[&key]).unwrap();
+    assert!(
+        analyst
+            .execute(
+                "UPDATE research.provider_budget_windows SET used_credits=3 WHERE budget_key=$1",
+                &[&key]
+            )
+            .is_err()
+    );
+    assert!(
+        analyst
+            .execute(
+                "UPDATE research.provider_budget_windows SET credit_limit=1 WHERE budget_key=$1",
+                &[&key]
+            )
+            .is_err()
+    );
+    assert!(
+        analyst
+            .execute(
+                "UPDATE research.provider_budget_windows SET used_credits=0 WHERE budget_key=$1",
+                &[&key]
+            )
+            .is_err()
+    );
+    assert!(
+        analyst
+            .execute(
+                "UPDATE research.provider_budget_windows SET credit_limit=20 WHERE budget_key=$1",
+                &[&key]
+            )
+            .is_err()
+    );
+    assert!(analyst.execute("UPDATE research.provider_budget_windows SET window_start=window_start+interval '1 month' WHERE budget_key=$1",&[&key]).is_err());
+    let source = trady_application::harness::new_id("financial_status_source");
+    analyst.execute("INSERT INTO research.financial_sources(source_id,registry_hash,document,enabled) VALUES($1,'fixture','{}',false)",&[&source]).unwrap();
+    assert!(analyst.execute("INSERT INTO research.financial_collections(request_id,source_id,registry_hash,window_document,status,started_at,lease_until,reserved_credits) VALUES($1,$2,'fixture','{}','MADE_UP',clock_timestamp(),clock_timestamp()+interval '1 minute',1)",&[&key,&source]).is_err());
 }

@@ -79,6 +79,8 @@ caller obligation; the store does not enforce a poisoned state.
 
 ## Verification
 
+Run `cargo test --workspace --locked` from the repository root.
+
 Run `cargo test -p trady-adapters --locked telegram` from the repository root.
 [HTTP tests](./tests.rs) use loopback fixtures, fixed non-secret test tokens and
 bounded request waits. They exercise payloads, discovery, redaction, rate limits,

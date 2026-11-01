@@ -1,7 +1,7 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 
-const FIELDS: &str = "id,text,created_at,conversation_id,entities,lang";
+const FIELDS: &str = "id,text,author_id,created_at,conversation_id,entities,lang,referenced_tweets,edit_history_tweet_ids";
 const GAPS: &[&str] = &[
     "POLLING_not_realtime",
     "deletions_and_unreposts_not_delivered",
@@ -48,7 +48,9 @@ struct Post {
     created_at: DateTime<Utc>,
     conversation_id: Option<String>,
     lang: Option<String>,
-    #[serde(default, alias = "referenced_tweets")]
+    // With referenced_tweets requested, X omits this optional field on originals.
+    // An explicit null still means unavailable metadata and stays fail-closed.
+    #[serde(default = "original_references", alias = "referenced_tweets")]
     referenced_posts: Option<Vec<Reference>>,
     #[serde(default, alias = "edit_history_tweet_ids")]
     edit_history_post_ids: Vec<String>,
@@ -82,6 +84,10 @@ struct Lookup {
     includes: Includes,
     #[serde(default)]
     errors: Vec<serde_json::Value>,
+}
+
+fn original_references() -> Option<Vec<Reference>> {
+    Some(vec![])
 }
 
 fn base(source: &SourceConfig) -> std::result::Result<Url, SourceFailure> {
@@ -216,12 +222,12 @@ pub(super) fn timeline<T: HttpTransport>(
 }
 
 fn post_fields(url: &mut Url) {
-    // Current X v2 names; deserialization also accepts legacy tweet-named payloads.
+    // The v2 wire API retains tweet-named fields and expansion paths.
     url.query_pairs_mut()
-        .append_pair("post.fields", FIELDS)
+        .append_pair("tweet.fields", FIELDS)
         .append_pair(
             "expansions",
-            "author_id,referenced_posts,edit_history_post_ids",
+            "author_id,referenced_tweets.id,edit_history_tweet_ids",
         );
 }
 
@@ -494,7 +500,7 @@ pub(super) fn recent_search<T: HttpTransport>(
     // Expand the author only; routine context/edit/media expansion would spend the support budget.
     url.query_pairs_mut()
         .append_pair("max_results", &window.limit.to_string())
-        .append_pair("post.fields", FIELDS)
+        .append_pair("tweet.fields", FIELDS)
         .append_pair("expansions", "author_id");
     let token = client.token(source)?;
     let response = client.get(request(source, url, token), now)?;

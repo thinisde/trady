@@ -1,0 +1,322 @@
+{
+  "commands": [
+    {
+      "command": "trady analyst --once",
+      "status": "foundation_probe_complete",
+      "database": "restricted_role_verified",
+      "entry_authorized": false
+    },
+    {
+      "command": "trady executor --once",
+      "status": "foundation_probe_complete",
+      "database": "restricted_role_verified",
+      "entry_authorized": false
+    },
+    {
+      "command": "trady gateway --once",
+      "status": "foundation_probe_complete",
+      "database": "restricted_role_verified",
+      "entry_authorized": false
+    },
+    {
+      "command": "trady demo-postgres",
+      "status": null,
+      "database": null,
+      "entry_authorized": false
+    },
+    {
+      "command": "trady news collect --once",
+      "status": null,
+      "database": null,
+      "entry_authorized": false
+    },
+    {
+      "command": "trady news read --limit 5 --for-model",
+      "status": null,
+      "database": null,
+      "entry_authorized": false
+    }
+  ],
+  "imports": [
+    {
+      "feature": "OPTIONS",
+      "status": null,
+      "entry_authorized": false
+    },
+    {
+      "feature": "COORDINATION",
+      "status": null,
+      "entry_authorized": false
+    },
+    {
+      "feature": "EVENT",
+      "status": null,
+      "entry_authorized": false
+    },
+    {
+      "feature": "SHORT_INTEREST",
+      "status": null,
+      "entry_authorized": false
+    },
+    {
+      "feature": "INSIDER",
+      "status": null,
+      "entry_authorized": false
+    },
+    {
+      "feature": "CROSS_ASSET",
+      "status": null,
+      "entry_authorized": false
+    },
+    {
+      "feature": "ATTENTION",
+      "status": null,
+      "entry_authorized": false
+    },
+    {
+      "feature": "ACCOUNTING",
+      "status": null,
+      "entry_authorized": false
+    },
+    {
+      "feature": "MICROSTRUCTURE",
+      "status": null,
+      "entry_authorized": false
+    }
+  ],
+  "reads": [
+    {
+      "feature": "OPTIONS",
+      "status": "UNAVAILABLE",
+      "has_result": true,
+      "entry_authorized": false
+    },
+    {
+      "feature": "COORDINATION",
+      "status": "UNAVAILABLE",
+      "has_result": true,
+      "entry_authorized": false
+    },
+    {
+      "feature": "EVENT",
+      "status": "AVAILABLE",
+      "has_result": true,
+      "entry_authorized": false
+    },
+    {
+      "feature": "SHORT_INTEREST",
+      "status": "PARTIAL",
+      "has_result": true,
+      "entry_authorized": false
+    },
+    {
+      "feature": "INSIDER",
+      "status": "PARTIAL",
+      "has_result": true,
+      "entry_authorized": false
+    },
+    {
+      "feature": "CROSS_ASSET",
+      "status": "PARTIAL",
+      "has_result": true,
+      "entry_authorized": false
+    },
+    {
+      "feature": "ATTENTION",
+      "status": "ABSTAINED",
+      "has_result": true,
+      "entry_authorized": false
+    },
+    {
+      "feature": "ACCOUNTING",
+      "status": "PARTIAL",
+      "has_result": true,
+      "entry_authorized": false
+    },
+    {
+      "feature": "MICROSTRUCTURE",
+      "status": "INVALIDATED",
+      "has_result": true,
+      "entry_authorized": false
+    }
+  ],
+  "queries": {
+    "feature_counts": [
+      {
+        "feature": "ACCOUNTING",
+        "observations": 1
+      },
+      {
+        "feature": "ATTENTION",
+        "observations": 1
+      },
+      {
+        "feature": "COORDINATION",
+        "observations": 1
+      },
+      {
+        "feature": "CROSS_ASSET",
+        "observations": 1
+      },
+      {
+        "feature": "EVENT",
+        "observations": 1
+      },
+      {
+        "feature": "INSIDER",
+        "observations": 1
+      },
+      {
+        "feature": "MICROSTRUCTURE",
+        "observations": 1
+      },
+      {
+        "feature": "OPTIONS",
+        "observations": 1
+      },
+      {
+        "feature": "SHORT_INTEREST",
+        "observations": 1
+      }
+    ],
+    "tax_rows": [
+      {
+        "retained_tax_rows": 0
+      }
+    ],
+    "role_privileges": [
+      {
+        "role_name": "trady_analyst",
+        "can_select": true
+      },
+      {
+        "role_name": "trady_executor",
+        "can_select": false
+      },
+      {
+        "role_name": "trady_gateway",
+        "can_select": false
+      },
+      {
+        "role_name": "trady_lab",
+        "can_select": false
+      },
+      {
+        "role_name": "trady_shadow",
+        "can_select": false
+      },
+      {
+        "role_name": "trady_verifier",
+        "can_select": false
+      }
+    ],
+    "schema_tables": [
+      {
+        "table_schema": "audit",
+        "base_tables": 1
+      },
+      {
+        "table_schema": "control",
+        "base_tables": 9
+      },
+      {
+        "table_schema": "execution",
+        "base_tables": 7
+      },
+      {
+        "table_schema": "policy",
+        "base_tables": 1
+      },
+      {
+        "table_schema": "public",
+        "base_tables": 1
+      },
+      {
+        "table_schema": "release",
+        "base_tables": 4
+      },
+      {
+        "table_schema": "research",
+        "base_tables": 32
+      },
+      {
+        "table_schema": "weekly",
+        "base_tables": 8
+      }
+    ],
+    "content_erasure": [
+      {
+        "observation_id": "audit_accounting",
+        "feature": "ACCOUNTING",
+        "content_erased": true
+      },
+      {
+        "observation_id": "audit_attention",
+        "feature": "ATTENTION",
+        "content_erased": false
+      },
+      {
+        "observation_id": "audit_coordination",
+        "feature": "COORDINATION",
+        "content_erased": false
+      },
+      {
+        "observation_id": "audit_cross_asset",
+        "feature": "CROSS_ASSET",
+        "content_erased": false
+      },
+      {
+        "observation_id": "audit_event",
+        "feature": "EVENT",
+        "content_erased": false
+      },
+      {
+        "observation_id": "audit_insider",
+        "feature": "INSIDER",
+        "content_erased": false
+      },
+      {
+        "observation_id": "audit_microstructure",
+        "feature": "MICROSTRUCTURE",
+        "content_erased": false
+      },
+      {
+        "observation_id": "audit_options",
+        "feature": "OPTIONS",
+        "content_erased": false
+      },
+      {
+        "observation_id": "audit_short_interest",
+        "feature": "SHORT_INTEREST",
+        "content_erased": false
+      }
+    ]
+  },
+  "expected_rejections": [
+    {
+      "kind": "tax_import",
+      "exit": 1,
+      "error": "trady: raw tax context cannot enter research storage; use the ephemeral owner comparator"
+    },
+    {
+      "kind": "trady_executor_read",
+      "exit": 3,
+      "error": "ERROR:  permission denied for table intelligence_observations"
+    },
+    {
+      "kind": "trady_gateway_read",
+      "exit": 3,
+      "error": "ERROR:  permission denied for table intelligence_observations"
+    }
+  ],
+  "migration": {
+    "migration": 10,
+    "status": "applied_or_verified"
+  },
+  "after_rights_revocation": {
+    "status": "INVALIDATED",
+    "result": null
+  },
+  "disposable_container_removed": true,
+  "trading212_api_calls": 0
+}

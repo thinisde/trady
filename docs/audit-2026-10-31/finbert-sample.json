@@ -1,0 +1,73 @@
+{
+  "request": {
+    "schema_version": 1,
+    "documents": [
+      {
+        "item_id": "audit_positive",
+        "text": "The company reported higher revenue and record profits.",
+        "text_sha256": "ade8cb29a9ff680d75a4dfa18b92e49773e1aa509198f249940eaf06d4bf565a"
+      },
+      {
+        "item_id": "audit_negative",
+        "text": "The company reported wider losses and cut its earnings forecast.",
+        "text_sha256": "b7e669c2ec74a8f8bf244380f9502be3fb83bb1b1dcf7415a1a73a273d14b9b7"
+      },
+      {
+        "item_id": "audit_neutral",
+        "text": "The company will publish its annual report next month.",
+        "text_sha256": "46ab80a0519e72473fb954e89fc7854d6b7dd8e0113de686e0988fddfd44f5e7"
+      }
+    ]
+  },
+  "health": {
+    "status": "ready",
+    "model_id": "ProsusAI/finbert",
+    "model_revision": "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031"
+  },
+  "response_http_status": 200,
+  "response": {
+    "schema_version": 1,
+    "model_id": "ProsusAI/finbert",
+    "model_revision": "0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031",
+    "predictions": [
+      {
+        "item_id": "audit_positive",
+        "text_sha256": "ade8cb29a9ff680d75a4dfa18b92e49773e1aa509198f249940eaf06d4bf565a",
+        "probabilities": {
+          "negative": "0.020995483",
+          "neutral": "0.021855997",
+          "positive": "0.957148433"
+        },
+        "truncated": false
+      },
+      {
+        "item_id": "audit_negative",
+        "text_sha256": "b7e669c2ec74a8f8bf244380f9502be3fb83bb1b1dcf7415a1a73a273d14b9b7",
+        "probabilities": {
+          "negative": "0.970705628",
+          "neutral": "0.019122943",
+          "positive": "0.010171428"
+        },
+        "truncated": false
+      },
+      {
+        "item_id": "audit_neutral",
+        "text_sha256": "46ab80a0519e72473fb954e89fc7854d6b7dd8e0113de686e0988fddfd44f5e7",
+        "probabilities": {
+          "negative": "0.038212769",
+          "neutral": "0.940138519",
+          "positive": "0.021648636"
+        },
+        "truncated": false
+      }
+    ]
+  },
+  "corrupted_hash_rejection": {
+    "http_status": 400,
+    "response": {
+      "error": "invalid_request"
+    }
+  },
+  "http_requests": 3,
+  "trading212_api_calls": 0
+}

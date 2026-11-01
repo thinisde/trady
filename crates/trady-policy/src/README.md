@@ -7,6 +7,10 @@ Its feature inputs require verification by the application; they are not model a
 
 ## Interface
 
+- [Optional intelligence](./intelligence/README.md): `[intelligence/mod.rs:assess]`
+  dispatches ten deterministic research calculations. These functions have no
+  order authority, I/O or promotion path into prediction fusion.
+
 - [Prediction fusion and performance](./prediction/README.md): conservative typed
   forecast fusion, uncertainty/cost-aware scenario utility and matured forecast scoring.
 
@@ -44,10 +48,19 @@ Its feature inputs require verification by the application; they are not model a
   reporting denominators.
 - `[limits/mod.rs:calculate_limits]`: versioned formula calculator; its
   [component contract](./limits/README.md) lists its supplied-input constraints.
+  It also exports `FormulaFamily`, `FormulaParameters`, `FormulaEnvelope`,
+  `FormulaEvidence`, `LimitsInput` and `CalculatedLimits`, with
+  `[limits/proof_bridge.rs:Request]`, `Operation`, `Reply` and `evaluate` for
+  offline formula/decimal evaluation.
 - `[prediction/mod.rs:PredictionFusionEngine]`, `expected_utility`,
   `select_scenario`, `score_matured_predictions`, `ChronologicalSplit`: calibrated
   baseline, explicit abstention/cash selection and original-outcome evaluation;
   see the [prediction contract](./prediction/README.md).
+  `[prediction/mod.rs:FusionConfig]`, `FusionContext`, `FusionStatus`,
+  `FusedPrediction`, `OutcomeEstimates`, `ReturnNormalization`, `UtilityConfig`,
+  `ScenarioUtility`, `UtilitySelection` and `[prediction/history.rs:PredictionPerformance]`
+  provide configuration and read-only results. The engine exposes `new`, `config`,
+  `fuse` and `fuse_ablation`; configuration validators remain explicit.
 - `[lib.rs:Policy::default]` and `[lib.rs:Policy::validate]` provide initial values
   and explicit validation. `[lib.rs:ConfidenceInputs]` and `[lib.rs:Catalyst]` also
   have Rust defaults. `[lib.rs:ConfidenceScore::total]` sums the six private
@@ -133,14 +146,17 @@ Its feature inputs require verification by the application; they are not model a
   `[economics.rs:target_price]` enforces its own 10% ceiling independently of a
   stricter policy cap. `[economics.rs:validate_protective_stop]` requires distance
   strictly above zero/noise and at least the supplied minimum.
-- `[holding.rs:holding_target_ceiling]` preserves an existing target ceiling
-  below 70 while disallowing increases. At 70 and above it applies the existing
+- `[holding.rs:holding_target_ceiling]` returns the lower of the existing target
+  and the current policy cap below 70 while disallowing increases. At 70 and above it applies the existing
   confidence bands without imposing the new-entry confidence floor. Low confidence
   alone creates no exit. `[holding.rs:activate_plan]` validates expected version
   and exactly one version increment, nondecreasing long stop, nonextending
   deadline and nonincreasing trailing activation/distance. Target increases also
   require the caller's checked evidence/permission flag. Available research is
   required for every replacement, including tighter stops and lower targets.
+  The policy target cap is checked at construction and replacement; ordinary
+  `HoldingState::validate` does not compare an existing target with a tightened
+  cap, and evaluation does not automatically lower that existing target.
 - `[holding.rs:evaluate_holding]` evaluates the latest fresh accepted quote,
   retaining it against older/conflicting observations. Default trailing activates
   at net return `0.005`, retains peak return and sets a nondecreasing floor to
@@ -150,6 +166,8 @@ Its feature inputs require verification by the application; they are not model a
   deadline, maximum sessions, unprotected close, owner close in that order.
   A stale/unusable valuation cannot produce a target/trailing exit. A fresh
   instrument-price stop still works without FX; time/owner exits need no quote.
+  An existing latch returns before state validation and current quote/valuation/
+  calendar evaluation, with `net_return=None` (`[holding.rs:evaluate_holding]`).
 - `[holding.rs:activate_plan]` evaluates old thresholds before replacement. An
   old latch blocks activation; an accepted lower target/tighter stop/trailing
   rule can latch immediately under the new version. Rejections return the
@@ -183,6 +201,21 @@ Its feature inputs require verification by the application; they are not model a
   cumulative gross flows; callers establish both. `[capital.rs:account_return_contribution]`
   separately checks matching currencies and positive opening equity.
 
+`[lib.rs:ConfidenceInputs]` defaults omitted fields during deserialization and
+rejects unknown fields. `[economics.rs:validate_protective_stop]` requires
+`protection_verified=true` and nonnegative minimum/noise distances after quote/FX
+valuation. `[holding.rs:HoldingPlan::validate]` requires positive version, stop
+and target with target at most 10%; `[holding.rs:TrailingSettings::validate]`
+requires nonnegative activation and positive distance. A persisted trailing floor
+requires a known peak at least as high (`[holding.rs:TrailingState::validate]`).
+
+`[holding.rs:HoldingState::new]` rounds the initial stop upward and starts with
+empty trailing history, exit latch and retained quote. `[holding.rs:evaluate_holding]`
+turns research, quote, valuation and calendar failures into degradation flags
+while continuing remaining exit checks; invalid state or propagated arithmetic
+failures can return `Err`. `[capital.rs:session_performance]` rejects negative
+opening/current equity, deposits or withdrawals.
+
 ## Side Effects
 
 Only `[lib.rs:SessionLossGuard::observe]` and `observe_cash_flows` change the
@@ -212,7 +245,7 @@ provenance; it does not establish research, protection or order authority.
 
 ## Verification
 
-Run `cargo test --workspace` from the repository root for workspace verification.
+Run `cargo test --workspace --locked` from the repository root for workspace verification.
 
 Run `cargo test -p trady-policy --locked` from the repository root.
 

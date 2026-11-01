@@ -1,0 +1,115 @@
+{
+  "entity_id": "synthetic_equity_42",
+  "evidence": [
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T19:59:59Z",
+      "complete": true,
+      "content_hash": "e63e670bef7e6d380a590cb3f6b969d83362345b67040edb7314c014495c960a",
+      "currency": "USD",
+      "entity_id": "synthetic_equity_42",
+      "expires_at": "2026-11-06T20:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T20:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T19:59:58Z",
+      "received_at": "2026-10-30T20:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_options_v1",
+      "unit": "normalized_research",
+      "venue": null
+    }
+  ],
+  "observation_id": "fixture_observation",
+  "payload": {
+    "feature": "OPTIONS",
+    "input": {
+      "assumptions": {
+        "available_at": "2026-10-30T20:00:00Z",
+        "dividend_yield_annualized": 0,
+        "observed_at": "2026-10-30T20:00:00Z",
+        "published_at": "2026-10-30T20:00:00Z",
+        "risk_free_rate_annualized": 0,
+        "source_ref": "synthetic_options_v1",
+        "valid_until": "2026-10-31T20:00:00Z"
+      },
+      "atm_max_moneyness_fraction": "0.05",
+      "contracts": [
+        {
+          "adjustment_basis": "synthetic_standard_v1",
+          "ask": "8.03",
+          "ask_size": "10",
+          "available_at": "2026-10-30T20:00:00Z",
+          "bid": "7.90",
+          "bid_size": "10",
+          "contract_id": "synthetic_call_100",
+          "contract_multiplier": "100",
+          "exercise": "EUROPEAN",
+          "expiry_at": "2027-10-30T20:00:00Z",
+          "observed_at": "2026-10-30T20:00:00Z",
+          "open_interest_contracts": 500,
+          "price_tick": "0.01",
+          "published_at": "2026-10-30T20:00:00Z",
+          "right": "CALL",
+          "source_ref": "synthetic_options_v1",
+          "strike": "100",
+          "volume_contracts": 80
+        },
+        {
+          "adjustment_basis": "synthetic_standard_v1",
+          "ask": "8.03",
+          "ask_size": "10",
+          "available_at": "2026-10-30T20:00:00Z",
+          "bid": "7.90",
+          "bid_size": "10",
+          "contract_id": "synthetic_put_100",
+          "contract_multiplier": "100",
+          "exercise": "EUROPEAN",
+          "expiry_at": "2027-10-30T20:00:00Z",
+          "observed_at": "2026-10-30T20:00:00Z",
+          "open_interest_contracts": 500,
+          "price_tick": "0.01",
+          "published_at": "2026-10-30T20:00:00Z",
+          "right": "PUT",
+          "source_ref": "synthetic_options_v1",
+          "strike": "100",
+          "volume_contracts": 80
+        }
+      ],
+      "currency": "USD",
+      "event": null,
+      "history_start": "2025-10-30T20:00:00Z",
+      "horizon_seconds": 31536000,
+      "instrument_id": "synthetic_equity_42",
+      "iv_history": [],
+      "max_alignment_seconds": 2,
+      "max_quote_age_seconds": 60,
+      "max_relative_spread_fraction": "0.10",
+      "minimum_open_interest": 100,
+      "realized_volatility": null,
+      "sector_comparables": [],
+      "skew_absolute_delta": 0.25,
+      "skew_delta_tolerance": 0.05,
+      "underlying": {
+        "adjustment_basis": "synthetic_standard_v1",
+        "available_at": "2026-10-30T20:00:00Z",
+        "observed_at": "2026-10-30T20:00:00Z",
+        "price": "100",
+        "published_at": "2026-10-30T20:00:00Z",
+        "source_ref": "synthetic_options_v1"
+      },
+      "venue": "XNAS"
+    }
+  },
+  "payload_hash": "e63e670bef7e6d380a590cb3f6b969d83362345b67040edb7314c014495c960a",
+  "schema_version": 1,
+  "scope": {
+    "account_id": "paper_synthetic",
+    "owner_id": "synthetic_owner"
+  },
+  "supersedes": null
+}

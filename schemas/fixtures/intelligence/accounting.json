@@ -1,0 +1,155 @@
+{
+  "issuer_id": "issuer",
+  "current_period": {
+    "fiscal_label": "2026-Q3",
+    "kind": "QUARTER",
+    "start": "2026-07-01",
+    "end": "2026-09-30",
+    "fiscal_weeks": 13
+  },
+  "comparison_period": {
+    "fiscal_label": "2025-Q3",
+    "kind": "QUARTER",
+    "start": "2025-07-01",
+    "end": "2025-09-30",
+    "fiscal_weeks": 13
+  },
+  "crosswalk_revision": "crosswalk-v1",
+  "accounting_basis": "GAAP",
+  "consolidated_scope": "consolidated",
+  "cohort": {
+    "industry_id": "manufacturer",
+    "model_revision": "industry-v1",
+    "inventory_relevant": true
+  },
+  "minimum_denominator": "0.01",
+  "minimum_cohort_size": 2,
+  "facts": [
+    {
+      "fact_id": "ni",
+      "issuer_id": "issuer",
+      "concept": "NET_INCOME",
+      "label_as_filed": "NetIncome",
+      "taxonomy_tag": "us-gaap:NetIncome",
+      "crosswalk_revision": "crosswalk-v1",
+      "period": {
+        "fiscal_label": "2026-Q3",
+        "kind": "QUARTER",
+        "start": "2026-07-01",
+        "end": "2026-09-30",
+        "fiscal_weeks": 13
+      },
+      "unit": {
+        "measure": "currency",
+        "currency": "USD",
+        "scale": "1"
+      },
+      "accounting_basis": "GAAP",
+      "consolidated_scope": "consolidated",
+      "value": "20",
+      "missing_reason": null,
+      "filing_accession": "filing",
+      "filed_at": "2026-10-30T21:00:00Z",
+      "available_at": "2026-10-30T21:00:00Z",
+      "revision_of": null,
+      "source_ref": "sec:filing#ni",
+      "source_text_offset": 10,
+      "share_adjustment": null
+    },
+    {
+      "fact_id": "ocf",
+      "issuer_id": "issuer",
+      "concept": "OPERATING_CASH_FLOW",
+      "label_as_filed": "OperatingCashFlow",
+      "taxonomy_tag": "us-gaap:OperatingCashFlow",
+      "crosswalk_revision": "crosswalk-v1",
+      "period": {
+        "fiscal_label": "2026-Q3",
+        "kind": "QUARTER",
+        "start": "2026-07-01",
+        "end": "2026-09-30",
+        "fiscal_weeks": 13
+      },
+      "unit": {
+        "measure": "currency",
+        "currency": "USD",
+        "scale": "1"
+      },
+      "accounting_basis": "GAAP",
+      "consolidated_scope": "consolidated",
+      "value": "10",
+      "missing_reason": null,
+      "filing_accession": "filing",
+      "filed_at": "2026-10-30T21:00:00Z",
+      "available_at": "2026-10-30T21:00:00Z",
+      "revision_of": null,
+      "source_ref": "sec:filing#ocf",
+      "source_text_offset": 10,
+      "share_adjustment": null
+    },
+    {
+      "fact_id": "a0",
+      "issuer_id": "issuer",
+      "concept": "ASSETS",
+      "label_as_filed": "Assets",
+      "taxonomy_tag": "us-gaap:Assets",
+      "crosswalk_revision": "crosswalk-v1",
+      "period": {
+        "fiscal_label": "2026-06-30",
+        "kind": "INSTANT",
+        "start": null,
+        "end": "2026-06-30",
+        "fiscal_weeks": null
+      },
+      "unit": {
+        "measure": "currency",
+        "currency": "USD",
+        "scale": "1"
+      },
+      "accounting_basis": "GAAP",
+      "consolidated_scope": "consolidated",
+      "value": "100",
+      "missing_reason": null,
+      "filing_accession": "filing",
+      "filed_at": "2026-10-30T21:00:00Z",
+      "available_at": "2026-10-30T21:00:00Z",
+      "revision_of": null,
+      "source_ref": "sec:filing#a0",
+      "source_text_offset": 10,
+      "share_adjustment": null
+    },
+    {
+      "fact_id": "a1",
+      "issuer_id": "issuer",
+      "concept": "ASSETS",
+      "label_as_filed": "Assets",
+      "taxonomy_tag": "us-gaap:Assets",
+      "crosswalk_revision": "crosswalk-v1",
+      "period": {
+        "fiscal_label": "2026-09-30",
+        "kind": "INSTANT",
+        "start": null,
+        "end": "2026-09-30",
+        "fiscal_weeks": null
+      },
+      "unit": {
+        "measure": "currency",
+        "currency": "USD",
+        "scale": "1"
+      },
+      "accounting_basis": "GAAP",
+      "consolidated_scope": "consolidated",
+      "value": "100",
+      "missing_reason": null,
+      "filing_accession": "filing",
+      "filed_at": "2026-10-30T21:00:00Z",
+      "available_at": "2026-10-30T21:00:00Z",
+      "revision_of": null,
+      "source_ref": "sec:filing#a1",
+      "source_text_offset": 10,
+      "share_adjustment": null
+    }
+  ],
+  "comparability_issues": [],
+  "peers": []
+}

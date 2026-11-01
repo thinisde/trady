@@ -1,0 +1,200 @@
+{
+  "after": {
+    "cash": {
+      "amount": "5000.00",
+      "currency": "EUR"
+    },
+    "observed_at": "2026-11-01T00:06:16.663417162Z",
+    "pending_orders": 0,
+    "positions": 0
+  },
+  "before": {
+    "cash": {
+      "amount": "5000.00",
+      "currency": "EUR"
+    },
+    "observed_at": "2026-11-01T00:06:10.179568875Z",
+    "pending_orders": 0,
+    "positions": 0
+  },
+  "broker_state_unchanged": true,
+  "config": "config/autonomous.demo-no-submit.json",
+  "database_probes": {
+    "analyst": {
+      "account_id": "paper_demo",
+      "database": "restricted_role_verified",
+      "entry_authorized": false,
+      "entry_blockers": [
+        "foundation probe does not verify research/readiness evidence",
+        "approved skill bundle is not loaded",
+        "usable Perpetual assessment is unavailable",
+        "foundation probe does not run the autonomous execution/protection workflow",
+        "required provider capabilities are unknown, unsupported or expired"
+      ],
+      "mode": "paper",
+      "policy_version": 1,
+      "service": "analyst",
+      "status": "foundation_probe_complete"
+    },
+    "executor": {
+      "account_id": "paper_demo",
+      "database": "restricted_role_verified",
+      "entry_authorized": false,
+      "entry_blockers": [
+        "foundation probe does not verify research/readiness evidence",
+        "approved skill bundle is not loaded",
+        "usable Perpetual assessment is unavailable",
+        "foundation probe does not run the autonomous execution/protection workflow",
+        "required provider capabilities are unknown, unsupported or expired"
+      ],
+      "mode": "paper",
+      "policy_version": 1,
+      "service": "executor",
+      "status": "foundation_probe_complete"
+    },
+    "gateway": {
+      "account_id": "paper_demo",
+      "database": "restricted_role_verified",
+      "entry_authorized": false,
+      "entry_blockers": [
+        "foundation probe does not verify research/readiness evidence",
+        "approved skill bundle is not loaded",
+        "usable Perpetual assessment is unavailable",
+        "foundation probe does not run the autonomous execution/protection workflow",
+        "required provider capabilities are unknown, unsupported or expired"
+      ],
+      "mode": "paper",
+      "policy_version": 1,
+      "service": "gateway",
+      "status": "foundation_probe_complete"
+    }
+  },
+  "finished_at": "2026-11-01T00:06:16.992554+00:00",
+  "order_api_writes": 0,
+  "runtime": {
+    "cycles": 0,
+    "order_mutations": 0,
+    "preflight": {
+      "account_id": "shadow_demo_no_submit_20261101",
+      "approved_models": 0,
+      "blockers": [
+        "approved_model_registry_empty",
+        "approved_input_service_unconfigured",
+        "universe_source_disabled",
+        "owner_allowlist_empty",
+        "approved_skill_hashes_missing",
+        "approved_formula_unavailable"
+      ],
+      "configuration_ready": false,
+      "entry_authorized": false,
+      "entry_controls_enabled": true,
+      "mode": "shadow",
+      "order_submission_policy": "record_only",
+      "required_actions": [
+        {
+          "code": "approved_model_registry_empty",
+          "required": "Supply a current, independently approved native model manifest and its exact fitted artifact; TEST ONLY artifacts do not qualify."
+        },
+        {
+          "code": "approved_input_service_unconfigured",
+          "required": "Configure a deployment-owned HTTPS input service with reviewed sources, reviewer identities, account bindings and fresh market/research imports."
+        },
+        {
+          "code": "universe_source_disabled",
+          "required": "Configure and enable an approved constituent provider with instrument mappings, storage rights and current classification evidence."
+        },
+        {
+          "code": "owner_allowlist_empty",
+          "required": "Supply the owner's explicit instrument allowlist in inputs.screening.owner_allowlist."
+        },
+        {
+          "code": "approved_skill_hashes_missing",
+          "required": "Pin the exact reviewed runtime skill hashes in trading.approved_skills."
+        },
+        {
+          "code": "approved_formula_unavailable",
+          "required": "Supply an active policy-compatible formula authority with matching prediction authority, proof, parity, independent evaluation and prospective shadow evidence."
+        }
+      ],
+      "status": "configuration_checked"
+    },
+    "shadow_record_hash": "2ad142886c6b48376af5cb2714209997f8d732de17e043f40e4ef7eb441a4c6b",
+    "status": "shadow_blocked"
+  },
+  "schema_version": 1,
+  "started_at": "2026-11-01T00:06:09.855049+00:00",
+  "status": "CODE_REPAIRS_VERIFIED_DEPLOYMENT_INPUTS_MISSING",
+  "all_issues_resolved": false,
+  "source_hashes": {
+    "crates/trady-cli/src/autonomous.rs": "f8b636553e3e12ab3cfce8fdaf8dc794eb86d18ec920e9e5f4e5dce0d387a9b9",
+    "crates/trady-cli/src/autonomous_shadow.rs": "fce28f4134898297925270818325a4686639cc096eb881a912e25faed167236c",
+    "crates/trady-cli/src/broker_read.rs": "b7d168bc87e66017e123eef3d93ab8f71667729ecd5a4f6effeeeaaebc7df7ea",
+    "scripts/rotate-postgres-credentials.py": "90c499142d0feadc368a89906cbc3ea98bb0bda7a4a534970c9b9443e5e740d3"
+  },
+  "cli_sha256": "4623d53feb3664afb0a29e98f398225f2f74382377a44f67a5e18deec4ec36b8",
+  "database_endpoint_repair": {
+    "dsn_endpoints_verified": true,
+    "passwords_preserved": true,
+    "published_ports": [
+      "32811"
+    ],
+    "roles": 8,
+    "secret_file_mode": "0600",
+    "secrets_displayed": false,
+    "status": "endpoints_synchronized",
+    "unchanged_roles": [
+      "trady_lab"
+    ]
+  },
+  "verification": {
+    "workspace_rust_tests": {
+      "passed": 530,
+      "ignored": 34
+    },
+    "disposable_postgres_rust_tests": {
+      "passed": 34,
+      "ignored": 0
+    },
+    "python_credential_and_endpoint_tests": {
+      "passed": 29
+    },
+    "clippy": "passed with -D warnings",
+    "rustfmt": "passed",
+    "asset_and_document_verification": "passed",
+    "git_diff_check": "passed"
+  },
+  "fixes": [
+    "Known throttled broker reads retry at most three times with at most thirty total seconds of backoff; mutations never use the read helper.",
+    "Shadow preflight reports all missing prerequisites and required actions before credential loading or broker/input client construction.",
+    "The empty owner instrument allowlist is now an explicit configuration blocker.",
+    "Eight explicitly scoped local DSN ports now match the authenticated diagnostic database; passwords and the separately bound lab DSN are preserved.",
+    "Foundation probe messages describe the probe boundary instead of claiming the autonomous workflow is unimplemented."
+  ],
+  "remaining_requirements": [
+    {
+      "code": "approved_model_registry_empty",
+      "required": "Supply a current, independently approved native model manifest and its exact fitted artifact; TEST ONLY artifacts do not qualify."
+    },
+    {
+      "code": "approved_input_service_unconfigured",
+      "required": "Configure a deployment-owned HTTPS input service with reviewed sources, reviewer identities, account bindings and fresh market/research imports."
+    },
+    {
+      "code": "universe_source_disabled",
+      "required": "Configure and enable an approved constituent provider with instrument mappings, storage rights and current classification evidence."
+    },
+    {
+      "code": "owner_allowlist_empty",
+      "required": "Supply the owner's explicit instrument allowlist in inputs.screening.owner_allowlist."
+    },
+    {
+      "code": "approved_skill_hashes_missing",
+      "required": "Pin the exact reviewed runtime skill hashes in trading.approved_skills."
+    },
+    {
+      "code": "approved_formula_unavailable",
+      "required": "Supply an active policy-compatible formula authority with matching prediction authority, proof, parity, independent evaluation and prospective shadow evidence."
+    }
+  ],
+  "entry_order_generated": false
+}

@@ -1,0 +1,234 @@
+{
+  "entity_id": "issuer",
+  "evidence": [
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T15:39:59Z",
+      "complete": true,
+      "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-06T15:40:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T15:40:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T15:39:58Z",
+      "received_at": "2026-10-30T15:40:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "calendar:verified-next-session",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T15:39:59Z",
+      "complete": true,
+      "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-06T15:40:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T15:40:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T15:39:58Z",
+      "received_at": "2026-10-30T15:40:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "consensus:fixture:e1",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T15:39:59Z",
+      "complete": true,
+      "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-06T15:40:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T15:40:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T15:39:58Z",
+      "received_at": "2026-10-30T15:40:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "price:2026-10-30 15:09:00 UTC",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T15:39:59Z",
+      "complete": true,
+      "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-06T15:40:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T15:40:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T15:39:58Z",
+      "received_at": "2026-10-30T15:40:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "price:2026-10-30 15:40:00 UTC",
+      "unit": "normalized_research",
+      "venue": null
+    },
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T15:39:59Z",
+      "complete": true,
+      "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+      "currency": "USD",
+      "entity_id": "issuer",
+      "expires_at": "2026-11-06T15:40:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T15:40:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T15:39:58Z",
+      "received_at": "2026-10-30T15:40:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "sec:release:a1",
+      "unit": "normalized_research",
+      "venue": null
+    }
+  ],
+  "observation_id": "fixture_observation",
+  "payload": {
+    "feature": "EVENT",
+    "input": {
+      "actuals": [
+        {
+          "available_at": "2026-10-30T15:10:00Z",
+          "metric": "diluted_eps",
+          "missing_reason": null,
+          "observation_id": "a1",
+          "period": "2026Q3",
+          "reported_at": "2026-10-30T15:10:00Z",
+          "revision_of": null,
+          "source_ref": "sec:release:a1",
+          "unit": {
+            "adjustment_definition": "GAAP diluted EPS",
+            "currency": "USD",
+            "label": "USD/share"
+          },
+          "value": "1.2"
+        }
+      ],
+      "clock_valid_until": "2026-11-06T20:10:00Z",
+      "clock_verified_at": "2026-10-29T20:10:00Z",
+      "confounders": [],
+      "drift_baseline_id": null,
+      "event_id": "earnings:issuer:2026Q3",
+      "event_type": "earnings",
+      "expectation_frozen_at": "2026-10-30T14:10:00Z",
+      "expectations": [
+        {
+          "analyst_count": 12,
+          "available_at": "2026-10-29T20:10:00Z",
+          "dispersion": "0.2",
+          "dispersion_definition": "SAMPLE_STANDARD_DEVIATION",
+          "estimate_id": "e1",
+          "metric": "diluted_eps",
+          "missing_reason": null,
+          "period": "2026Q3",
+          "provider": "licensed-fixture",
+          "revision_of": null,
+          "source_ref": "consensus:fixture:e1",
+          "unit": {
+            "adjustment_definition": "GAAP diluted EPS",
+            "currency": "USD",
+            "label": "USD/share"
+          },
+          "value": "1",
+          "vintage_at": "2026-10-29T20:10:00Z"
+        }
+      ],
+      "frozen_estimate_id": "e1",
+      "issuer_id": "issuer",
+      "metric": "diluted_eps",
+      "normalization": {
+        "allow_floor_for_metric": false,
+        "justification": "relative EPS only above material floor",
+        "scale_floor": "0.01"
+      },
+      "period": "2026Q3",
+      "pricing_proxy": null,
+      "reaction": {
+        "after": {
+          "adjustment_basis": "total-return-v1",
+          "available_at": "2026-10-30T15:40:00Z",
+          "currency": "USD",
+          "observed_at": "2026-10-30T15:40:00Z",
+          "source_ref": "price:2026-10-30 15:40:00 UTC",
+          "value": "105"
+        },
+        "benchmark_after": {
+          "adjustment_basis": "total-return-v1",
+          "available_at": "2026-10-30T15:40:00Z",
+          "currency": "USD",
+          "observed_at": "2026-10-30T15:40:00Z",
+          "source_ref": "price:2026-10-30 15:40:00 UTC",
+          "value": "101"
+        },
+        "benchmark_reference": {
+          "adjustment_basis": "total-return-v1",
+          "available_at": "2026-10-30T15:09:00Z",
+          "currency": "USD",
+          "observed_at": "2026-10-30T15:09:00Z",
+          "source_ref": "price:2026-10-30 15:09:00 UTC",
+          "value": "100"
+        },
+        "corporate_actions_resolved": true,
+        "fx_resolved": true,
+        "missing_reasons": [],
+        "reference": {
+          "adjustment_basis": "total-return-v1",
+          "available_at": "2026-10-30T15:09:00Z",
+          "currency": "USD",
+          "observed_at": "2026-10-30T15:09:00Z",
+          "source_ref": "price:2026-10-30 15:09:00 UTC",
+          "value": "100"
+        },
+        "session_calendar_reference": "calendar:verified-next-session",
+        "session_close_at": "2026-10-30T19:10:00Z",
+        "session_open_at": "2026-10-30T14:10:00Z",
+        "total_return_adjustments_verified": true,
+        "trading_halt": false,
+        "window_id": "next-session-30m"
+      },
+      "release_at": "2026-10-30T15:10:00Z",
+      "unit": {
+        "adjustment_definition": "GAAP diluted EPS",
+        "currency": "USD",
+        "label": "USD/share"
+      }
+    }
+  },
+  "payload_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+  "schema_version": 1,
+  "scope": {
+    "account_id": "paper_synthetic",
+    "owner_id": "synthetic_owner"
+  },
+  "supersedes": null
+}

@@ -16,7 +16,7 @@ use trady_application::{FoundationConfig, contracts::parse_json, harness::*};
 use trady_domain::{Error, Result, require};
 use trady_storage::sessions::PgSessionRepository;
 
-pub const HELP: &str = "\nLLM conversations (PostgreSQL analyst role):\n  trady skill-manifest SKILL_ROOT\n  trady chat --owner OWNER --approval MANIFEST [--session ID] --message TEXT\n  trady chat --owner OWNER --approval MANIFEST --session ID --resume\n  trady sessions list|show ID|close ID --owner OWNER\n\nChat options: --llm-config FILE --config PAPER_CONFIG --skills-root DIR\n              --message-file FILE --context FILE --stream\nGenerate and review the skill-manifest output, then deploy it with --approval.\nOpenCode Go credentials use OPENCODE_API_KEY; sessions use TRADY_ANALYST_DSN.\nThe local CLI is a trusted owner interface; model text cannot invoke these commands.";
+pub const HELP: &str = "\nLLM conversations (PostgreSQL analyst role):\n  trady skill-manifest SKILL_ROOT\n  trady chat --owner OWNER --approval MANIFEST [--session ID] --message TEXT\n  trady chat --owner OWNER --approval MANIFEST --session ID --resume\n  trady sessions list|show ID|close ID --owner OWNER\n\nChat options: --llm-config FILE --config PAPER_CONFIG --skills-root DIR\n              --message-file FILE --context FILE --stream\n              --intelligence-config FILE\nEnabled intelligence tools require a new ephemeral conversation; omit --session/--resume.\nGenerate and review the skill-manifest output, then deploy it with --approval.\nOpenCode Go credentials use OPENCODE_API_KEY; sessions and stored research use TRADY_ANALYST_DSN.\nThe local CLI is a trusted owner interface; model text cannot invoke these commands.";
 
 fn options(args: &[String]) -> Result<BTreeMap<String, String>> {
     let mut out = BTreeMap::new();
@@ -32,6 +32,7 @@ fn options(args: &[String]) -> Result<BTreeMap<String, String>> {
                     | "--message"
                     | "--message-file"
                     | "--llm-config"
+                    | "--intelligence-config"
                     | "--config"
                     | "--skills-root"
                     | "--context"
@@ -191,9 +192,78 @@ fn chat(args: &[String]) -> Result<Value> {
         Path::new(opts.get("--skills-root").map_or("skills", String::as_str)),
         &approval,
     )?;
-    let mut tools = RuntimeTools { bundle };
+    let initial_skills = bundle.initial_skills()?;
+    let intelligence_config = opts
+        .get("--intelligence-config")
+        .map(|p| super::intelligence::configuration(Some(p)))
+        .transpose()?;
+    require(
+        intelligence_config.as_ref().is_none_or(|c| {
+            c.scope.owner_id == scope.owner_id && c.scope.account_id == scope.account_id
+        }),
+        "intelligence configuration must match the conversation owner/account",
+    )?;
+    let intelligence_repository = if intelligence_config
+        .as_ref()
+        .is_some_and(|c| !c.enabled.is_empty())
+    {
+        Some(
+            trady_storage::intelligence::PgIntelligenceRepository::connect(&super::secret(
+                "TRADY_ANALYST_DSN",
+            )?)?,
+        )
+    } else {
+        None
+    };
+    let mut tools = trady_adapters::intelligence::tools::IntelligenceTools {
+        base: RuntimeTools { bundle },
+        repository: intelligence_repository,
+        config: intelligence_config,
+        mode: foundation.mode,
+    };
+    let ephemeral = tools.requires_ephemeral_session();
+    require(
+        !ephemeral || (!opts.contains_key("--session") && !opts.contains_key("--resume")),
+        "enabled intelligence requires a new ephemeral conversation; omit --session and --resume",
+    )?;
     let mut provider = OpenCodeGoProvider::from_env(config.clone())?;
-    let mut repo = repository()?;
+    let setup = ChatSetup {
+        scope,
+        foundation,
+        limits: config.limits,
+        initial_skills,
+    };
+    if ephemeral {
+        execute_chat(
+            &opts,
+            setup,
+            &mut provider,
+            &mut tools,
+            &mut trady_adapters::sessions::MemorySessionRepository::default(),
+        )
+    } else {
+        execute_chat(&opts, setup, &mut provider, &mut tools, &mut repository()?)
+    }
+}
+struct ChatSetup {
+    scope: Scope,
+    foundation: FoundationConfig,
+    limits: RunLimits,
+    initial_skills: Vec<PinnedSkill>,
+}
+fn execute_chat(
+    opts: &BTreeMap<String, String>,
+    setup: ChatSetup,
+    provider: &mut impl LlmProvider,
+    tools: &mut impl ToolExecutor,
+    repo: &mut impl SessionRepository,
+) -> Result<Value> {
+    let ChatSetup {
+        scope,
+        foundation,
+        limits,
+        initial_skills,
+    } = setup;
     let session_id = if let Some(id) = opts.get("--session") {
         id.clone()
     } else {
@@ -202,10 +272,10 @@ fn chat(args: &[String]) -> Result<Value> {
         let mut session = Session::new(
             scope.clone(),
             provider.identity(),
-            config.limits,
+            limits,
             governing,
             tools.revision(),
-            tools.bundle.initial_skills()?,
+            initial_skills,
         )?;
         if let Some(path) = opts.get("--context") {
             let item: MemoryItem =
@@ -242,9 +312,9 @@ fn chat(args: &[String]) -> Result<Value> {
     eprintln!("Session: {session_id}");
     let stream = opts.contains_key("--stream");
     let final_message = AgentHarness::new()?.respond(
-        &mut repo,
-        &mut provider,
-        &mut tools,
+        repo,
+        provider,
+        tools,
         RunInput {
             scope: &scope,
             session_id: &session_id,
@@ -263,6 +333,6 @@ fn chat(args: &[String]) -> Result<Value> {
     }
     let session = repo.load(&scope, &session_id)?;
     Ok(
-        json!({"session_id":session_id,"run_id":session.runs.last().map(|r|&r.id),"run_status":session.runs.last().map(|r|r.status),"final":final_message,"charged_tokens":session.charged_tokens(),"entry_authorized":false}),
+        json!({"session_id":session_id,"ephemeral":repo.is_ephemeral(),"run_id":session.runs.last().map(|r|&r.id),"run_status":session.runs.last().map(|r|r.status),"final":final_message,"charged_tokens":session.charged_tokens(),"entry_authorized":false}),
     )
 }

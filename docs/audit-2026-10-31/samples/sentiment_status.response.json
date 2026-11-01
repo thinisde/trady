@@ -1,0 +1,17 @@
+{
+  "name": "sentiment_status",
+  "command": [
+    "target/debug/trady",
+    "sentiment",
+    "status",
+    "--config",
+    "config/finbert/config.example.json"
+  ],
+  "exit": 0,
+  "response": {
+    "enabled": false,
+    "entry_authorized": false,
+    "network_checked": false
+  },
+  "error": ""
+}

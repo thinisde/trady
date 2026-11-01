@@ -17,7 +17,7 @@ subsystems; news discovery stays in the existing
   SEC, CoinGecko and Tiingo; its default rejects nonempty custom headers.
 - `[mod.rs:request]` constructs fixed SEC/FRED/Twelve Data/FMP/CoinGecko/Tiingo/
   Massive routes and adapter-private authentication. It rejects yfinance
-  network access. `PARSER_VERSION` records the normalizer revision.
+  network access. `PARSER_VERSION` is `trady-financial-1`.
 - `[parse.rs:offline_page]` accepts bounded canonical daily-bar JSON for explicitly
   reviewed offline yfinance imports.
 
@@ -28,13 +28,19 @@ subsystems; news discovery stays in the existing
   empty observations. Errors expose stable codes rather than raw URLs or content.
   HTTP 429/503 returns `Unavailable`; retry time uses integer/RFC2822
   `Retry-After`, then rate-reset epoch, then 15 minutes, at least one second ahead.
-- `[mod.rs:request]` chooses credential names through domain
-  `Provider::credential_name`, uses fixed HTTPS hosts and disables redirects.
+- `[mod.rs:FinancialClient::fetch]` chooses and resolves credential names through
+  domain `Provider::credential_name`; `[mod.rs:request]` validates the supplied
+  credential, uses fixed HTTPS hosts and disables redirects.
   SEC requires the operator's contact-bearing User-Agent. The shared
   `[../news/http.rs:SafeHttp]` boundary pins public DNS and bounds header values.
+- `[mod.rs:request]` bounds required provider credentials to 4,096 bytes and rejects
+  blank or control-containing values. SEC contact values additionally need an
+  `@` and at least 12 bytes; Tiingo tokens have a 4,090-byte ceiling before
+  constructing the authorization header.
 - `[parse.rs:financial_json]` preserves decimal numeric lexemes locally.
   `[parse.rs:observation]` records source/entity/lineage identity, registry/content
-  hashes, actual receipt, availability and expiry, omitting credential queries.
+  hashes, actual receipt, availability and expiry. `[mod.rs:FinancialClient::fetch]`
+  removes query parameters before passing the provenance URL to the parser.
 - `[parse.rs:page]` validates requested identities, periods, units/currencies and
   daily price basis. FRED missing markers remain null; SEC revisions retain
   fiscal periods/accessions. Completeness rules differ by provider: equality to
@@ -59,6 +65,8 @@ injected clock and caller time. Neither parsing nor offline imports make network
 This package writes no database, execution ledger or broker order.
 
 ## Verification
+
+Run `cargo test --workspace --locked` from the repository root.
 
 ```sh
 cargo test --locked -p trady-adapters financial::tests

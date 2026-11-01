@@ -1,0 +1,263 @@
+{
+  "entity_id": "US",
+  "evidence": [
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T19:59:59Z",
+      "complete": true,
+      "content_hash": "e760357eaa840dcea771744bac6dc979a4f3d4ed1727eab79868c8b3125c3aa6",
+      "currency": "USD",
+      "entity_id": "US",
+      "expires_at": "2026-11-06T20:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T20:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T19:59:58Z",
+      "received_at": "2026-10-30T20:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_cross_asset_v1",
+      "unit": "normalized_research",
+      "venue": null
+    }
+  ],
+  "observation_id": "fixture_observation",
+  "payload": {
+    "feature": "CROSS_ASSET",
+    "input": {
+      "breadth": null,
+      "effective_horizon_seconds": 86400,
+      "flows": [],
+      "pairs": [
+        {
+          "asset_series_id": "synthetic_sector",
+          "benchmark_series_id": "synthetic_market",
+          "lookback_start": "2026-10-20T20:00:00Z",
+          "minimum_samples": 4,
+          "short_window_samples": 4
+        }
+      ],
+      "region": "US",
+      "series": [
+        {
+          "adjustment_basis": "synthetic_total_return_v1",
+          "calendar_id": "SYNTHETIC_UTC_24H",
+          "currency": "USD",
+          "currency_pair": null,
+          "entity_id": "synthetic_sector",
+          "id": "synthetic_sector",
+          "kind": "PERIOD_TOTAL_RETURN",
+          "max_age_seconds": 259200,
+          "observations": [
+            {
+              "available_at": "2026-10-25T20:00:00Z",
+              "ingested_at": "2026-10-25T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-25T20:00:00Z",
+              "period_start": "2026-10-24T20:00:00Z",
+              "published_at": "2026-10-25T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.010",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-26T20:00:00Z",
+              "ingested_at": "2026-10-26T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-26T20:00:00Z",
+              "period_start": "2026-10-25T20:00:00Z",
+              "published_at": "2026-10-26T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "-0.020",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-27T20:00:00Z",
+              "ingested_at": "2026-10-27T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-27T20:00:00Z",
+              "period_start": "2026-10-26T20:00:00Z",
+              "published_at": "2026-10-27T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.030",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-28T20:00:00Z",
+              "ingested_at": "2026-10-28T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-28T20:00:00Z",
+              "period_start": "2026-10-27T20:00:00Z",
+              "published_at": "2026-10-28T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.005",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-29T20:00:00Z",
+              "ingested_at": "2026-10-29T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-29T20:00:00Z",
+              "period_start": "2026-10-28T20:00:00Z",
+              "published_at": "2026-10-29T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "-0.010",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-30T20:00:00Z",
+              "ingested_at": "2026-10-30T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-30T20:00:00Z",
+              "period_start": "2026-10-29T20:00:00Z",
+              "published_at": "2026-10-30T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.025",
+              "vintage": "synthetic_original"
+            }
+          ],
+          "required": true,
+          "unit": "FRACTION",
+          "venue": "synthetic"
+        },
+        {
+          "adjustment_basis": "synthetic_total_return_v1",
+          "calendar_id": "SYNTHETIC_UTC_24H",
+          "currency": "USD",
+          "currency_pair": null,
+          "entity_id": "synthetic_market",
+          "id": "synthetic_market",
+          "kind": "PERIOD_TOTAL_RETURN",
+          "max_age_seconds": 259200,
+          "observations": [
+            {
+              "available_at": "2026-10-25T20:00:00Z",
+              "ingested_at": "2026-10-25T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-25T20:00:00Z",
+              "period_start": "2026-10-24T20:00:00Z",
+              "published_at": "2026-10-25T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.008",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-26T20:00:00Z",
+              "ingested_at": "2026-10-26T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-26T20:00:00Z",
+              "period_start": "2026-10-25T20:00:00Z",
+              "published_at": "2026-10-26T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "-0.010",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-27T20:00:00Z",
+              "ingested_at": "2026-10-27T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-27T20:00:00Z",
+              "period_start": "2026-10-26T20:00:00Z",
+              "published_at": "2026-10-27T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.015",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-28T20:00:00Z",
+              "ingested_at": "2026-10-28T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-28T20:00:00Z",
+              "period_start": "2026-10-27T20:00:00Z",
+              "published_at": "2026-10-28T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.007",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-29T20:00:00Z",
+              "ingested_at": "2026-10-29T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-29T20:00:00Z",
+              "period_start": "2026-10-28T20:00:00Z",
+              "published_at": "2026-10-29T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "-0.004",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-30T20:00:00Z",
+              "ingested_at": "2026-10-30T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-30T20:00:00Z",
+              "period_start": "2026-10-29T20:00:00Z",
+              "published_at": "2026-10-30T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.020",
+              "vintage": "synthetic_original"
+            }
+          ],
+          "required": true,
+          "unit": "FRACTION",
+          "venue": "synthetic"
+        },
+        {
+          "adjustment_basis": "synthetic_total_return_v1",
+          "calendar_id": "SYNTHETIC_UTC_24H",
+          "currency": "USD",
+          "currency_pair": null,
+          "entity_id": "synthetic_credit",
+          "id": "synthetic_credit",
+          "kind": "YIELD_SPREAD_FRACTION",
+          "max_age_seconds": 259200,
+          "observations": [
+            {
+              "available_at": "2026-10-29T20:00:00Z",
+              "ingested_at": "2026-10-29T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-29T20:00:00Z",
+              "period_start": "2026-10-28T20:00:00Z",
+              "published_at": "2026-10-29T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.020",
+              "vintage": "synthetic_original"
+            },
+            {
+              "available_at": "2026-10-30T20:00:00Z",
+              "ingested_at": "2026-10-30T20:00:00Z",
+              "missing_reason": null,
+              "period_end": "2026-10-30T20:00:00Z",
+              "period_start": "2026-10-29T20:00:00Z",
+              "published_at": "2026-10-30T20:00:00Z",
+              "source_ref": "synthetic_cross_asset_v1",
+              "value": "0.035",
+              "vintage": "synthetic_original"
+            }
+          ],
+          "required": true,
+          "unit": "FRACTION",
+          "venue": "synthetic"
+        }
+      ],
+      "stress": [
+        {
+          "direction": "RISING",
+          "horizon_seconds": 86400,
+          "method": "DIFFERENCE",
+          "series_id": "synthetic_credit",
+          "threshold": "0.010"
+        }
+      ]
+    }
+  },
+  "payload_hash": "e760357eaa840dcea771744bac6dc979a4f3d4ed1727eab79868c8b3125c3aa6",
+  "schema_version": 1,
+  "scope": {
+    "account_id": "paper_synthetic",
+    "owner_id": "synthetic_owner"
+  },
+  "supersedes": null
+}

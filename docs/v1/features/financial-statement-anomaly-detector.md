@@ -1,6 +1,6 @@
-# Financial statement anomaly and earnings-quality detector (proposed)
+# Financial statement anomaly and earnings-quality detector (research implementation)
 
-Status: new feature design, 2026-10-31. Documentation only; financial-fact collection is separately planned, but no cross-period forensic accounting assessment is implemented by this proposal.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research. [Policy](../../../crates/trady-policy/src/intelligence/accounting.rs) calculates comparable cash/earnings, accrual, receivables, dilution and revision metrics, with optional empirical peer ranks and metric-specific abstention. Approved normalized facts and replay use the [shared service](./implementation-report.md). Automated taxonomy normalization, collection and calibrated anomaly thresholds remain separate work; output never establishes fraud.
 
 ## Purpose and distinct scope
 

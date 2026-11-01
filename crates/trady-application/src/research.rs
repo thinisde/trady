@@ -475,8 +475,16 @@ pub fn collect_source(
             return Ok(report);
         }
     }
-    // An explicit one-shot run can skip cadence, never a provider's retry deadline.
-    if state.retry_at.is_some_and(|at| at > now)
+    // Older versions persisted cadence as a retry deadline after this local
+    // parser failure. A forced repair can clear that exact legacy condition;
+    // provider deadlines and request/cost reservations remain authoritative.
+    let repaired_parser_cadence = force
+        && state.last_status == Some(CollectionStatus::Unavailable)
+        && state.gaps == ["x_repost_exclusion_not_verified"]
+        && state.last_attempt_at.is_some_and(|attempt| {
+            state.retry_at == Some(attempt + Duration::seconds(i64::from(source.interval_seconds)))
+        });
+    if (state.retry_at.is_some_and(|at| at > now) && !repaired_parser_cadence)
         || (!force
             && state
                 .last_attempt_at
@@ -539,9 +547,9 @@ pub fn collect_source(
         match provider.fetch(source, &request, now) {
             Err(failure) => {
                 state.last_status = Some(failure.status);
-                state.retry_at = failure.retry_at.or(Some(
-                    now + Duration::seconds(i64::from(source.interval_seconds)),
-                ));
+                // Cadence is already enforced through last_attempt_at. Only an
+                // explicit provider deadline must also block a forced retry.
+                state.retry_at = failure.retry_at;
                 state.gaps = vec![failure.reason];
                 repository.commit_page(&source.id, old_revision, &state, &[], now)?;
                 report.status = failure.status;

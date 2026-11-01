@@ -13,14 +13,18 @@ correlation. The public module remains `trady_application::sentiment`; the
   `model_revision(&self) -> &str`.
 - `[mod.rs:text_sha256]`: SHA-256 of the exact selected UTF-8 text.
 - `[mod.rs:assess_sentiment]`: source projection, provider call and assessment.
-- `[mod.rs:validate_probabilities]`: policy validator re-export.
+- `[mod.rs:validate_probabilities]`: validator re-exported from
+  [sentiment policy](../../../trady-policy/src/sentiment/mod.rs).
+  `SentimentDocument`, `SentimentBatch` and `SentimentAssessment` are imported
+  [domain records](../../../trady-domain/src/sentiment/mod.rs).
 
 ## Invariants
 
 `[mod.rs:assess_sentiment]` requires 1–16 distinct, nonempty item IDs and reporting
 lineages, each at most 256 bytes. It clones and redacts each source for model use,
-requires language exactly `en`, and rejects future, expired or older-than-24-hour
-observations. Present social metadata must report `missing_context=false`;
+accepts case-insensitive `en` or an `en-` prefix followed by hyphen-separated
+subtags of 1–8 ASCII alphanumeric characters, and rejects future, expired or
+older-than-24-hour observations. Present social metadata must report `missing_context=false`;
 absent social metadata is accepted. Source originals remain unchanged. Callers
 select instrument-relevant evidence; this function does not verify relevance.
 

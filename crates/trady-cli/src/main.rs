@@ -1,11 +1,17 @@
+mod account;
+mod api_health;
 mod autonomous;
+mod broker_read;
+mod entry_demo;
 mod financial;
 mod finbert;
 mod inputs_service;
+mod intelligence;
 mod model_lab;
 mod news;
 mod opencode;
 mod release;
+mod stock_report;
 mod telegram;
 mod weekly;
 
@@ -36,7 +42,12 @@ fn print_help() {
         weekly::HELP,
         release::HELP
     );
+    print!("{}", api_health::HELP);
+    print!("{}", stock_report::HELP);
     print!("{}", financial::HELP);
+    print!("{}", intelligence::HELP);
+    print!("{}", entry_demo::HELP);
+    print!("{}", account::HELP);
 }
 
 fn main() -> std::process::ExitCode {
@@ -73,6 +84,7 @@ fn run() -> Result<()> {
         "credentials" if args.len() == 2 && args[1] == "status" => {
             output(json!({"credentials":CredentialStore::load()?.status()?}))
         }
+        "account" => output(account::run(&args[1..])?),
         "telegram" => output(telegram::run(&args[1..])?),
         "autonomous" => output(autonomous::run(&args[1..])?),
         "weekly" => output(weekly::run(&args[1..])?),
@@ -81,6 +93,9 @@ fn run() -> Result<()> {
         "model-lab" => output(model_lab::run(&args[1..])?),
         "news" => output(news::run(&args[1..])?),
         "financial" => output(financial::run(&args[1..])?),
+        "api-health" => output(api_health::run(&args[1..])?),
+        "research-report" => output(stock_report::run(&args[1..])?),
+        "intelligence" => output(intelligence::run(&args[1..])?),
         "sentiment" => output(finbert::run(&args[1..])?),
         "t212" if args.len() == 4 && args[1] == "snapshot" && args[2] == "--config" => {
             trading212_snapshot(&args[3])
@@ -93,9 +108,10 @@ fn run() -> Result<()> {
         "analyst" | "executor" | "gateway" => service(command, &args[1..]),
         "migrate" if args.len() == 1 => {
             trady_storage::migrate(&secret("TRADY_MIGRATOR_DSN")?)?;
-            output(json!({"migration":9,"status":"applied_or_verified"}))
+            output(json!({"migration":10,"status":"applied_or_verified"}))
         }
         "demo" if args.len() == 1 => demo_memory(),
+        "demo-entry" => output(entry_demo::run(&args[1..])?),
         "demo-postgres" if args.len() == 1 => demo_postgres(),
         "validate-json" if args.len() == 3 => {
             let contract = match args[1].as_str() {
@@ -128,9 +144,11 @@ fn trading212_snapshot(path: &str) -> Result<()> {
     let credentials = Credentials::from_store(config.environment, &CredentialStore::load()?)?;
     let mut reader =
         Trading212Reader::new(config.clone(), credentials).map_err(|e| Error(e.to_string()))?;
-    let snapshot = reader
-        .read_snapshot(&config.account_id)
-        .map_err(|e| Error(e.to_string()))?;
+    let snapshot = broker_read::snapshot(
+        &mut reader,
+        &config.account_id,
+        &std::sync::atomic::AtomicBool::new(false),
+    )?;
     output(
         json!({"provider":"trading212","environment":config.environment,"entry_authorized":false,"snapshot":snapshot}),
     )

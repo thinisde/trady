@@ -24,6 +24,10 @@ ProtectControlGroups=yes
 RestrictSUIDSGID=yes
 LockPersonality=yes
 RestrictAddressFamilies=AF_UNIX
+# Accepted evaluator IPC replies need no outbound connect or io_uring support.
+SystemCallArchitectures=native
+SystemCallFilter=~connect io_uring_setup io_uring_enter io_uring_register
+SystemCallErrorNumber=EPERM
 CapabilityBoundingSet=
 AmbientCapabilities=
 ReadOnlyPaths=/opt/trady /etc/trady/evaluator /var/lib/trady/sealed

@@ -67,13 +67,13 @@ pub(crate) fn reserve_credits(
     let mut allowed = true;
     for (kind, start, limit) in &windows {
         client.execute("INSERT INTO research.provider_budget_windows(budget_key,window_kind,window_start,credit_limit) VALUES($1,$2,$3,$4)
-            ON CONFLICT(budget_key,window_kind,window_start) DO UPDATE SET credit_limit=LEAST(research.provider_budget_windows.credit_limit,EXCLUDED.credit_limit)",
+            ON CONFLICT(budget_key,window_kind,window_start) DO UPDATE SET credit_limit=GREATEST(research.provider_budget_windows.used_credits,LEAST(research.provider_budget_windows.credit_limit,EXCLUDED.credit_limit))",
             &[&key,kind,start,&i64::from(*limit)]).map_err(db)?;
         let row=client.query_one("SELECT used_credits,credit_limit FROM research.provider_budget_windows WHERE budget_key=$1 AND window_kind=$2 AND window_start=$3 FOR UPDATE",&[&key,kind,start]).map_err(db)?;
         allowed &= row
             .get::<_, i64>(0)
             .checked_add(i64::from(cost))
-            .is_some_and(|used| used <= row.get::<_, i64>(1));
+            .is_some_and(|used| used <= row.get::<_, i64>(1).min(i64::from(*limit)));
     }
     if allowed {
         for (kind, start, _) in &windows {

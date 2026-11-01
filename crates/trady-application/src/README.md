@@ -5,8 +5,9 @@
 [lib.rs](./lib.rs) owns configuration, ports and reconciliation.
 [contracts.rs](./contracts.rs) owns syntax validation, with no research authority.
 [harness.rs](./harness.rs) owns durable model-session orchestration through
-provider, tool and repository ports. Concrete storage/provider implementations
-remain outside this crate.
+provider, tool and repository ports. Concrete PostgreSQL/provider implementations
+remain outside this crate; `[model_lab/journal.rs:EvaluationJournal]` and
+`write_immutable` provide local artifact and holdout persistence.
 [research.rs](./research.rs) coordinates registry-driven collection; the
 [Telegram source contract](./telegram/README.md) covers owner authorization and
 read-only monitoring. [perpetual.rs](./perpetual.rs) binds advisory predictions to
@@ -16,6 +17,34 @@ readiness/formula evidence; [optimization](./optimization/README.md) owns approv
 formula bindings and bounded weekly experiment ports.
 
 ## Interface
+
+- `[intelligence.rs:IntelligenceConfig]`, `FeatureSource`, `IntelligenceRepository`,
+  `ingest`, `assess_ephemeral`, `ReadRequest` and `read`: enabled by default,
+  rights-aware research over ten typed features. Subject/citation binding,
+  current rights, immutable vintages, retention, correction and erasure checks
+  precede permitted use. `IntelligenceConfig::research_defaults` and an omitted
+  `enabled` field select all ten features; an explicit list selects exactly those
+  features, and `enabled: []` opts out. `IntelligenceConfig::disabled` remains an
+  explicit opt-out constructor. Tax ingestion returns before repository access;
+  tax reads do not register or purge. Every non-tax ingest/read registers a valid
+  reviewed configuration before observation/query checks or disabled-feature
+  returns, so persistence receives revocation/disablement even when no input is
+  accepted. Non-tax reads purge before disabled/live-mode early returns.
+  `[intelligence.rs:StoredObservation]`, `InvalidationTarget`, `InvalidationReason`,
+  `Invalidation` and `RejectedInput` expose stored vintages, invalidation requests
+  and retained rejection metadata.
+- `[harness.rs:SessionRepository::is_ephemeral]` and
+  `ToolExecutor::{requires_ephemeral_session,validate_context}`: intelligence
+  tools require ephemeral conversation storage and revalidate retained research
+  before every model request. Durable conversations retain their existing path.
+
+- `[stock_report.rs:generate]`, `ReportInput`, `Candidate`, `Region`, `Financials`,
+  `ResearchQuote` and `TrailingEps` define offline evidence-linked US/EU reports.
+  The generator validates dates, numeric bounds, URL syntax and quote/EPS currency
+  consistency, calculates growth/margins and optional trailing P/E, and exposes
+  stale or missing evidence. Financial period/unit consistency and source-content
+  truth remain caller obligations. It has no
+  provider or database effects; see the [guide](../../../docs/stock-reports.md).
 
 - `[financial.rs:FinancialRepository]` / `FinancialProvider`: shared bounded
   collection and snapshot ports. `FinancialConfig::validate`, `collect`, `snapshot`,
@@ -150,6 +179,8 @@ formula bindings and bounded weekly experiment ports.
 
 - `[financial.rs:collect]` requires a prefetch reservation and validates each
   observation's source, entity, receipt and requested-window semantics.
+  Page receipt timestamps must all agree, be at least the invocation time and
+  remain strictly less than 90 seconds after it.
   `[financial.rs:snapshot]` rechecks current rights and excludes future or expired
   inputs; unavailable/partial/stale data do not produce price features.
   `[financial.rs:model_features]` requires a numerical-consumer snapshot and bounded
@@ -193,7 +224,11 @@ formula bindings and bounded weekly experiment ports.
 
 - `[research.rs:collect_source]` admits configured sources only, preserves the original
   pending interval, commits before cursor progression and never advances the successful
-  watermark on a source error or page cap. `--force` cannot bypass retry/debit limits.
+  watermark on a source error or page cap. `--force` bypasses ordinary source
+  cadence but preserves future retry deadlines. The exact legacy parser deadline
+  can also be bypassed for `Unavailable` status, the sole gap
+  `x_repost_exclusion_not_verified`, and a retry time equal to the last attempt
+  plus the source interval. Explicit provider deadlines and request debits still apply.
 - `[research.rs:reserve_source_requests]` commits conservative request debits before I/O;
   `[research.rs:prepare_state]` resets changed source cursors without refunding allowance.
 - `[research.rs:SourceConfig::activation_gap]` blocks disabled or unverified/
@@ -247,8 +282,9 @@ formula bindings and bounded weekly experiment ports.
   before further mutation when true.
 
 - Configuration requires version 1, valid policy, paper mode and a `paper_` account
-  (`[lib.rs:FoundationConfig::validate]`). Entry blockers always include missing
-  readiness verification, approved skills, Perpetual and the validated execution/protection workflow.
+  (`[lib.rs:FoundationConfig::validate]`). Entry blockers state that the foundation
+  probe does not verify readiness evidence or run autonomous execution/protection,
+  and lacks approved skills and a usable Perpetual assessment for entry.
   `[lib.rs:FoundationConfig::entry_blockers]` adds a capability blocker unless
   cash-account, instrument, protective-order and quote capabilities are usable.
 - `[lib.rs:ExchangeSession::permits_entry]` uses explicit opening/closing timestamps
@@ -324,6 +360,15 @@ formula bindings and bounded weekly experiment ports.
 
 ## Side Effects
 
+`[intelligence.rs:ingest]` and `read` register valid non-tax source configurations
+even for rejected inputs or unavailable queries. `ingest` stores observations,
+corrections and eligible licensed rejection markers. Non-tax `read` purges expired content
+and saves assessments only with every source's derived-storage permission.
+`assess_ephemeral` has no repository access; tax is owner-only and omits evidence.
+`[intelligence.rs:ingest_checked]` inserts an accepted correction and then
+invalidates its predecessor through separate repository calls; this orchestration
+does not wrap both calls in a transaction.
+
 `[financial.rs:collect]` calls supplied reservation, provider, commit and failure
 ports. Pure snapshot/signal/feature construction performs no network or database
 operation and grants no execution authority.
@@ -359,7 +404,9 @@ Contract validation performs no provider or database calls; schemas are embedded
 `[harness.rs:AgentHarness::respond]` acquires a 45-second session lease for a new
 worker and releases it after the run operation. The harness saves input/run state,
 provider attempts, tool starts/results, context manifests and terminal state
-through the repository. The PostgreSQL implementation renews lease expiry on
+through the repository. Context manifests retain the complete selected model
+request messages alongside hashes and selection metadata
+(`[harness.rs:AgentHarness::context]`). The PostgreSQL implementation renews lease expiry on
 each successful save (`[../../trady-storage/src/sessions.rs:save]`). Provider calls
 stream through `on_text`; tools execute
 sequentially. Cancellation or elapsed tool deadlines replace returned outputs with

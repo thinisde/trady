@@ -1,0 +1,194 @@
+{
+  "name": "event",
+  "command": [
+    "target/debug/trady",
+    "intelligence",
+    "assess",
+    "--config",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/event.config.json",
+    "--input",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/event.observation.json",
+    "--as-of",
+    "2026-10-30T15:40:00Z"
+  ],
+  "exit": 0,
+  "response": {
+    "assessment_id": "intel_6b012850aea234bc799e1a23adb6e9a459698be094db6eef82a8c5a8d8e181dd",
+    "calibration": "RESEARCH_ONLY_UNCALIBRATED",
+    "computed_at": "2026-10-31T21:49:12.822933351Z",
+    "decision_at": "2026-10-30T15:40:00Z",
+    "entity_id": "issuer",
+    "entry_authorized": false,
+    "evidence": [
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-30T15:39:59Z",
+        "complete": true,
+        "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-06T15:40:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-29T15:40:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-30T15:39:58Z",
+        "received_at": "2026-10-30T15:40:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "calendar:verified-next-session",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-30T15:39:59Z",
+        "complete": true,
+        "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-06T15:40:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-29T15:40:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-30T15:39:58Z",
+        "received_at": "2026-10-30T15:40:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "consensus:fixture:e1",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-30T15:39:59Z",
+        "complete": true,
+        "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-06T15:40:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-29T15:40:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-30T15:39:58Z",
+        "received_at": "2026-10-30T15:40:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "price:2026-10-30 15:09:00 UTC",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-30T15:39:59Z",
+        "complete": true,
+        "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-06T15:40:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-29T15:40:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-30T15:39:58Z",
+        "received_at": "2026-10-30T15:40:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "price:2026-10-30 15:40:00 UTC",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-30T15:39:59Z",
+        "complete": true,
+        "content_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-06T15:40:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-29T15:40:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-30T15:39:58Z",
+        "received_at": "2026-10-30T15:40:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "sec:release:a1",
+        "unit": "normalized_research",
+        "venue": null
+      }
+    ],
+    "expires_at": "2026-11-06T15:40:00Z",
+    "feature": "EVENT",
+    "feature_version": "trady-intelligence-v1",
+    "input_hash": "2f873dd8367f8e1436869679a61a913f2995012bc00b43085805996b22d1fc72",
+    "observation_id": "fixture_observation",
+    "reasons": [
+      "uncalibrated_research_no_expected_return_or_order_authority"
+    ],
+    "registry_hash": "9bdae0184691eeca2a0b01b361ba79e063abafd7b1b9038110d8596d47c0420f",
+    "result": {
+      "assessment": {
+        "abnormal_return": "0.04",
+        "actual_id": "a1",
+        "actual_revisions": [],
+        "as_of": "2026-10-30T15:40:00Z",
+        "confounded": false,
+        "confounders": [],
+        "drift_reason": "earlier_estimate_window_not_supplied",
+        "estimate_id": "e1",
+        "estimated_value": "1",
+        "event_id": "earnings:issuer:2026Q3",
+        "evidence_refs": [
+          "calendar:verified-next-session",
+          "consensus:fixture:e1",
+          "price:2026-10-30 15:09:00 UTC",
+          "price:2026-10-30 15:40:00 UTC",
+          "sec:release:a1"
+        ],
+        "expectation_drift": null,
+        "normalization_reason": null,
+        "normalized_surprise": "0.2",
+        "options_implied_move_proxy": null,
+        "outcome": "SURPRISE_UP_REACTION_UP",
+        "period": "2026Q3",
+        "pre_event_abnormal_return_proxy": null,
+        "pricing_proxy_reasons": [
+          "pre_release_pricing_proxy_unavailable"
+        ],
+        "raw_surprise": "0.2",
+        "reasons": [],
+        "reported_value": "1.2",
+        "standardization_reason": null,
+        "standardized_surprise": "1",
+        "unit": {
+          "adjustment_definition": "GAAP diluted EPS",
+          "currency": "USD",
+          "label": "USD/share"
+        },
+        "version": "event-expectation-v1"
+      },
+      "feature": "EVENT"
+    },
+    "schema_version": 1,
+    "scope": {
+      "account_id": "paper_synthetic",
+      "owner_id": "synthetic_owner"
+    },
+    "status": "AVAILABLE"
+  },
+  "error": ""
+}

@@ -1,0 +1,16 @@
+{
+  "instrument_id":"synthetic_stock",
+  "assessment_tax_date":"2026-10-31","comparison_tax_date":"2026-11-10",
+  "context":{"jurisdiction":"SYNTHETIC","tax_year":2026,"account_wrapper":"synthetic_wrapper","broker_entity":"synthetic_broker","tax_currency":"EUR","residence_owner_confirmed":true,"account_treatment_owner_confirmed":true,"confirmed_at":"2026-10-31T12:00:00Z","statement_as_of":"2026-10-30T12:00:00Z","statement_reference":"synthetic_statement","valid_until":"2026-12-31T00:00:00Z"},
+  "context_unavailable_reason":null,
+  "rules":{"version":"synthetic_rules_v1","jurisdiction":"SYNTHETIC","tax_year":2026,"account_wrapper":"synthetic_wrapper","broker_entity":"synthetic_broker","tax_currency":"EUR","effective_from":"2026-01-01T00:00:00Z","effective_until":"2027-01-01T00:00:00Z","source_published_at":"2025-12-01T00:00:00Z","available_at":"2025-12-02T00:00:00Z","owner_reviewed_at":"2025-12-03T00:00:00Z","source_reference":"synthetic_rule_source","owner_approved":true,"linear_scenario_supported":true,"lot_method":"FIFO","specific_identification_permitted":false,"gains_rate":{"lower":"0.25","central":"0.25","upper":"0.25"},"dividend_rate":{"lower":"0.25","central":"0.25","upper":"0.25"},"loss_treatment":"GAINS_THEN_DIVIDENDS","allowance_allocation":"GAINS_THEN_DIVIDENDS","carryforward_permitted":true,"acquisition_fees_in_basis":true,"sale_costs_deductible":true,"withholding_credit_permitted":true,"excess_withholding_refundable":true,"acquisition_disposal_date_fx_approved":true},
+  "rules_unavailable_reason":null,
+  "lots":[{"lot_id":"synthetic_lot","instrument_id":"synthetic_stock","acquired_at":"2026-01-10T00:00:00Z","tax_valuation_date":"2026-01-10","quantity":"1","unit_cost":"80","acquisition_fees":"1","currency":"EUR","acquisition_fx":null,"broker_confirmed":true,"available_at":"2026-01-11T00:00:00Z","statement_reference":"synthetic_lot_statement"}],
+  "lots_unavailable_reason":null,"splits":[],
+  "annual_state":{"gross_stock_gains":"0","stock_losses":"0","gross_dividends":"0","confirmed_allowance":"0","confirmed_loss_carryforward":"0","unknown_reason":null,"owner_confirmed":true,"available_at":"2026-10-31T12:00:00Z","statement_reference":"synthetic_annual_statement","withholding":[]},
+  "annual_state_unavailable_reason":null,"no_action_value_tax_currency":"100","no_action_value_unavailable_reason":null,
+  "comparison_horizon":"2026-11-10T14:00:00Z","assumptions_reference":"synthetic_no_action_mark",
+  "hold_to_target":{"disposal_id":"synthetic_target","disposed_at":"2026-11-10T14:00:00Z","tax_valuation_date":"2026-11-10","quantity":"1","unit_proceeds":"100","sale_fees":"1","slippage_and_fx_charges":"0","currency":"EUR","disposal_fx":null,"selected_lot_ids":[],"withholding":null,"withholding_confirmed_absent":true,"withholding_unavailable_reason":null,"broker_cash":null,"remaining_position_value_tax_currency":"0","assumptions_reference":"synthetic_target_assumption"},
+  "hold_to_target_unavailable_reason":null,"sell_replace":null,"sell_replace_unavailable_reason":"synthetic fixture does not compare replacement",
+  "safety":{"exit_latched":false,"protective_exit_active":false,"entry_slot_available":true,"replacement_path_approved":false,"replacement_risk_valid":false,"original_stop":"75","original_target":"100","confidence_gate":90,"leverage_enabled":false}
+}

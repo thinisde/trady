@@ -17,6 +17,11 @@ financial evidence. See the [operator guide](../../../../services/inputs/README.
   `EvidenceArtifact` and `ForecastImport` define strict, versioned import/review
   contracts. Payloads reuse the actual `SessionPacket`, `Quote`, `CostsPacket`,
   `AnalystPacket`, `UniverseDocument` and `ForecastObservation` Rust types.
+- `[mod.rs:MAX_IMPORTS]` is 20,000; `[mod.rs:MAX_IMPORT_BYTES]` is 8 MiB.
+  `[store.rs:ImportStore::open]` uses the former as the active-index capacity;
+  `[mod.rs:InputsServiceConfig::validate]` uses the latter as the ceiling for
+  configured HTTP response bytes. Raw import text is limited to half that byte
+  ceiling by `[store.rs:ImportStore::validate_import]`.
 - `[store.rs:ImportStore]::{open,config,import,staged,review,resolve,latest,prune_expired}`
   stage immutable documents, verify exact review/dependency bindings, select
   current observations and remove expired licensed content.
@@ -50,7 +55,9 @@ financial evidence. See the [operator guide](../../../../services/inputs/README.
 - `[store.rs:ImportStore::import]` rejects content, observation/availability or
   expiry changes for an existing ID and rejects ID reuse after retention deletion.
   `[store.rs:ImportStore::resolve_inner]` requires current, bounded, acyclic,
-  separately reviewed dependencies. Derived retention cannot exceed any dependency.
+  separately reviewed dependencies. `[store.rs:ImportStore::review]` checks at
+  review publication that derived retention cannot exceed any resolved direct
+  dependency's retention.
 - `[validate.rs:quote]` and `costs` require original observations at most
   60 seconds old, positive executable prices, uncrossed spreads and current FX. `[store.rs:ImportStore::latest]`
   orders by observation then availability time; conflicting payloads fail when
@@ -117,6 +124,8 @@ workers.
 No provider HTTP request, paid API, database migration or broker call occurs here.
 
 ## Verification
+
+Run `cargo test --workspace --locked` from the repository root.
 
 Run `cargo test -p trady-adapters inputs_service::tests --locked`.
 Focused regressions cover copied secondary lineages/ownership overlaps, active

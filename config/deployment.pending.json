@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status": "PENDING_APPROVAL_EVIDENCE",
+  "runtime_config": "config/autonomous.pending.json",
+  "runtime_enabled": false,
+  "entry_authorized": false,
+  "purpose": "Operator handoff manifest; this is not an executable runtime or release-approval document.",
+  "required_artifacts": [
+    {
+      "id": "input_service",
+      "status": "MISSING",
+      "example": "services/inputs/config.example.json",
+      "runtime_fields": ["inputs.base_url", "inputs.allowed_hosts"],
+      "required": [
+        "Deployment-owned HTTPS endpoint and approved TLS proxy for the loopback inputs service",
+        "Sources with provider identity, independent origin groups, allowed hosts, content rights and import kinds",
+        "Independent reviewer identities and exact-content-hash reviews of source imports",
+        "Scoped account, currency, exchange calendar, fresh quotes, costs and finalized research packets"
+      ],
+      "verification": "trady inputs-service check --config APPROVED_INPUTS_CONFIG"
+    },
+    {
+      "id": "native_model",
+      "status": "MISSING",
+      "runtime_fields": ["models", "trading.limits_authority.prediction"],
+      "required": [
+        "Non-test training data with licensed provenance and a compatible feature/label schema",
+        "Separate sealed holdout evaluation and independently authored approval evidence",
+        "Model bundle, native artifact and pinned manifest with matching SHA-256 and calibration bindings",
+        "Inputs-service model deployment with matching reviewed evidence imports"
+      ],
+      "verification": "Use model-lab fit, evaluate and bundle; then autonomous check against the pinned artifact. TEST ONLY bundles cannot supply production approval."
+    },
+    {
+      "id": "formula_authority",
+      "status": "MISSING",
+      "runtime_fields": ["trading.limits_authority"],
+      "required": [
+        "Policy-compatible formula envelope and parameter hash",
+        "Proof, Rust/Lean parity, evaluation and genuine prospective shadow evidence references",
+        "Independent owner release approval with current validity and matching prediction authority",
+        "Identical authority bound to the inputs-service account"
+      ],
+      "verification": "trady autonomous check --config config/autonomous.pending.json"
+    },
+    {
+      "id": "universe",
+      "status": "MISSING",
+      "runtime_fields": ["universe", "inputs.screening.owner_allowlist"],
+      "required": [
+        "Owner-selected instruments and deployment-approved membership provider",
+        "Licensed storage rights, terms reference, taxonomy edition and fresh membership snapshot",
+        "Instrument-to-broker identity mappings and calendars for every selected venue"
+      ],
+      "verification": "Validate the universe import with the approved inputs service and pin its matching HTTPS export/provider/taxonomy."
+    },
+    {
+      "id": "runtime_skills_and_capabilities",
+      "status": "MISSING",
+      "runtime_fields": ["trading.owner_id", "trading.approved_skills", "trading.capabilities"],
+      "required": [
+        "Actual owner identity and approved runtime skill bundle hashes",
+        "Current account, instrument, fractional-order, protective-order and quote capability evidence",
+        "Current instrument-relevant English sentiment evidence within 24 hours and available reference context"
+      ],
+      "verification": "Native readiness and candidate checks must pass with real evidence during a verified exchange session."
+    }
+  ],
+  "activation_conditions": [
+    "Review and supply each missing artifact; absence remains a blocker",
+    "Keep shadow mode and separate account namespace for the first deployment validation",
+    "Explicitly review enabled and controls.pause_entries only after configuration and workflow checks pass",
+    "Broker execution requires its own evidence and release scope; this pending package grants none"
+  ],
+  "credential_handling": {
+    "references_only": true,
+    "secret_store": "config/credentials.local.json",
+    "database_scope": "Dedicated trady-live-demo-db-20261031 container",
+    "rotation_verified_roles": 9,
+    "dsn_endpoints_preserved": true,
+    "note": "Diagnostic database connections use the verified published loopback port; central DSN endpoint values were not rewritten."
+  }
+}

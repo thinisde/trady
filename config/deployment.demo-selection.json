@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "status": "SELECTED_NOT_DEPLOYMENT_APPROVED",
+  "selected_on": "2026-11-01",
+  "authority": {
+    "basis": "Owner delegated instrument and setup selection in this conversation.",
+    "scope": "Record-only demo only; no broker order submission or new paid subscriptions."
+  },
+  "runtime_config": "config/autonomous.demo-no-submit.json",
+  "order_submission_policy": "record_only",
+  "provider_research": "docs/provider-api-research-2026-11-01.md",
+  "provider_limits": {
+    "trading212_public_api": {
+      "scope": "per_account",
+      "account_summary_seconds": 5,
+      "instrument_metadata_seconds": 50,
+      "market_orders_per_minute": 50,
+      "limit_orders_seconds": 2,
+      "cancellation_per_minute": 50,
+      "history_per_minute": 6,
+      "history_export_list_per_minute": 1,
+      "history_export_request_seconds": 30
+    },
+    "twelve_data_basic": {
+      "api_credits_per_minute": 8,
+      "api_credits_per_day": 800,
+      "websocket_trial_credits": 8
+    },
+    "finnhub_free": {
+      "rest_calls_per_minute": 60,
+      "global_calls_per_second": 30
+    },
+    "massive_basic": {
+      "requests_per_minute": 5,
+      "market_data": "end_of_day_and_reference_only"
+    },
+    "fmp_basic": {
+      "requests_per_day": 250,
+      "market_scope": "US_personal_use"
+    },
+    "alpaca_basic": {
+      "real_time_equity_feed": "IEX_only",
+      "websocket_symbols": 30,
+      "historical_calls_per_minute": 200
+    }
+  },
+  "selected_investment_profile": {
+    "account_type": "Invest",
+    "environment": "demo",
+    "primary_currency": "EUR",
+    "leverage": false,
+    "shorting": false,
+    "cfds": false,
+    "fractional_orders": "disabled_until_account_bound_evidence",
+    "max_concurrent_supervised_orders": 1,
+    "manual_approval_required": true,
+    "protection_required": true
+  },
+  "demo_trade_selection": {
+    "instrument_id": "XOM_US_EQ",
+    "ticker": "XOM",
+    "isin": "US30233Q1085",
+    "currency": "USD",
+    "reason": "highest Alpaca Basic annualized daily close-return volatility in the bounded five-name universe",
+    "volatility_report": "var/research-training/2026-11-01/alpaca/volatility-selection.json",
+    "max_order_value": {
+      "amount": "50.00",
+      "currency": "EUR"
+    },
+    "status": "SELECTED_PRETRADE_QUOTE_AND_PROTECTION_REQUIRED"
+  },
+  "instruments": [
+    {
+      "instrument_id": "MSFT_US_EQ",
+      "symbol": "MSFT",
+      "name": "Microsoft",
+      "isin": "US5949181045",
+      "currency": "USD",
+      "type": "STOCK",
+      "research_focus": "software and cloud"
+    },
+    {
+      "instrument_id": "JPM_US_EQ",
+      "symbol": "JPM",
+      "name": "JPMorgan Chase & Co",
+      "isin": "US46625H1005",
+      "currency": "USD",
+      "type": "STOCK",
+      "research_focus": "banking"
+    },
+    {
+      "instrument_id": "JNJ_US_EQ",
+      "symbol": "JNJ",
+      "name": "Johnson & Johnson",
+      "isin": "US4781601046",
+      "currency": "USD",
+      "type": "STOCK",
+      "research_focus": "health care"
+    },
+    {
+      "instrument_id": "XOM_US_EQ",
+      "symbol": "XOM",
+      "name": "ExxonMobil Holdings Corporation",
+      "isin": "US30233Q1085",
+      "currency": "USD",
+      "type": "STOCK",
+      "research_focus": "energy"
+    },
+    {
+      "instrument_id": "PG_US_EQ",
+      "symbol": "PG",
+      "name": "Procter & Gamble",
+      "isin": "US7427181091",
+      "currency": "USD",
+      "type": "STOCK",
+      "research_focus": "household products"
+    }
+  ],
+  "instrument_selection": {
+    "rationale": "A bounded five-company research set spanning different businesses, suitable for exercising the existing candidate limit. This is a test universe, not a portfolio allocation or expected-return ranking.",
+    "broker_metadata_observed_at": "2026-11-01T02:00:50.618043Z",
+    "broker_metadata_endpoint": "https://demo.trading212.com/api/v0/equity/metadata/instruments",
+    "broker_metadata_method": "GET",
+    "broker_metadata_status": 200,
+    "broker_metadata_source_hash": "03ae2dc6133d2b47f93d511b99e4a313d79c65420f66d146c1d031825f887665",
+    "pg_identity_crosswalk": {
+      "historical_symbol": "PG_US_EQ",
+      "requested_broker_instrument_id": "PGC_US_EQ",
+      "resolved_broker_instrument_id": "PG_US_EQ",
+      "ticker": "PG",
+      "isin": "US7427181091",
+      "currency": "USD",
+      "venue": "XNYS",
+      "broker_catalog_added_on": "2018-07-12T07:10:14.000+03:00",
+      "effective_membership_date": null,
+      "status": "REQUESTED_MAPPING_REJECTED_CORRECT_BROKER_ID_IDENTIFIED"
+    },
+    "membership_and_gics_verified": false,
+    "metadata_is_capability_evidence": false,
+    "xom_identity_reference": "https://investor.exxonmobil.com/company-information/faq",
+    "account_currency": "EUR",
+    "required_currency_conversion": "Fresh USD-to-EUR executable FX and fee evidence remain required."
+  },
+  "data_stack": [
+    {
+      "role": "broker account and instrument identity",
+      "provider": "Trading 212 demo",
+      "status": "READ_ONLY_METADATA_IDENTITY_VERIFIED_NO_EXECUTION_CAPABILITY",
+      "credential_names": [
+        "TRADY_T212_DEMO_API_KEY",
+        "TRADY_T212_DEMO_API_SECRET"
+      ],
+      "supports_quote_requirement": false
+    },
+    {
+      "role": "historical bars for offline research",
+      "provider": "Twelve Data",
+      "status": "HISTORICAL_RESEARCH_DATA_FETCHED_NOT_DEPLOYMENT_APPROVED",
+      "credential_name": "TRADY_TWELVE_DATA_API_KEY",
+      "probe": {
+        "endpoint": "https://api.twelvedata.com/time_series",
+        "method": "GET",
+        "symbol": "MSFT",
+        "interval": "1day",
+        "requested_records": 2,
+        "http_status": 200,
+        "provider_status": "ok"
+      },
+      "limitations": [
+        "Daily OHLCV does not provide executable bid/ask or observed fill/cost labels.",
+        "Historical replay was fitted locally; historical availability, selection bias, corporate-action provenance and intended-use rights remain unresolved for deployment."
+      ]
+    },
+    {
+      "role": "candidate executable US equity quotes and volatility research",
+      "provider": "Alpaca Basic",
+      "status": "PAPER_ACCOUNT_VALID_HISTORICAL_DATA_AVAILABLE_CURRENT_SESSION_CLOSED",
+      "credential_names": [
+        "TRADY_ALPACA_API_KEY",
+        "TRADY_ALPACA_SECRET_KEY"
+      ],
+      "probes": {
+        "paper_account_http_status": 200,
+        "market_clock_is_open": false,
+        "next_open": "2026-11-02T09:30:00-05:00",
+        "daily_bars_http_status": 200,
+        "latest_iex_quote_http_status": 200,
+        "latest_iex_quote_current_bid_ask": false,
+        "historical_sip_quote_http_status": 200
+      },
+      "selected_instrument": "XOM_US_EQ",
+      "volatility_selection": "var/research-training/2026-11-01/alpaca/volatility-selection.json",
+      "limitations": [
+        "Basic real-time equities are IEX-only, not consolidated NBBO.",
+        "The current session is closed, so the quote is not fresh enough for first-order.",
+        "Historical bars and historical quotes are research evidence, not execution evidence."
+      ]
+    },
+    {
+      "role": "current and historical S&P 500 membership/classification",
+      "provider": "Financial Modeling Prep",
+      "status": "ACCESS_BLOCKED_HTTP_402",
+      "credential_name": "TRADY_FMP_API_KEY",
+      "probe": {
+        "endpoint": "https://financialmodelingprep.com/stable/sp500-constituent",
+        "method": "GET",
+        "http_status": 402
+      },
+      "documentation": "https://site.financialmodelingprep.com/developer/docs/stable/sp-500",
+      "activation_requires": [
+        "Endpoint access under the existing account or a separately authorized subscription.",
+        "Verified storage/processing rights and current GICS classification mapping.",
+        "Normalize and independently review provider exports through the existing input service; raw provider JSON is not UniverseDocument."
+      ]
+    },
+    {
+      "role": "live consolidated U.S. bid/ask",
+      "provider": "Massive",
+      "status": "ACCESS_BLOCKED_HTTP_403",
+      "credential_name": "TRADY_MASSIVE_API_KEY",
+      "probe": {
+        "endpoint": "https://api.massive.com/v2/last/nbbo/MSFT",
+        "method": "GET",
+        "http_status": 403
+      },
+      "documentation": "https://massive.com/docs/rest/stocks/trades-quotes/last-quote",
+      "activation_requires": [
+        "Verified real-time NBBO entitlement and applicable exchange agreements.",
+        "Confirmed intended-use and storage rights.",
+        "Fresh normalized quotes with instrument/venue/FX/cost mapping; NBBO alone is not broker execution capability evidence."
+      ]
+    },
+    {
+      "role": "primary issuer research",
+      "provider": "SEC EDGAR and issuer investor relations",
+      "status": "SELECTED_NOT_REGISTERED",
+      "activation_requires": [
+        "Actual imports with original publication/availability times, exact hashes and independent review.",
+        "Independent reporting lineage in addition to primary-source facts."
+      ]
+    }
+  ],
+  "input_service": {
+    "implementation": "Existing Rust inputs-service",
+    "example_config": "services/inputs/config.example.json",
+    "status": "NOT_CONFIGURED",
+    "deployment_choice": "Loopback service behind a trusted HTTPS proxy; separate import/review authority and read-only runtime access.",
+    "activation_requires": [
+      "Reviewed source registry and reviewer identities.",
+      "Verified exchange calendar, account/currency and current quotes, FX, costs and finalized research.",
+      "Approved formula authority and model bundles.",
+      "Working HTTPS origin before replacing the runtime placeholder."
+    ]
+  },
+  "model_choice": {
+    "native_advisor": "Existing pinned Perpetual binary classifier for exact scenario support, with separate calibration and native manifest.",
+    "scenario_forecast": "Existing model-lab four-outcome softmax baseline with conditional net-payoff regressions.",
+    "status": "NATIVE_RESEARCH_MODEL_TRAINED_FAILED_HOLDOUT_BASELINE",
+    "research_artifact_directory": "var/research-training/2026-11-01/model",
+    "research_result": "NO_MEASURED_HOLDOUT_ADVANTAGE",
+    "deployment_eligible": false,
+    "requirement": "Keep binary advice distinct from four-outcome forecasts. Train on genuine point-in-time records, evaluate separate sealed holdouts, then collect independent approval and prospective shadow evidence."
+  },
+  "formula_choice": {
+    "baseline": "Existing bounded native TREND family; ordinary 1% net target as the initial research scenario.",
+    "policy_changed": false,
+    "status": "RESEARCH_BASELINE_ONLY_NO_ACTIVE_AUTHORITY",
+    "requirement": "Freeze a compatible parameter/envelope candidate; require proof, parity, genuine evaluation, prediction bindings and prospective shadow evidence before activation. Do not widen risk or targets to force eligibility."
+  },
+  "skills": {
+    "bundle_version": "2.1.1",
+    "candidate_manifest": "config/skills.demo.candidate.json",
+    "approved_manifest": "config/skills.demo.approved.json",
+    "file_count": 52,
+    "status": "CONTENT_REVIEWED_SHADOW_ONLY_OPERATOR_INSTRUCTIONS",
+    "installed_as_runtime_approval": true,
+    "approval_scope": "Only the record-only demo configuration; no source, model, formula, financial or live-deployment approval.",
+    "review_report": "docs/demo-skill-review-2026-11-01.md",
+    "requirement": "Actual tool availability and results remain mandatory. Skill instructions cannot create capabilities, verified evidence or execution authority."
+  },
+  "spending": {
+    "new_subscriptions_purchased": false,
+    "automatic_paid_fallback": false
+  },
+  "remaining_configuration_blockers": [
+    "approved_model_registry_empty",
+    "approved_input_service_unconfigured",
+    "universe_source_disabled",
+    "approved_formula_unavailable"
+  ],
+  "verification_report": "docs/demo-training-setup-2026-11-01.md"
+}

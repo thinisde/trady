@@ -4,7 +4,7 @@
 
 This module loads deployment-owned immutable binary classifiers and performs native Rust inference. Advice describes whether a persisted scenario's executable net target is reached before its stop or deadline. It cannot set limits, size orders, train models, approve deployments or submit trades.
 
-The exact dependency is `perpetual = "=3.0.0-rc.2"`. Its published crate records upstream revision `6cddc9e55a7b132f7f252fca7617d95e4c4538f8`, which was checked against the native prediction and serialization source. The earlier documented 2.3.0 revision uses a nightly feature; this pinned prerelease compiles with the workspace's stable Rust 1.93 toolchain. Models must be exported for the pinned format; 2.3.0 artifacts are rejected.
+The exact dependency is pinned in `Cargo.toml` as `perpetual = "=3.0.0-rc.2"`; the adapter exports the matching runtime/source/format identifiers through `[mod.rs:RUNTIME_VERSION]`, `[mod.rs:RUNTIME_SOURCE_REVISION]` and `[mod.rs:MODEL_FORMAT]`. Models must be exported for this pinned format and are rejected when their artifact metadata does not match those constants.
 
 ## Interface
 
@@ -48,8 +48,9 @@ Call `trady_application::perpetual::assess(&mut repository, &advisor, &arguments
 
 ## Verification
 
-- Run from the workspace root: `cargo test -p trady-domain perpetual --lib`.
-- Run from the workspace root: `cargo test -p trady-adapters perpetual --lib -- --test-threads=1`.
+- Run from the workspace root: `cargo test --workspace --locked`.
+- Run from the workspace root: `cargo test -p trady-domain perpetual --lib --locked`.
+- Run from the workspace root: `cargo test -p trady-adapters perpetual --lib --locked -- --test-threads=1`.
 - [`tests.rs`](./tests.rs) fits and serializes a real synthetic native classifier, verifies probability/calibration parity and persisted inputs, and exercises corrupt artifacts, unsupported objectives/graphs, missing models, stale/future/nonfinite features, drift, persistence failure and changed final scenarios. The synthetic fixture is test-only and has no financial deployment approval.
 - [`holding_economics_tests.rs`](./holding_economics_tests.rs) uses that fitted fixture for final reviewed 1% to 2% holding activation after fresh confidence rises from 75 to 85, explicit signed support for profitable FX stops, and rejection of changed economics/model/drift/research or excessive nominal targets sharing a rounded price. Run `cargo test -p trady-adapters --lib perpetual::tests::holding_economics --locked`.
 - Holding sentiment regressions check the exact 0.60 threshold, the ten-point penalty, a separate no-raise veto even at base score 100, no positive-sentiment bonus and live missing-reference rejection. Synthetic references exercise only restrictive policy; actual persistence still requires the fenced journal's atomic dependency check.

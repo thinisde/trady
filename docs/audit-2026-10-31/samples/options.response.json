@@ -1,0 +1,141 @@
+{
+  "name": "options",
+  "command": [
+    "target/debug/trady",
+    "intelligence",
+    "assess",
+    "--config",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/options.config.json",
+    "--input",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/options.observation.json",
+    "--as-of",
+    "2026-10-30T20:00:00Z"
+  ],
+  "exit": 0,
+  "response": {
+    "assessment_id": "intel_3e4c54949e1ae6ebfb74fb1a05e41c0a86e91248c177dd2b2528f70e9538f168",
+    "calibration": "RESEARCH_ONLY_UNCALIBRATED",
+    "computed_at": "2026-10-31T21:49:12.802322425Z",
+    "decision_at": "2026-10-30T20:00:00Z",
+    "entity_id": "synthetic_equity_42",
+    "entry_authorized": false,
+    "evidence": [
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-30T19:59:59Z",
+        "complete": true,
+        "content_hash": "e63e670bef7e6d380a590cb3f6b969d83362345b67040edb7314c014495c960a",
+        "currency": "USD",
+        "entity_id": "synthetic_equity_42",
+        "expires_at": "2026-11-06T20:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-29T20:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-30T19:59:58Z",
+        "received_at": "2026-10-30T20:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "synthetic_options_v1",
+        "unit": "normalized_research",
+        "venue": null
+      }
+    ],
+    "expires_at": "2026-11-06T20:00:00Z",
+    "feature": "OPTIONS",
+    "feature_version": "trady-intelligence-v1",
+    "input_hash": "e63e670bef7e6d380a590cb3f6b969d83362345b67040edb7314c014495c960a",
+    "observation_id": "fixture_observation",
+    "reasons": [
+      "uncalibrated_research_no_expected_return_or_order_authority"
+    ],
+    "registry_hash": "a16cdf74167657626a8035738ffab73a8cc15ccb585c6e86d887dc52818c9b05",
+    "result": {
+      "assessment": {
+        "at": "2026-10-30T20:00:00Z",
+        "comparison_horizon_seconds": 31536000,
+        "comparison_method": "constant-tenor/method; rank=(IV-min)/(max-min); inclusive empirical sector CDF",
+        "comparison_source_refs": [],
+        "event_variance": null,
+        "event_variance_interval": null,
+        "expiries": [
+          {
+            "atm_iv": {
+              "ask": 0.20162295183989304,
+              "bid": 0.19834799798868788,
+              "max_price_residual": 8.670470563743038e-9,
+              "midpoint": 0.19998547491429047,
+              "solver_iterations": 33
+            },
+            "eligible_contracts": 2,
+            "expiry_at": "2027-10-30T20:00:00Z",
+            "issues": [
+              {
+                "field": "skew",
+                "reason": "no same-expiry OTM put/call at comparable supported delta; no interpolation",
+                "source_refs": []
+              }
+            ],
+            "oldest_quote_at": "2026-10-30T20:00:00Z",
+            "one_standard_deviation_scale": {
+              "distribution_assumption": "lognormal constant-volatility one-standard-deviation scale; neither guaranteed range nor straddle break-even",
+              "horizon_years": 1,
+              "lower_iv_scale": 19.834799798868787,
+              "midpoint_iv_scale": 19.998547491429047,
+              "upper_iv_scale": 20.162295183989304
+            },
+            "skew": null,
+            "source_refs": [
+              "synthetic_options_v1"
+            ],
+            "used_contract_ids": [
+              "synthetic_call_100",
+              "synthetic_put_100"
+            ]
+          }
+        ],
+        "history_start": "2025-10-30T20:00:00Z",
+        "issues": [
+          {
+            "field": "iv_history_rank",
+            "reason": "insufficient nonconstant available history at identical tenor/method",
+            "source_refs": []
+          },
+          {
+            "field": "sector_iv_percentile",
+            "reason": "same-tenor/method sector observations missing or stale",
+            "source_refs": []
+          },
+          {
+            "field": "iv_to_realized_ratio",
+            "reason": "positive realized volatility at matching tenor unavailable",
+            "source_refs": []
+          },
+          {
+            "field": "event_variance",
+            "reason": "no explicit event window and non-event variance baseline",
+            "source_refs": []
+          }
+        ],
+        "iv_history_rank": null,
+        "iv_to_realized_ratio": null,
+        "model": "BLACK_SCHOLES_EUROPEAN_ACT365_BISECTION_V1",
+        "realized_volatility_method": null,
+        "reference_expiry": "2027-10-30T20:00:00Z",
+        "sector_iv_percentile": null,
+        "status": "PARTIAL",
+        "term_structure": []
+      },
+      "feature": "OPTIONS"
+    },
+    "schema_version": 1,
+    "scope": {
+      "account_id": "paper_synthetic",
+      "owner_id": "synthetic_owner"
+    },
+    "status": "PARTIAL"
+  },
+  "error": ""
+}

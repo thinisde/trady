@@ -5,7 +5,8 @@ import socket
 import stat
 import time
 from .common import canonical, pinned_json, require, sha, strict_json, valid_hash
-from .run import read_lock, reply
+from .isolation import isolate_worker, worker_process
+from .run import diagnostics_directory, read_lock, reply
 
 LIMIT = 4 * 1024 * 1024
 
@@ -78,17 +79,22 @@ def consume(directory, lock, request):
 
 def serve(lock_path, socket_path, state_directory, stop_after=None):
     """Fixed deployment paths only. stop_after is a test-only Python parameter."""
+    worker_process()
     private_directory(socket_path.parent)
     private_directory(state_directory)
     require(not socket_path.exists() and not socket_path.is_symlink(), "evaluator socket already exists")
-    lock = read_lock(lock_path)
-    artifacts = [pinned_json(lock["artifacts"][key]) for key in ("dataset", "search", "shadow")]
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
         listener.bind(str(socket_path))
-        socket_path.chmod(0o660)
-        listener.listen(8)
-        handled = 0
         try:
+            isolate_worker()
+            # No sealed records are opened until the kernel boundary holds.
+            lock = read_lock(lock_path)
+            with diagnostics_directory(lock["diagnostics_directory"]):
+                pass
+            artifacts = [pinned_json(lock["artifacts"][key]) for key in ("dataset", "search", "shadow")]
+            listener.listen(8)
+            socket_path.chmod(0o660)
+            handled = 0
             while stop_after is None or handled < stop_after:
                 stream, _ = listener.accept()
                 with stream:

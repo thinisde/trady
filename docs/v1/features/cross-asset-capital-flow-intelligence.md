@@ -1,6 +1,6 @@
-# Cross-asset capital-flow and stress intelligence (proposed)
+# Cross-asset capital-flow and stress intelligence (research implementation)
 
-Status: new feature design, 2026-10-31. No cross-asset flow inference pipeline, feed or trading authority exists.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research. [Policy](../../../crates/trady-policy/src/intelligence/cross_asset.rs) aligns sparse publication-aware series, computes compatible beta/correlation with uncertainty, separates primary flows from performance-driven AUM changes, and reports bounded stress/breadth context. Approved normalized inputs and explicitly reviewed contextual entities use the [shared service](./implementation-report.md). Feed provisioning and historical calibration remain separate gates.
 
 ## What is new
 

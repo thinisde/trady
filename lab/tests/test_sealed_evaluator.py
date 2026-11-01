@@ -7,7 +7,6 @@ import pathlib
 import subprocess
 import sys
 import tempfile
-import threading
 import time
 import unittest
 from copy import deepcopy
@@ -21,7 +20,7 @@ from evaluator.observations import calendar_index, equity_series, search_account
 from evaluator.predictions import calibration_scores, score_predictions
 from evaluator.run import evaluate, write_artifact
 from evaluator.statistics import drawdown, objective, paired_bounds, risk_metrics
-from evaluator.transport import consume, request_evaluation, serve
+from evaluator.transport import consume, request_evaluation
 from sealed_fixture import fixture, reseal, stamp
 
 
@@ -300,28 +299,35 @@ class SealedEvaluator(unittest.TestCase):
             self.lock["diagnostics_directory"] = str(directory / "diagnostics")
             lock_path = directory / "lock.json"; lock_path.write_bytes(canonical(self.lock)); lock_path.chmod(0o600)
             socket_path = directory / "worker.sock"
-            errors = []
-            def worker():
+            code = ("import pathlib,sys; from evaluator.transport import serve; "
+                    "serve(*(pathlib.Path(p) for p in sys.argv[1:]), stop_after=2)")
+            # Isolation is irreversible and process-wide; never apply it to the
+            # unittest/client process or substitute a weaker TEST_ONLY filter.
+            with subprocess.Popen([sys.executable, "-B", "-c", code, str(lock_path), str(socket_path), str(state)],
+                                  cwd=LAB, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as worker:
                 try:
-                    serve(lock_path, socket_path, state, stop_after=2)
-                except Exception as error:
-                    errors.append(error)
-            thread = threading.Thread(target=worker, daemon=True); thread.start()
-            deadline = time.monotonic() + 3
-            while not socket_path.exists() and not errors and time.monotonic() < deadline:
-                time.sleep(0.01)
-            self.assertTrue(socket_path.exists(), errors)
-            self.assertEqual(socket_path.stat().st_mode & 0o777, 0o660)
-            with self.assertRaisesRegex(ValueError, "identity"):
-                request_evaluation(socket_path, canonical(self.request), os.getuid() + 1)
-            response = strict_json(request_evaluation(socket_path, canonical(self.request), os.getuid()))
-            self.assertEqual(response["payload"]["outer_intervals"], 6)
-            changed = deepcopy(self.request); changed["plan"]["minimum_improvement"] = "0"
-            with self.assertRaisesRegex(ValueError, "blocked"):
-                request_evaluation(socket_path, canonical(changed), os.getuid())
-            thread.join(timeout=3)
-            self.assertFalse(thread.is_alive())
-            self.assertEqual(errors, [])
+                    deadline = time.monotonic() + 5
+                    while worker.poll() is None and time.monotonic() < deadline:
+                        if socket_path.exists() and socket_path.stat().st_mode & 0o777 == 0o660:
+                            break
+                        time.sleep(0.01)
+                    self.assertIsNone(worker.poll(), worker.communicate() if worker.poll() is not None else None)
+                    self.assertTrue(socket_path.exists())
+                    self.assertEqual(socket_path.stat().st_mode & 0o777, 0o660)
+                    with self.assertRaisesRegex(ValueError, "identity"):
+                        request_evaluation(socket_path, canonical(self.request), os.getuid() + 1)
+                    response = strict_json(request_evaluation(socket_path, canonical(self.request), os.getuid()))
+                    self.assertEqual(response["payload"]["outer_intervals"], 6)
+                    changed = deepcopy(self.request); changed["plan"]["minimum_improvement"] = "0"
+                    with self.assertRaisesRegex(ValueError, "blocked"):
+                        request_evaluation(socket_path, canonical(changed), os.getuid())
+                    stdout, stderr = worker.communicate(timeout=5)
+                    self.assertEqual(worker.returncode, 0, stderr.decode())
+                    self.assertEqual(stdout, b"")
+                finally:
+                    if worker.poll() is None:
+                        worker.kill()
+                        worker.communicate(timeout=5)
             self.assertEqual(len(list(state.iterdir())), 1)
 
     @unittest.skipUnless(os.getuid() == 0, "fixed-entrypoint pinning requires deployment-owned files")

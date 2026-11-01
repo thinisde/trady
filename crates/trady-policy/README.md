@@ -16,6 +16,11 @@ evaluation returns a new caller-owned snapshot for serialized persistence.
 
 ## Interface
 
+- [Optional intelligence contract](./src/intelligence/README.md):
+  `[src/intelligence/mod.rs:assess]` dispatches ten deterministic descriptive
+  research calculations, without I/O, order authority or promotion into
+  prediction fusion.
+
 - `[src/sentiment/mod.rs:sentiment_thresholds]`, `SentimentThresholds`,
   `validate_probabilities`: pure sentiment adjustment and entry/target constraints;
   [versioned rules](../../docs/v1/finbert/README.md#threshold-calculation-version-1).
@@ -43,6 +48,10 @@ evaluation returns a new caller-owned snapshot for serialized persistence.
 `[Cargo.toml:dependencies]` contains no network client or storage driver. Policy
 validation is called by sizing and target/risk validation.
 
+`[src/lib.rs:Policy]` has public fields; construction/deserialization does not
+invoke validation. `[src/economics.rs:target_price]` enforces its own 10% ceiling
+independently of a stricter policy cap; callers apply the relevant policy checks.
+
 `[Cargo.toml:dependencies]` describes direct dependencies. The source uses checked
 decimal arithmetic and validates observations against the supplied `now`.
 `[src/lib.rs:size_entry]`, `[src/lib.rs:validate_risk]`,
@@ -67,7 +76,7 @@ for unknown order outcomes even when an exit is latched.
 
 ## Verification
 
-Run `cargo test --workspace` from the repository root for workspace verification.
+Run `cargo test --workspace --locked` from the repository root for workspace verification.
 
 Run `cargo test -p trady-policy --locked` from the repository root.
 

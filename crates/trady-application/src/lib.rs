@@ -5,6 +5,7 @@ pub mod broker;
 pub mod contracts;
 pub mod financial;
 pub mod harness;
+pub mod intelligence;
 pub mod model_lab;
 pub mod optimization;
 pub mod perpetual;
@@ -12,6 +13,7 @@ pub mod research;
 pub mod research_jobs;
 pub mod screening;
 pub mod sentiment;
+pub mod stock_report;
 pub mod telegram;
 pub mod x_monitoring;
 
@@ -44,10 +46,10 @@ impl FoundationConfig {
     }
     pub fn entry_blockers(&self, now: DateTime<Utc>) -> Vec<&'static str> {
         let mut reasons = vec![
-            "research/readiness verifier is not implemented",
+            "foundation probe does not verify research/readiness evidence",
             "approved skill bundle is not loaded",
             "usable Perpetual assessment is unavailable",
-            "validated execution and protection workflow is not implemented",
+            "foundation probe does not run the autonomous execution/protection workflow",
         ];
         if ![
             &self.capabilities.cash_account,

@@ -185,3 +185,460 @@ No drift detected.
   or artifact envelope containing its revision, original download identity and
   adjustment/session configuration as proposed by the catalog. See
   [offline_page](crates/trady-adapters/src/financial/parse.rs).
+
+# EGM contract bootstrap drift addendum — 2026-10-31
+
+Scope: the 48 README contracts modified by this bootstrap/remediation, reviewed
+sequentially against current working-tree source. Earlier financial-data findings
+above are preserved. The findings below concern documentation coverage; the
+listed interfaces already exist in code. Live workflow readiness is recorded in
+the [remediation report](docs/workflow-remediation-2026-10-31.md).
+
+## README.md
+
+No drift detected.
+
+## config/README.md
+
+No drift detected.
+
+## config/credentials/postgresql/README.md
+
+No drift detected.
+
+## crates/README.md
+
+No drift detected.
+
+## crates/trady-adapters/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/autonomous/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/financial/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/finbert/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/inputs_service/README.md
+
+- **Public limits are missing from the contract.** [mod.rs](crates/trady-adapters/src/inputs_service/mod.rs) exports `MAX_IMPORTS = 20_000` and `MAX_IMPORT_BYTES = 8 * 1024 * 1024` (lines 29–30). [store.rs](crates/trady-adapters/src/inputs_service/store.rs) uses the first for active store capacity and half the second for raw-document bytes; configuration validation also uses the second as the response-size ceiling. Add the two constants and distinguish these scopes in Interface/Invariants.
+- **Payload helper contracts are missing.** `ImportPayload::kind` and `ImportPayload::key` in [mod.rs](crates/trady-adapters/src/inputs_service/mod.rs) (lines 238–264) are public but absent from the interface inventory. `kind` maps payload variants to import kinds; `key` chooses a kind-specific identity, including `account:instrument:market_snapshot` for forecasts. Document those helpers and the compound-key rule.
+
+## crates/trady-adapters/src/intelligence/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/news/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/opencode/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/perpetual/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/research_jobs/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/screening/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/telegram/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/weekly_lab/README.md
+
+No drift detected.
+
+## crates/trady-application/README.md
+
+No drift detected.
+
+## crates/trady-application/src/README.md
+
+- **Source fingerprint helper is omitted.** `FinancialSource::registry_hash` in [financial.rs](crates/trady-application/src/financial.rs) (lines 179–181) hashes the serialized source configuration. The contract lists `FinancialSource` and registry synchronization but omits this public helper and its fingerprint scope.
+- **Invalidation matching contracts are omitted.** `Invalidation::matches` and `RejectedInput::matches` in [intelligence.rs](crates/trady-application/src/intelligence.rs) (lines 185–198 and 236–247) require equal scopes and select observation, source or lineage identity according to the invalidation target. The README inventories the records but does not expose these public matching helpers or their target-specific rules.
+
+## crates/trady-application/src/model_lab/README.md
+
+No drift detected.
+
+## crates/trady-application/src/sentiment/README.md
+
+No drift detected.
+
+## crates/trady-cli/README.md
+
+No drift detected.
+
+## crates/trady-cli/src/README.md
+
+No drift detected.
+
+## crates/trady-cli/src/opencode/README.md
+
+No drift detected.
+
+## crates/trady-domain/README.md
+
+No drift detected.
+
+## crates/trady-domain/src/README.md
+
+No drift detected.
+
+## crates/trady-domain/src/intelligence/README.md
+
+- **The public type inventory is incomplete.** The Interface table omits 102 public record/enum definitions across the ten feature modules. Add the following types to the contract, or provide linked subordinate contracts that inventory them:
+- [accounting.rs](crates/trady-domain/src/intelligence/accounting.rs): `FinancialConcept`, `FinancialPeriodKind`, `FinancialPeriod`, `FinancialUnit`, `ShareCountAdjustment`, `ComparableFinancialFact`, `AccountingMetric`, `AccountingCohort`, `AccountingPeerObservation`, `AnomalySignal`.
+- [attention.rs](crates/trady-domain/src/intelligence/attention.rs): `AttentionSemantics`, `AttentionEntityKind`, `AttentionAgentCoverage`, `VerifiedAttentionEvent`, `AttentionThresholds`, `AttentionStatus`, `AttentionPattern`, `AttentionEventTiming`, `AttentionEventComparison`, `AttentionQueryAssessment`, `AttentionConcordance`.
+- [coordination.rs](crates/trady-domain/src/intelligence/coordination.rs): `PromotionKind`, `CoordinationCoverage`, `CoordinationThresholds`, `CoordinationMarketDeviation`, `SourceBurst`.
+- [cross_asset.rs](crates/trady-domain/src/intelligence/cross_asset.rs): `CrossAssetKind`, `CrossAssetUnit`, `CrossAssetObservation`, `CrossAssetSeries`, `CrossAssetPair`, `CrossAssetStressMethod`, `CrossAssetStressDirection`, `CrossAssetStress`, `CrossAssetBreadthMember`, `CrossAssetBreadth`, `CrossAssetStatus`, `CrossAssetAlignedValue`, `CrossAssetInterval`, `CrossAssetFlowAssessment`, `CrossAssetStressAssessment`, `CrossAssetBreadthAssessment`.
+- [event.rs](crates/trady-domain/src/intelligence/event.rs): `EstimateDispersionDefinition`, `EventUnit`, `ActualObservation`, `EventPrice`, `EventPricingProxy`, `EventConfounder`, `SurpriseNormalization`, `EventOutcome`.
+- [insider.rs](crates/trady-domain/src/intelligence/insider.rs): `OwnershipTable`, `FilingCoverage`, `FilingFootnote`, `ReportingOwner`, `InsiderLineRef`, `InsiderSplitAdjustment`, `InsiderHolding`, `InsiderTransactionKind`, `InsiderRowAssessment`.
+- [microstructure.rs](crates/trady-domain/src/intelligence/microstructure.rs): `MicrostructureBookState`, `MicrostructureFeedKind`, `MicrostructureLevel`, `MicrostructureRouting`, `MicrostructureAuction`, `MicrostructureMarkoutSide`, `MicrostructureMarkout`, `MicrostructureStatus`.
+- [options.rs](crates/trady-domain/src/intelligence/options.rs): `OptionsRight`, `OptionsExercise`, `OptionsUnderlying`, `OptionsPricingAssumptions`, `OptionsVolatilityObservation`, `OptionsEvent`, `OptionsStatus`, `OptionsIssue`, `OptionsIvInterval`, `OptionsSkew`.
+- [short_interest.rs](crates/trady-domain/src/intelligence/short_interest.rs): `ShortPositionReport`, `ShortFloatObservation`, `ShortVolumeScope`, `ShortAverageVolume`, `ShortBorrowObservation`, `ShortMarketContext`, `ShortCrowdingThresholds`, `ShortCrowdingFlag`, `ShortInterestIssue`.
+- [tax.rs](crates/trady-domain/src/intelligence/tax.rs): `TaxLotMethod`, `TaxLossTreatment`, `TaxAllowanceAllocation`, `TaxRateRange`, `TaxFxRate`, `TaxSplit`, `TaxWithholding`, `AnnualTaxState`, `TaxCashObservation`, `TaxDisposalScenario`, `TaxSafetySnapshot`, `TaxAssessmentStatus`, `TaxScenarioKind`, `TaxAmountRange`, `TaxLotAllocation`, `TaxScenarioEstimate`.
+
+## crates/trady-domain/src/sentiment/README.md
+
+No drift detected.
+
+## crates/trady-policy/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/intelligence/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/limits/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/prediction/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/sentiment/README.md
+
+No drift detected.
+
+## crates/trady-storage/README.md
+
+No drift detected.
+
+## crates/trady-storage/src/README.md
+
+- **Gateway delivery record is omitted.** [research_jobs.rs](crates/trady-storage/src/research_jobs.rs) defines public `GatewayDelivery` (lines 847–854), returned by `PgResearchJobs::pending_deliveries`, with `id`, `bot_id`, `owner_user_id`, `chat_id`, `scope` and `text`. The README describes outbox delivery but omits this public response contract.
+- **Research/gateway callable inventory is incomplete.** The public `PgResearchJobs` methods `install_policy`, `get_job`, `recent_jobs`, `checked_readiness_reference`, `pending_deliveries`, `acknowledge_delivery`, `selected_session`, `select_session` and `bind_job_session` are absent from the named interface in the README. Their implementations are in [research_jobs.rs](crates/trady-storage/src/research_jobs.rs). Add the callable names and map the existing broad descriptions to their read/write, analyst/gateway-role and lease requirements.
+- **Release callable inventory is incomplete.** [weekly.rs](crates/trady-storage/src/weekly.rs) exposes `ReleaseCandidate::subject_hash`, `PgActiveReleaseReader::resolve_active`, and `PgReleaseStore::{record_evidence,advance,active_formula}`. The README describes release behavior broadly but omits these individual public entry points. Name them and bind the existing read-only authority, evidence-write and transition descriptions to the appropriate methods.
+
+## docs/v1/features/README.md
+
+No drift detected.
+
+## lab/README.md
+
+No drift detected.
+
+## lab/evaluator/README.md
+
+No drift detected.
+
+## lab/lean/README.md
+
+No drift detected.
+
+## lab/proofs/README.md
+
+No drift detected.
+
+## lab/proofs/TradyProof/README.md
+
+No drift detected.
+
+## migrations/README.md
+
+No drift detected.
+
+## scripts/README.md
+
+No drift detected.
+
+## services/README.md
+
+No drift detected.
+
+## services/finbert/README.md
+
+No drift detected.
+
+## services/runtime/README.md
+
+No drift detected.
+
+# Full-tree bootstrap audit follow-up — 2026-10-31
+
+This follow-up covers all 51 source-directory contracts. It preserves the prior
+report. The entries record corrected differences; remaining caller/deployment
+boundaries are documented in the contracts and consolidated audit report.
+
+## README.md
+
+- Corrected: Added the current audit entry point and the discovered Python lab verification command.
+
+## crates/README.md
+
+- Corrected: Rolled up the optional intelligence boundaries and application-local model-lab persistence.
+
+## crates/trady-adapters/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/autonomous/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/financial/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/finbert/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/inputs_service/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/intelligence/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/news/README.md
+
+- Corrected: Added provider-enforced publication/discovery clocks, continuation and raw-row saturation rules, and provenance-only publisher URL behavior.
+
+## crates/trady-adapters/src/opencode/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/perpetual/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/research_jobs/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/screening/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/telegram/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/trading212/README.md
+
+No drift detected.
+
+## crates/trady-adapters/src/weekly_lab/README.md
+
+- Corrected: Distinguished the supplied input binding from the recorded request-byte hash and documented required helper component-map entries.
+
+## crates/trady-application/README.md
+
+- Corrected: Qualified the external-storage boundary to acknowledge local model-lab journal and holdout artifacts.
+
+## crates/trady-application/src/README.md
+
+- Corrected: Qualified local model-lab persistence and separated force/cadence bypass from the narrow legacy parser retry exception.
+
+## crates/trady-application/src/autonomous/README.md
+
+No drift detected.
+
+## crates/trady-application/src/model_lab/README.md
+
+No drift detected.
+
+## crates/trady-application/src/optimization/README.md
+
+No drift detected.
+
+## crates/trady-application/src/sentiment/README.md
+
+No drift detected.
+
+## crates/trady-application/src/telegram/README.md
+
+No drift detected.
+
+## crates/trady-cli/README.md
+
+No drift detected.
+
+## crates/trady-cli/src/README.md
+
+- Corrected: Corrected the child reply timer boundary: process launch, I/O setup and enqueue precede the monotonic wait timer.
+
+## crates/trady-cli/src/finbert/README.md
+
+No drift detected.
+
+## crates/trady-cli/src/opencode/README.md
+
+No drift detected.
+
+## crates/trady-cli/src/telegram/README.md
+
+No drift detected.
+
+## crates/trady-domain/README.md
+
+No drift detected.
+
+## crates/trady-domain/src/README.md
+
+No drift detected.
+
+## crates/trady-domain/src/intelligence/README.md
+
+No drift detected.
+
+## crates/trady-domain/src/sentiment/README.md
+
+No drift detected.
+
+## crates/trady-policy/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/intelligence/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/limits/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/prediction/README.md
+
+No drift detected.
+
+## crates/trady-policy/src/sentiment/README.md
+
+No drift detected.
+
+## crates/trady-storage/README.md
+
+- Corrected: Corrected assessment invalidation timing and retention clamping to the observation deadline.
+
+## crates/trady-storage/src/README.md
+
+- Corrected: Corrected changed-content invalidation codes, assessment invalidation timing and retention clamping.
+
+## lab/README.md
+
+No drift detected.
+
+## lab/evaluator/README.md
+
+- Corrected: Corrected missing-payoff behavior and qualified the owner/mode checks on existing diagnostic directories.
+
+## lab/lean/README.md
+
+- Corrected: Corrected executable hashing to construction time rather than each request.
+
+## lab/proofs/README.md
+
+- Corrected: Qualified Lean account/reference validation, private dispatch and caller-supplied revision bindings.
+
+## lab/proofs/TradyProof/README.md
+
+- Corrected: Qualified account-reference validation: account identity, mode, side and the complete status allowlist are outside these checks.
+
+## migrations/README.md
+
+- Corrected: Corrected role/function grants, nullable validation boundaries, financial constraints, confirmation/readiness checks and explicit intelligence erasure behavior.
+
+## scripts/README.md
+
+- Corrected: Added the credential-file default and documented container-loopback authentication without saved DSN endpoint correspondence.
+
+## services/README.md
+
+No drift detected.
+
+## services/finbert/README.md
+
+- Corrected: Corrected Content-Length rejection behavior: missing, zero, negative and oversized lengths return HTTP 413.
+
+## services/runtime/README.md
+
+- Corrected: Qualified evaluator isolation: permitting AF_UNIX alone does not deny PostgreSQL Unix sockets.
+
+## Implementation remediation, 2026-11-01
+
+The entries above preserve the original documentation audit. Subsequent
+implementation fixes and final execution evidence are recorded in the
+[remediation report](./docs/audit-2026-10-31/remediation.md) and
+[verification record](./docs/audit-2026-10-31/remediation-verification.json).
+
+- Evaluator contracts now describe mandatory Linux seccomp/TSYNC isolation,
+  exact diagnostic-directory ownership and modes, and execution from verified,
+  sealed executable snapshots.
+- Storage contracts now describe append-only migration 11, null-rejecting
+  weekly/release gates, current readiness, durable credit ceilings, intelligence
+  content/rights validation, permanent registry retirements and erased-lineage
+  tombstones. Protected publication, cleanup and runtime authority boundaries
+  require `READ COMMITTED`; unsupported transaction isolation fails explicitly.
+- Application contracts now describe valid non-tax registry registration before
+  input/query validation and disabled-feature returns, including rejected input
+  and unavailable reads.
+- Credential contracts now describe saved-endpoint SCRAM identity validation,
+  conservative HBA checks, narrow DSN parsing, private stdin transport and file
+  plus server serialization. The server lock and protected commands share one
+  administrative connection, including rollback.
+- Weekly helper and proof contracts now describe complete manifest validation,
+  checked component lookups, the 26-theorem inventory, original numeric lexemes,
+  checked Unicode escapes and distinct input-rejection evidence. Finite parity
+  retains its explicitly bounded scope.
+- News contracts now distinguish malformed GDELT responses from valid empty
+  article arrays and document the 60-second default backoff. The sampled upstream
+  HTTP 429 remains an external availability limitation.
+
+Historical audit results and prior migrations were retained. Trading212 API
+requests remain excluded from verification.

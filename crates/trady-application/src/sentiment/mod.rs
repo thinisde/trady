@@ -43,8 +43,15 @@ pub fn assess_sentiment(
             .or(item.published_at)
             .ok_or_else(|| Error("sentiment requires a known source event time".into()))?;
         require(
-            item.language.as_deref() == Some("en")
-                && !item.item_id.is_empty()
+            item.language.as_deref().is_some_and(|language| {
+                language.eq_ignore_ascii_case("en")
+                    || language.to_ascii_lowercase().starts_with("en-")
+                        && language.split('-').skip(1).all(|part| {
+                            !part.is_empty()
+                                && part.len() <= 8
+                                && part.bytes().all(|b| b.is_ascii_alphanumeric())
+                        })
+            }) && !item.item_id.is_empty()
                 && item.item_id.len() <= 256
                 && !item.lineage_id.is_empty()
                 && item.lineage_id.len() <= 256

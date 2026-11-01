@@ -1,0 +1,199 @@
+{
+  "name": "api_health_offline",
+  "command": [
+    "target/debug/trady",
+    "api-health"
+  ],
+  "exit": 0,
+  "response": {
+    "checked_at": "2026-10-31T21:49:12.931921160Z",
+    "checks": [
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_SEC_USER_AGENT",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "sec",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_FRED_API_KEY",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "fred",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_TWELVE_DATA_API_KEY",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "twelve_data",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_FINNHUB_API_KEY",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "finnhub",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_ALPHA_VANTAGE_API_KEY",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "alpha_vantage",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_FMP_API_KEY",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "fmp",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_COINGECKO_API_KEY",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "coingecko",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_TIINGO_API_KEY",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "tiingo",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_MASSIVE_API_KEY",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "massive",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": null,
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "gdelt",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "public_endpoint_not_checked"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": null,
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "google_news",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "public_endpoint_not_checked"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": null,
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "publisher_rss",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "public_endpoint_not_checked"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_TELEGRAM_BOT_TOKEN",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "telegram",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "missing_credential"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": "TRADY_X_BEARER_TOKEN",
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "x",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "requires_existing_cost_gate"
+      },
+      {
+        "credential_configured": false,
+        "credential_name": null,
+        "failure_code": null,
+        "http_status": null,
+        "latency_ms": null,
+        "network_requests": 0,
+        "provider": "yfinance",
+        "response_records": null,
+        "retry_after_seconds": null,
+        "status": "offline_import_only"
+      }
+    ],
+    "collection_settings_changed": false,
+    "entry_authorized": false,
+    "mode": "OFFLINE",
+    "network_requests": 0,
+    "schema_version": 1
+  },
+  "error": ""
+}

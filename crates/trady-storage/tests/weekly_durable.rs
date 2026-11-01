@@ -17,6 +17,14 @@ use trady_storage::{migrate, weekly::*};
 
 fn dsn(role: &str) -> String {
     assert_eq!(env::var("TRADY_TEST_ISOLATED").as_deref(), Ok("1"));
+    let key = if role == "trady_releaser" {
+        "TRADY_RELEASE_DSN".into()
+    } else {
+        format!("{}_DSN", role.to_ascii_uppercase())
+    };
+    if let Ok(value) = env::var(key) {
+        return value;
+    }
     format!(
         "host=127.0.0.1 port={} user={role} dbname=trady",
         env::var("TRADY_TEST_PORT").unwrap()
@@ -378,4 +386,384 @@ fn release_evidence_requires_independent_roles_real_sessions_and_untampered_cont
     let mut shadow = PgReleaseStore::connect(&dsn("trady_shadow"), "trady_shadow").unwrap();
     assert!(shadow.record_evidence("owner", &evidence).is_err());
     assert!(lab.resolve(&id).is_err());
+}
+
+#[test]
+#[ignore = "requires isolated PostgreSQL; run python3 scripts/test-postgres.py"]
+fn weekly_sql_null_fences_missing_holdout_bindings_and_ledger_fields_fail_closed() {
+    migrate(&dsn("trady_migrator")).unwrap();
+    let state = initial("paper_weekly_sql_nulls");
+    let id = state.manifest.run_id().unwrap();
+    let document = serde_json::to_value(&state).unwrap();
+    let mut lab = Client::connect(&dsn("trady_lab"), NoTls).unwrap();
+    assert!(
+        lab.query_one(
+            "SELECT weekly.freeze($1,$2,'sql_fixture',NULL)",
+            &[&id, &document]
+        )
+        .is_err()
+    );
+    let generation: i64 = lab
+        .query_one(
+            "SELECT weekly.freeze($1,$2,'sql_fixture',30)",
+            &[&id, &document],
+        )
+        .unwrap()
+        .get(0);
+    assert!(
+        lab.query_one("SELECT weekly.load_run($1,NULL)", &[&id])
+            .is_err()
+    );
+    assert!(
+        lab.query_one("SELECT weekly.renew($1,$2,NULL)", &[&id, &generation])
+            .is_err()
+    );
+    assert!(
+        lab.query_one("SELECT weekly.release_run($1,NULL)", &[&id])
+            .is_err()
+    );
+    assert!(
+        lab.query_one(
+            "SELECT weekly.freeze_v6($1,$2,'sql_fixture',30)",
+            &[&id, &document]
+        )
+        .is_err()
+    );
+    let reserved = trial(&state);
+    let trial_json = serde_json::to_value(&reserved).unwrap();
+    assert!(
+        lab.query_one(
+            "SELECT weekly.reserve_trial($1,$2,$3,NULL)",
+            &[&id, &generation, &trial_json]
+        )
+        .is_err()
+    );
+    lab.query_one(
+        "SELECT weekly.reserve_trial($1,$2,$3,1)",
+        &[&id, &generation, &trial_json],
+    )
+    .unwrap();
+    let mut loaded: serde_json::Value = lab
+        .query_one("SELECT weekly.load_run($1,$2)", &[&id, &generation])
+        .unwrap()
+        .get(0);
+    let hash = "a".repeat(64);
+    loaded["trials"][0]["development"] = json!({"report":{"input_hash":hash}});
+    loaded["verification"] = json!({"proof":{"input_hash":hash},"parity":{"input_hash":hash},"approved_axioms_only":true,"non_vacuous":true,"exact_numeric_parity":true,"safety_definitions_unchanged":true});
+    lab.query_one(
+        "SELECT weekly.checkpoint($1,$2,$3)",
+        &[&id, &generation, &loaded],
+    )
+    .unwrap();
+    lab.query_one(
+        "SELECT weekly.claim_holdout($1,$2,$3,$4)",
+        &[&id, &generation, &reserved.candidate_id, &hash],
+    )
+    .unwrap();
+    for report in [
+        serde_json::Value::Null,
+        json!({}),
+        json!({"run_id":id,"report":{"input_hash":null}}),
+    ] {
+        assert!(
+            lab.query_one(
+                "SELECT weekly.finish_holdout($1,$2,$3)",
+                &[&id, &generation, &report]
+            )
+            .is_err()
+        );
+    }
+    let mut analyst = Client::connect(&dsn("trady_analyst"), NoTls).unwrap();
+    let mut verifier = Client::connect(&dsn("trady_verifier"), NoTls).unwrap();
+    assert!(analyst.query_one("SELECT weekly.record_ledger('forecast','paper_weekly_sql_nulls','paper','missing_fields','{}')",&[]).is_err());
+    assert!(verifier.query_one("SELECT weekly.record_ledger('reconciliation','paper_weekly_sql_nulls','paper','missing_fields','{}')",&[]).is_err());
+    // A valid prospective forecast remains recordable through the SQL boundary.
+    let forecast_id = "valid_sql_forecast";
+    let canonical=serde_json::to_string(&json!({"metadata":{"prediction_id":forecast_id,"generated_at":Utc::now()-Duration::seconds(1),"horizon":{"deadline_at":Utc::now()+Duration::hours(1)}}})).unwrap();
+    analyst
+        .query_one(
+            "SELECT weekly.record_ledger('forecast','paper_weekly_sql_nulls','paper',$1,$2)",
+            &[&forecast_id, &canonical],
+        )
+        .unwrap();
+    assert!(
+        verifier
+            .query_one(
+                "SELECT weekly.record_ledger('label','paper_weekly_sql_nulls','paper',$1,'{}')",
+                &[&forecast_id]
+            )
+            .is_err()
+    );
+}
+
+#[test]
+#[ignore = "requires isolated PostgreSQL; run python3 scripts/test-postgres.py"]
+fn release_sql_null_transitions_and_expired_runtime_readiness_fail_closed() {
+    migrate(&dsn("trady_migrator")).unwrap();
+    let state = initial("paper_release_sql_nulls");
+    let candidate = ReleaseCandidate {
+        revision_id: "sql_expiry_fixture".into(),
+        account_id: state.manifest.account_id.clone(),
+        mode: Mode::Paper,
+        owner_id: "sql_fixture_owner".into(),
+        policy_hash: digest(&state.policy).unwrap(),
+        formula_hash: digest(&state.plan.candidates[0]).unwrap(),
+        source_hash: "a".repeat(64),
+        calendar_hash: "b".repeat(64),
+        model_hashes: BTreeMap::from([("fixture".into(), "c".repeat(64))]),
+        parameters: state.plan.candidates[0].clone(),
+        envelope: state.plan.envelope,
+        effective_from: Utc::now() - Duration::hours(1),
+        valid_until: Utc::now() + Duration::days(1),
+        supersedes_release_id: None,
+    };
+    let mut lab = PgReleaseStore::connect(&dsn("trady_lab"), "trady_lab").unwrap();
+    let id = lab.candidate(&candidate).unwrap();
+    let mut releaser = Client::connect(&dsn("trady_releaser"), NoTls).unwrap();
+    for query in [
+        "SELECT release.advance($1,NULL,'VERIFIED','{}')",
+        "SELECT release.advance($1,0,NULL,'{}')",
+        "SELECT release.advance($1,0,'VERIFIED',NULL)",
+        "SELECT release.advance_v6($1,0,'VERIFIED','{}')",
+    ] {
+        assert!(releaser.query_one(query, &[&id]).is_err(), "{query}");
+    }
+    let mut verifier = PgReleaseStore::connect(&dsn("trady_verifier"), "trady_verifier").unwrap();
+    let mut readiness = evidence_envelope(&candidate, "readiness", Utc::now()).unwrap();
+    readiness["evidence_class"] = json!("PRODUCTION");
+    readiness["ready"] = json!(true);
+    readiness["valid_until"] = json!(Utc::now() + Duration::minutes(2));
+    readiness["account_id"] = json!(candidate.account_id);
+    readiness["mode"] = json!("paper");
+    readiness["snapshot_hash"] = json!("d".repeat(64));
+    readiness["capabilities_hash"] = json!("e".repeat(64));
+    let readiness_id = verifier.record_evidence("readiness", &readiness).unwrap();
+    let mut wrong = readiness.clone();
+    wrong["ready"] = serde_json::Value::Null;
+    assert!(verifier.record_evidence("readiness", &wrong).is_err());
+    wrong = readiness.clone();
+    wrong["account_id"] = json!("paper_wrong_scope");
+    assert!(verifier.record_evidence("readiness", &wrong).is_err());
+    // Administrator-only fixture construction isolates the read-time gate. It
+    // neither simulates a production promotion nor grants service write access.
+    let mut admin = Client::connect(&dsn("postgres"), NoTls).unwrap();
+    let owner_id = format!("evidence_{}", "f".repeat(64));
+    let mut approval =
+        evidence_envelope(&candidate, "owner", Utc::now() - Duration::hours(2)).unwrap();
+    for (key, value) in [
+        ("owner_id", json!(candidate.owner_id)),
+        ("account_id", json!(candidate.account_id)),
+        ("mode", json!("paper")),
+        ("policy_hash", json!(candidate.policy_hash)),
+        ("decision", json!("APPROVE")),
+        ("authority", json!("OWNER_LIVE")),
+        ("valid_until", json!(Utc::now() + Duration::hours(4))),
+    ] {
+        approval[key] = value;
+    }
+    let owner_canonical = serde_json::to_string(&approval).unwrap();
+    let subject = candidate.subject_hash().unwrap();
+    admin.execute("INSERT INTO release.evidence(evidence_id,subject_hash,kind,canonical,content_hash,producer) VALUES($1,$2,'owner',$3,weekly.hash($3),'trady_release_owner')",&[&owner_id,&subject,&owner_canonical]).unwrap();
+    admin.execute("UPDATE release.candidates SET state='ACTIVE',evidence=jsonb_build_object('owner',$2::text,'readiness',$3::text) WHERE release_id=$1",&[&id,&owner_id,&readiness_id]).unwrap();
+    admin
+        .execute(
+            "INSERT INTO release.active(account_id,mode,release_id) VALUES($1,'paper',$2)",
+            &[&candidate.account_id.as_str(), &id],
+        )
+        .unwrap();
+    let mut executor = PgActiveReleaseReader::connect(&dsn("trady_executor")).unwrap();
+    assert!(
+        executor
+            .resolve_active(&candidate.account_id, Mode::Paper)
+            .is_ok()
+    );
+    readiness["valid_until"] = json!(Utc::now() - Duration::seconds(1));
+    let expired = serde_json::to_string(&readiness).unwrap();
+    admin.execute("UPDATE release.evidence SET canonical=$1,content_hash=weekly.hash($1) WHERE evidence_id=$2",&[&expired,&readiness_id]).unwrap();
+    assert!(
+        executor
+            .resolve_active(&candidate.account_id, Mode::Paper)
+            .is_err()
+    );
+    // Missing expiry must fail in the same path, even with a matching content hash.
+    readiness.as_object_mut().unwrap().remove("valid_until");
+    let missing = serde_json::to_string(&readiness).unwrap();
+    admin.execute("UPDATE release.evidence SET canonical=$1,content_hash=weekly.hash($1) WHERE evidence_id=$2",&[&missing,&readiness_id]).unwrap();
+    assert!(
+        executor
+            .resolve_active(&candidate.account_id, Mode::Paper)
+            .is_err()
+    );
+    readiness["recorded_at"] = json!(Utc::now());
+    readiness["valid_until"] = json!(Utc::now() + Duration::minutes(2));
+    let renewed = verifier.record_evidence("readiness", &readiness).unwrap();
+    let resolved = executor
+        .resolve_active(&candidate.account_id, Mode::Paper)
+        .unwrap();
+    assert_eq!(resolved["evidence"]["readiness"], renewed);
+    readiness["recorded_at"] = json!(Utc::now());
+    readiness["ready"] = json!(false);
+    verifier.record_evidence("readiness", &readiness).unwrap();
+    assert!(
+        executor
+            .resolve_active(&candidate.account_id, Mode::Paper)
+            .is_err()
+    );
+}
+
+fn active_release_fixture(account: &str, revision: &str) -> (String, serde_json::Value) {
+    let state = initial(account);
+    let candidate = ReleaseCandidate {
+        revision_id: revision.into(),
+        account_id: state.manifest.account_id.clone(),
+        mode: Mode::Paper,
+        owner_id: "fixed_snapshot_fixture_owner".into(),
+        policy_hash: digest(&state.policy).unwrap(),
+        formula_hash: digest(&state.plan.candidates[0]).unwrap(),
+        source_hash: "a".repeat(64),
+        calendar_hash: "b".repeat(64),
+        model_hashes: BTreeMap::from([("fixture".into(), "c".repeat(64))]),
+        parameters: state.plan.candidates[0].clone(),
+        envelope: state.plan.envelope,
+        effective_from: Utc::now() - Duration::hours(1),
+        valid_until: Utc::now() + Duration::days(1),
+        supersedes_release_id: None,
+    };
+    let mut lab = PgReleaseStore::connect(&dsn("trady_lab"), "trady_lab").unwrap();
+    let id = lab.candidate(&candidate).unwrap();
+    let mut verifier = PgReleaseStore::connect(&dsn("trady_verifier"), "trady_verifier").unwrap();
+    let mut readiness = evidence_envelope(&candidate, "readiness", Utc::now()).unwrap();
+    for (key, value) in [
+        ("evidence_class", json!("PRODUCTION")),
+        ("ready", json!(true)),
+        ("valid_until", json!(Utc::now() + Duration::minutes(2))),
+        ("account_id", json!(candidate.account_id)),
+        ("mode", json!("paper")),
+        ("snapshot_hash", json!("d".repeat(64))),
+        ("capabilities_hash", json!("e".repeat(64))),
+    ] {
+        readiness[key] = value;
+    }
+    let readiness_id = verifier.record_evidence("readiness", &readiness).unwrap();
+    let mut approval =
+        evidence_envelope(&candidate, "owner", Utc::now() - Duration::hours(2)).unwrap();
+    for (key, value) in [
+        ("owner_id", json!(candidate.owner_id)),
+        ("account_id", json!(candidate.account_id)),
+        ("mode", json!("paper")),
+        ("policy_hash", json!(candidate.policy_hash)),
+        ("decision", json!("APPROVE")),
+        ("authority", json!("OWNER_LIVE")),
+        ("valid_until", json!(Utc::now() + Duration::hours(4))),
+    ] {
+        approval[key] = value;
+    }
+    // Disposable administrator construction tests only runtime authority lookup;
+    // it neither grants service writes nor bypasses the production promotion API.
+    let mut admin = Client::connect(&dsn("postgres"), NoTls).unwrap();
+    let owner_id = format!("evidence_{}", digest(&approval).unwrap());
+    let subject = candidate.subject_hash().unwrap();
+    let canonical = serde_json::to_string(&approval).unwrap();
+    admin.execute("INSERT INTO release.evidence(evidence_id,subject_hash,kind,canonical,content_hash,producer) VALUES($1,$2,'owner',$3,weekly.hash($3),'trady_release_owner')",&[&owner_id,&subject,&canonical]).unwrap();
+    admin.execute("UPDATE release.candidates SET state='ACTIVE',evidence=jsonb_build_object('owner',$2::text,'readiness',$3::text) WHERE release_id=$1",&[&id,&owner_id,&readiness_id]).unwrap();
+    admin.execute("INSERT INTO release.active(account_id,mode,release_id) VALUES($1,'paper',$2) ON CONFLICT(account_id,mode) DO UPDATE SET release_id=excluded.release_id",&[&account,&id]).unwrap();
+    (id, readiness)
+}
+
+fn assert_release_requires_read_committed(error: postgres::Error) {
+    assert_eq!(
+        error.code(),
+        Some(&postgres::error::SqlState::FEATURE_NOT_SUPPORTED),
+        "{error:?}"
+    );
+    assert_eq!(
+        error.as_db_error().unwrap().message(),
+        "STORAGE_REQUIRES_READ_COMMITTED"
+    );
+}
+
+#[test]
+#[ignore = "requires isolated PostgreSQL; run python3 scripts/test-postgres.py"]
+fn release_fixed_snapshots_cannot_reuse_readiness_or_replaced_active_pointer() {
+    migrate(&dsn("trady_migrator")).unwrap();
+    let account = "paper_release_fixed_snapshots";
+    let (id, mut readiness) = active_release_fixture(account, "fixed_snapshot_first");
+    let (replacement, _) = active_release_fixture(account, "fixed_snapshot_replacement");
+    let mut admin = Client::connect(&dsn("postgres"), NoTls).unwrap();
+    let mut verifier = PgReleaseStore::connect(&dsn("trady_verifier"), "trady_verifier").unwrap();
+    let mut current = Client::connect(&dsn("trady_executor"), NoTls).unwrap();
+    for transition in ["negative_readiness", "pointer_replacement"] {
+        admin
+            .execute(
+                "UPDATE release.active SET release_id=$1 WHERE account_id=$2 AND mode='paper'",
+                &[&id, &account],
+            )
+            .unwrap();
+        readiness["recorded_at"] = json!(Utc::now());
+        readiness["valid_until"] = json!(Utc::now() + Duration::minutes(2));
+        readiness["ready"] = json!(true);
+        verifier.record_evidence("readiness", &readiness).unwrap();
+        let resolved: serde_json::Value = current
+            .query_one("SELECT release.current_active($1,'paper')", &[&account])
+            .unwrap()
+            .get(0);
+        assert_eq!(resolved["release_id"], id);
+        let mut snapshots = Vec::new();
+        for isolation in ["REPEATABLE READ", "SERIALIZABLE"] {
+            let mut snapshot = Client::connect(&dsn("trady_executor"), NoTls).unwrap();
+            snapshot
+                .batch_execute(&format!("BEGIN ISOLATION LEVEL {isolation}"))
+                .unwrap();
+            // Establish the executor's old snapshot while authority is positive.
+            // The guarded API deliberately disallows even its first fixed-snapshot
+            // authority lookup; a harmless SELECT pins the counterexample instead.
+            snapshot.query_one("SELECT 1", &[]).unwrap();
+            snapshots.push(snapshot);
+        }
+        if transition == "negative_readiness" {
+            readiness["recorded_at"] = json!(Utc::now());
+            readiness["ready"] = json!(false);
+            verifier.record_evidence("readiness", &readiness).unwrap();
+        } else {
+            admin
+                .execute(
+                    "UPDATE release.active SET release_id=$1 WHERE account_id=$2 AND mode='paper'",
+                    &[&replacement, &account],
+                )
+                .unwrap();
+        }
+        for mut snapshot in snapshots {
+            assert_release_requires_read_committed(
+                snapshot
+                    .query_one("SELECT release.current_active($1,'paper')", &[&account])
+                    .unwrap_err(),
+            );
+            snapshot.batch_execute("ROLLBACK").unwrap();
+            let result =
+                snapshot.query_one("SELECT release.current_active($1,'paper')", &[&account]);
+            if transition == "negative_readiness" {
+                assert_eq!(
+                    result.unwrap_err().as_db_error().unwrap().message(),
+                    "ACTIVE_RELEASE_AUTHORITY_UNAVAILABLE"
+                );
+            } else {
+                assert_eq!(
+                    result.unwrap().get::<_, serde_json::Value>(0)["release_id"],
+                    replacement
+                );
+            }
+        }
+    }
+    for isolation in ["REPEATABLE READ", "SERIALIZABLE"] {
+        let mut releaser = Client::connect(&dsn("trady_releaser"), NoTls).unwrap();
+        releaser
+            .batch_execute(&format!("BEGIN ISOLATION LEVEL {isolation}"))
+            .unwrap();
+        assert_release_requires_read_committed(
+            releaser
+                .query_one("SELECT release.advance($1,0,'ACTIVE','{}')", &[&id])
+                .unwrap_err(),
+        );
+        releaser.batch_execute("ROLLBACK").unwrap();
+    }
 }

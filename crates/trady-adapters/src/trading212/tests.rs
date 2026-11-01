@@ -599,6 +599,22 @@ fn metadata_currency_and_instrument_type_are_checked_before_submission() {
 }
 
 #[test]
+fn metadata_rows_with_unrepresentable_tickers_are_counted_and_skipped() {
+    let server = Server::new(vec![
+        summary(),
+        ok(json!([
+            {"ticker":"AAPL_US_EQ","currencyCode":"USD","isin":"US0378331005","type":"STOCK"},
+            {"ticker":"BRK.B_US_EQ","currencyCode":"USD","isin":"US0846707026","type":"STOCK"}
+        ])),
+    ]);
+    let catalog = server.reader().instruments_with_rejections().unwrap();
+    assert_eq!(catalog.instruments.len(), 1);
+    assert_eq!(catalog.instruments[0].instrument_id.as_str(), "AAPL_US_EQ");
+    assert_eq!(catalog.rejected_count, 1);
+    assert_eq!(server.requests().len(), 2);
+}
+
+#[test]
 fn cancellation_receipt_is_not_terminal_state_and_pending_404_is_only_absence() {
     let server = Server::new(vec![
         summary(),
@@ -635,9 +651,10 @@ fn history_deduplicates_order_totals_and_returns_a_validated_cursor() {
     filled["filledQuantity"] = json!(1);
     let server = Server::new(vec![
         summary(),
-        ok(
-            json!({"items":[{"order":filled,"fill":{"quantity":0.3}},{"order":filled,"fill":{"quantity":0.7}}],"nextPagePath":"/api/v0/equity/history/orders?limit=50&cursor=123&ticker=AAPL_US_EQ"}),
-        ),
+        ok(json!({"items":[
+                {"order":filled,"fill":{"id":7,"filledAt":"2026-10-30T14:00:01Z","price":123.4,"quantity":0.3,"tradingMethod":"TOTV","type":"TRADE","walletImpact":{"currency":"EUR","fxRate":1.1,"netValue":-37.02,"realisedProfitLoss":0,"taxes":[{"chargedAt":"2026-10-30T14:00:01Z","currency":"EUR","name":"TRANSACTION_FEE","quantity":0.2}]} }},
+                {"order":filled,"fill":{"id":8,"filledAt":"2026-10-30T14:00:02Z","price":123.5,"quantity":0.7,"tradingMethod":"OTC","type":"TRADE","walletImpact":{"currency":"EUR","fxRate":1.1,"netValue":-86.45,"realisedProfitLoss":0,"taxes":[]}}}
+            ],"nextPagePath":"/api/v0/equity/history/orders?limit=50&cursor=123&ticker=AAPL_US_EQ"})),
     ]);
     let page = server
         .reader()
@@ -649,11 +666,71 @@ fn history_deduplicates_order_totals_and_returns_a_validated_cursor() {
         .unwrap();
     assert_eq!(page.orders.len(), 1);
     assert_eq!(page.orders[0].filled_quantity, Decimal::ONE);
+    assert_eq!(page.fills.len(), 2);
+    assert_eq!(page.fills[0].quantity, Some(Decimal::new(3, 1)));
+    assert_eq!(page.fills[0].price, Some(Decimal::new(1234, 1)));
+    assert_eq!(page.fills[0].fill_type.as_deref(), Some("TRADE"));
+    assert_eq!(
+        page.fills[0].wallet_impact.as_ref().unwrap().fx_rate,
+        Some(Decimal::new(11, 1))
+    );
+    assert_eq!(page.fills[0].wallet_impact.as_ref().unwrap().taxes.len(), 1);
     assert_eq!(page.next_cursor, Some(123));
     assert!(
         server.requests()[1]
             .line
             .contains("limit=50&ticker=AAPL_US_EQ")
+    );
+}
+
+#[test]
+fn history_rejects_conflicting_duplicate_fill_ids_and_overfilled_totals() {
+    let mut filled = order();
+    filled["status"] = json!("FILLED");
+    filled["filledQuantity"] = json!(1);
+    let server = Server::new(vec![
+        summary(),
+        ok(json!({
+            "items":[
+                {"order":filled,"fill":{"id":7,"quantity":0.5,"price":10}},
+                {"order":filled,"fill":{"id":7,"quantity":0.5,"price":11}}
+            ],
+            "nextPagePath":null
+        })),
+    ]);
+    assert!(
+        server
+            .reader()
+            .historical_orders(&HistoryQuery {
+                instrument_id: None,
+                cursor: None,
+                limit: 50,
+            })
+            .is_err()
+    );
+
+    let mut filled = order();
+    filled["status"] = json!("FILLED");
+    filled["filledQuantity"] = json!(1);
+    let server = Server::new(vec![
+        summary(),
+        ok(json!({
+            "items":[
+                {"order":filled,"fill":{"id":7,"quantity":0.7,"price":10}},
+                {"order":filled,"fill":{"id":8,"quantity":0.7,"price":10}}
+            ],
+            "nextPagePath":null
+        })),
+    ]);
+    assert!(
+        server
+            .reader()
+            .historical_orders(&HistoryQuery {
+                instrument_id: None,
+                cursor: None,
+                limit: 50,
+            })
+            .is_err()
     );
 }
 
@@ -726,6 +803,11 @@ fn malformed_or_value_orders_fail_and_unknown_statuses_stay_unknown() {
     }
     let mut value = order();
     value["strategy"] = json!("VALUE");
+    let server = Server::new(vec![summary(), ok(json!([value]))]);
+    assert!(server.reader().pending_orders().is_err());
+    let mut value = order();
+    value["ticker"] = json!("BRK.B_US_EQ");
+    value["instrument"]["ticker"] = json!("BRK.B_US_EQ");
     let server = Server::new(vec![summary(), ok(json!([value]))]);
     assert!(server.reader().pending_orders().is_err());
 }

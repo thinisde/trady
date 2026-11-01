@@ -8,6 +8,9 @@ for phone setup and the implemented command subset.
 
 ## Interface
 
+- `[mod.rs:HELP]` and `run` are public within the binary's private module tree.
+  `Config` and the `gateway` module are private; gateway types describe internal
+  command composition rather than library exports.
 - [gateway.rs](./gateway.rs) adds opt-in `expanded_gateway` configuration and
   `telegram worker --config FILE [--once]`. The
   [expanded example](./gateway.example.json) deliberately contains invalid numeric

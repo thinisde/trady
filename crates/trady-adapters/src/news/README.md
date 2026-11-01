@@ -16,8 +16,9 @@ inputs; the news collectors use GET requests.
 - `[http.rs:HttpTransport::get_with_headers]` and `SafeHttp` support bounded
   financial authentication/User-Agent headers with redirects disabled.
   `[http.rs:SafeHttp::get_with_headers]` permits only `User-Agent`,
-  `x-cg-demo-api-key` and `Authorization`; the trait default rejects nonempty
-  headers. `[x_meter.rs:MeteredHttp]` retains that default and unsupported POST
+  `x-cg-demo-api-key` and `Authorization`; `[http.rs:SafeHttp::send]` limits each
+  value to 4,096 bytes without control characters. The trait default rejects
+  nonempty headers. `[x_meter.rs:MeteredHttp]` retains that default and unsupported POST
   behavior rather than forwarding those methods to its inner transport.
 
 - `[x_meter.rs:MeteredHttp]` decorates `HttpTransport` with a collector-owned
@@ -32,6 +33,7 @@ inputs; the news collectors use GET requests.
   an injected transport and named-credential callback.
 - `[mod.rs:parse_feed]`, `canonical_url`, `x_post_id`, `digest`, `PARSER_VERSION`,
   `MAX_BODY_BYTES`: offline RSS/Atom parsing, reference normalization and limits.
+  The parser revision is `trady-news-2`; the shared body limit is 2 MiB.
 - `[http.rs:HttpTransport]`, `HttpRequest`, `HttpResponse`, `SafeHttp`,
   `public_address`, `validate_destination`: bounded HTTPS transport and destination checks.
   `HttpResponse::final_url` supplies the checked redirect destination as the feed base.
@@ -56,12 +58,15 @@ inputs; the news collectors use GET requests.
   HTTP call, records returned post/user/count resources and retains unknown
   consumption on failures. It rejects absent/inactive policies, unsupported
   endpoints and exhausted budgets; overruns are recorded and delivery fails.
-  All source callers sharing a billing scope use the same durable ledger.
+  Callers sharing a billing scope must configure the same durable ledger through
+  their injected repositories.
 - `[x.rs:recent_search]` rechecks stable identity, rejects other actors and posts
   outside the requested interval, sends one versioned query and expands authors
   only. It reports selected/polling coverage and missing context instead of
   claiming a full account timeline. Optional repost exclusion requires verifiable
-  reference metadata. `[x.rs:normalize]` uses `SocialAction::Unknown` when absent.
+  reference metadata. `[x.rs:original_references]` defaults an omitted reference
+  field to an empty list, classified `Original`; explicit `null` remains
+  `SocialAction::Unknown`, adds metadata/context gaps and fails enabled repost exclusion.
 - `[x.rs:search_window]` restricts search/counts to supported seven-day history,
   page sizes 10–100, second-aligned timestamps and an end at least ten seconds old.
   `[x.rs:counts]` validates daily bucket totals/continuity, preserves pagination,
@@ -73,7 +78,8 @@ inputs; the news collectors use GET requests.
 - `[http.rs:SafeHttp::send]` shares GET/POST destination and response guards:
   approved HTTPS, pinned public DNS, disabled proxies/compression/automatic retries,
   and bounded time, redirects and body size.
-  Each hop has a 15-second request timeout and five-second connection/DNS waits;
+  DNS waiting is five seconds. Request/connection timeouts are 30/15 seconds for
+  `api.gdeltproject.org` and 15/5 seconds for other hosts;
   the body limit is 2 MiB and at most three redirects are followed. Bearer requests
   never follow redirects; Alpha's query-key request sets `redirects: 0` explicitly.
   Failures do not expose response bodies. A DNS wait timeout does not cancel its resolver thread.
@@ -85,8 +91,8 @@ inputs; the news collectors use GET requests.
   monitored actor's outgoing posts. `[x.rs:normalize]` preserves reference/edit/context
   attribution, marks missing context across every reference, supports legacy response
   aliases and does not infer instrument identity. Author/reference/edit IDs are
-  requested as `expansions=author_id,referenced_posts,edit_history_post_ids`,
-  separately from `post.fields`. These are the emitted parameters; source inspection
+  requested as `expansions=author_id,referenced_tweets.id,edit_history_tweet_ids`,
+  separately from `tweet.fields`. These are the emitted parameters; source inspection
   does not establish provider acceptance. `[x.rs:timeline]` does not locally
   reject returned timestamps outside its requested interval; recent search does.
 - `[x.rs:normalize]` bounds references to three and supplied edit-history IDs to
@@ -95,9 +101,14 @@ inputs; the news collectors use GET requests.
   gaps; `complete` means no provider errors and can coexist with a continuation
   or empty timeline. `[x.rs:lookup]` returns one post and reports partial context
   separately; neither flag proves complete account history.
-- `[rss.rs:parse]` rejects DTDs and malformed XML/entity references and bounds
-  depth, fields and items. Atom text constructs extract plain text from nested
-  XHTML; relative links resolve against inherited
+- `[rss.rs:parse]` rejects DTDs, XML-reader errors and invalid entity references,
+  and bounds depth, fields and items. Self-closing elements receive no root-position
+  validation. Atom text constructs extract plain text from nested
+  XHTML; RSS/Atom item titles and summaries are reduced to plain text. Language
+  tags are normalized with scoped `xml:lang` inheritance and RSS channel-language
+  fallback; an empty `xml:lang` clears inheritance. Item language follows summary
+  scope when summary content exists, otherwise title scope, before entry/channel
+  fallback; explicitly cleared or mixed scope remains absent. Relative links resolve against inherited
   `xml:base` and the fetched feed URL. Feed titles survive element reordering.
   Google results remain metadata-only; RSS supplies snapshot coverage, not complete history.
   `[rss.rs:fetch]` forwards cache validators and rejects unsolicited 304s;
@@ -108,13 +119,23 @@ inputs; the news collectors use GET requests.
   without draining. `complete: true` with continuation does not promise full history.
   Publication times returned by Alpha are not locally checked against the
   requested window or caller time.
+- `[financial_news.rs:fetch]` rejects continuation tokens and processes only the
+  first requested-limit rows. Finnhub rejects future publication times and skips
+  publications outside the inclusive collection window; GDELT rejects future or
+  out-of-window discovery times without treating them as publication times.
+  Saturation is determined from the raw row count before filtering, so a filtered
+  page can remain incomplete. Publisher article URLs are provenance only and are
+  not fetched. A GDELT payload without an article array fails with
+  `gdelt_articles_missing` and a 60-second retry timestamp. An explicit empty
+  article array remains a valid empty page; malformed responses do not assert
+  complete empty coverage.
 - `[mod.rs:canonical_url]` strips tracking parameters/fragments and rejects local
   literal destinations, but performs no DNS or fetch authorization. Network entry
   points require enabled valid sources; `fetch` and `recent_x_counts` also
   check activation gaps.
   `[mod.rs:parse_feed]` is an offline parser restricted to RSS kinds and limits
   `1..=100`; it does not require source enablement or check activation gaps.
-- `[mod.rs:item]` hashes normalized content, preserves lineage/rights and redacts denied
+- `[mod.rs:item]` hashes normalized content including language, preserves lineage/rights and redacts denied
   storage. Source text and provider errors cannot modify configuration or order state.
 
 ## Side Effects
@@ -142,5 +163,7 @@ callbacks determine their own effects. Persistence belongs to the application re
 destination, with optional bearer forwarding; it does not change news collection to POST.
 
 ## Verification
+
+Run `cargo test --workspace --locked` from the repository root.
 
 Run `cargo test -p trady-adapters news:: --locked` from the repository root.

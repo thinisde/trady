@@ -8,12 +8,30 @@ from dataclasses import dataclass
 import random
 
 
+# Production unsigned fields shared by width and raw-wire lexeme regressions.
+UNSIGNED_FIELDS = [
+    ("policy.version", 32), ("policy.confidence_entry_min", 8), ("policy.max_holding_sessions", 8),
+    ("parameters.version", 32), ("parameters.max_holding_sessions", 8), ("parameters.atr_lookback", 16),
+    ("parameters.bar_seconds", 32), ("input.evidence.atr_lookback", 16),
+    ("input.evidence.bar_seconds", 32), ("input.evidence.completed_bars", 32),
+    ("input.evidence.base_confidence_score", 8), ("input.evidence.confidence_score", 8),
+]
+
+
 @dataclass(frozen=True)
 class Fixture:
     name: str
     request: dict
     status: str | None
     error: str | None = None
+    wire_replacements: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True)
+class MalformedFixture:
+    name: str
+    request: dict
+    diagnostic: str
 
 
 def baseline():
@@ -84,6 +102,25 @@ def formula_fixtures():
     add("accepted/quote-one-nanosecond-inside", {"input.quote.observed_at": "2026-10-30T13:59:50.000000001Z"})
     add("accepted/represented-leap-second", {"input.quote.observed_at": "2026-10-30T13:59:60.5Z"})
     add("accepted/utc-offset", {"input.quote.observed_at": "2026-10-30T16:00:00+02:00"})
+    add("accepted/subnanosecond-truncation", {"input.quote.observed_at": "2026-10-30T13:59:59.123456789987Z"})
+    for name, deadline in [
+        ("ordinary-maximum", "+262142-12-31T23:59:59.999999999Z"),
+        ("final-leap-second", "+262142-12-31T23:59:60Z"),
+        ("final-leap-maximum", "+262142-12-31T23:59:60.999999999Z"),
+    ]:
+        add("accepted/" + name, {"input.holding_deadline_at": deadline})
+    unicode_request = changed(base, {"input.account.snapshot_id": "account_😀𐀀\U0010ffff",
+                                     "input.market_snapshot_id": "market_😀",
+                                     "input.evidence.snapshot_id": "bars_𐀀"})
+    for name, replacements in [
+        ("escaped", ((r"\ud83d\ude00", r"\uD83D\uDE00"), ('"snapshot_id"', r'"\u0073napshot_id"'))),
+        ("utf8", ((r"\ud83d\ude00", "😀"), (r"\ud800\udc00", "𐀀"), (r"\udbff\udfff", "\U0010ffff"))),
+    ]:
+        cases.append(Fixture("formula/accepted/unicode/" + name, unicode_request, "ACCEPTED",
+                             wire_replacements=replacements))
+    for mode in ["paper", "shadow", "live"]:
+        add("accepted/account-mode/" + mode, {"input.account.mode": mode})
+    add("accepted/maximum-account-id", {"input.account.account_id": "a" * 96})
     add("accepted/maximum-cash-rounding", {"input.account.spendable_cash.amount": "79228162514264337593543950335",
                                          "input.rules.quantity_step": "1", "input.rules.currency_unit": "1"})
     no_charges = {"input.entry_costs.fixed.amount": "0", "input.entry_costs.uncertainty.amount": "0",
@@ -220,6 +257,15 @@ def formula_fixtures():
     add("rejected/duplicate-position", {"input.account.positions": [pos, pos]}, "duplicate position")
     order = {"broker_order_id": "broker_1", "client_intent_id": None, "instrument_id": "test_stock", "side": "BUY",
              "quantity": "1", "filled_quantity": "0", "status": "OPEN"}
+    for side in ["BUY", "SELL"]:
+        for status, filled in [("OPEN", "0"), ("PARTIALLY_FILLED", "0.5"), ("FILLED", "1"),
+                               ("CANCELLED", "0"), ("REJECTED", "0"), ("UNKNOWN", "0")]:
+            add("accepted/order/" + side + "/" + status, {"input.account.orders": [
+                {**order, "side": side, "status": status, "filled_quantity": filled, "client_intent_id": "intent_1"}]})
+    optional_order = {key: value for key, value in order.items() if key != "client_intent_id"}
+    add("accepted/absent-optional-intent", {"input.account.orders": [optional_order]})
+    optional_costs = {key: value for key, value in base["input"]["entry_costs"].items() if key != "fx"}
+    add("accepted/absent-optional-fx", {"input.entry_costs": optional_costs, "input.exit_costs": optional_costs})
     for name, orders, error in [
         ("duplicate-order", [order, order], "invalid or duplicate broker order"),
         ("negative-order", [{**order, "quantity": "-1"}], "invalid broker quantity"),
@@ -233,6 +279,12 @@ def formula_fixtures():
         "input.evidence.last_completed_at": "+262142-12-31T23:59:13Z", "input.evidence.available_at": "+262142-12-31T23:59:28Z",
         "input.evidence.valid_until": "+262142-12-31T23:59:59Z", "input.valid_until": "+262142-12-31T23:59:59Z",
         "input.holding_deadline_at": "+262142-12-31T23:59:59Z"}, "formula validity timestamp overflow")
+    add("rejected/final-leap-duration-overflow", {
+        "as_of": "+262142-12-31T23:59:60.5Z", "input.account.observed_at": "+262142-12-31T23:59:60.5Z",
+        "input.quote.observed_at": "+262142-12-31T23:59:60.5Z", "input.quote.received_at": "+262142-12-31T23:59:60.5Z",
+        "input.evidence.last_completed_at": "+262142-12-31T23:59:13Z", "input.evidence.available_at": "+262142-12-31T23:59:28Z",
+        "input.evidence.valid_until": "+262142-12-31T23:59:60.9Z", "input.valid_until": "+262142-12-31T23:59:60.9Z",
+        "input.holding_deadline_at": "+262142-12-31T23:59:60.999999999Z"}, "formula validity timestamp overflow")
     add("rejected/fx-timestamp-overflow", {
         **fx_updates, "as_of": "+262142-12-31T23:59:49Z", "input.account.observed_at": "+262142-12-31T23:58:50Z",
         "input.quote.observed_at": "+262142-12-31T23:59:40Z", "input.quote.received_at": "+262142-12-31T23:59:40Z",
@@ -310,3 +362,71 @@ def generated_fixtures():
 
 def fixtures():
     return formula_fixtures() + decimal_fixtures() + generated_fixtures()
+
+
+def malformed_fixtures():
+    base = baseline()
+    order = {"broker_order_id": "broker_1", "client_intent_id": "intent_1", "instrument_id": "test_stock",
+             "side": "BUY", "quantity": "1", "filled_quantity": "0", "status": "OPEN"}
+    base["input"]["account"]["orders"] = [order]
+    base["input"]["account"]["positions"] = [{"instrument_id": "test_stock", "quantity": "1"}]
+    cases = []
+
+    def add(name, updates, diagnostic):
+        cases.append(MalformedFixture("parse/" + name, changed(base, updates), diagnostic))
+
+    for path in ["input.account.account_id", "input.quote.instrument_id", "input.account.positions.0.instrument_id",
+                 "input.account.orders.0.instrument_id", "input.account.orders.0.client_intent_id"]:
+        for index, value in enumerate(["", "not an id", "../escape", "é", "a" * 97]):
+            add(path + "/" + str(index), {path: value}, "invalid identifier")
+    for path, values in [
+        ("input.account.mode", ["PAPER", "", "demo"]),
+        ("input.account.orders.0.side", ["buy", "", "HOLD"]),
+        ("input.account.orders.0.status", ["filled", "", "CANCELED", "DONE"]),
+        ("parameters.family", ["trend", "UNKNOWN"]),
+        ("input.evidence.family", ["trend", "UNKNOWN"]),
+    ]:
+        for value in values:
+            add(path + "/" + value, {path: value}, "unknown enum value")
+    for path in ["input.account.spendable_cash.currency", "input.quote.currency", "input.entry_range.currency",
+                 "input.entry_costs.fixed.currency", "input.exit_costs.uncertainty.currency"]:
+        for value in ["eur", "EU", "EURO", "ÉUR"]:
+            add(path + "/" + value, {path: value}, "currency must be three uppercase letters")
+    for path, width in UNSIGNED_FIELDS:
+        add(path + "/overflow", {path: 2**width}, "integer exceeds production field width")
+        add(path + "/negative", {path: -1}, "Natural number expected")
+        add(path + "/floating-integer", {path: 1.0}, "Natural number expected")
+    # Exercise every nested object, not just the outer request envelope.
+    for path in ["", "policy", "envelope", "parameters", "input", "input.account", "input.account.spendable_cash",
+                 "input.account.positions.0", "input.account.orders.0", "input.quote", "input.entry_range",
+                 "input.entry_costs", "input.entry_costs.fixed", "input.entry_costs.uncertainty",
+                 "input.exit_costs", "input.exit_costs.fixed", "input.exit_costs.uncertainty", "input.rules", "input.evidence"]:
+        add("unknown-field/" + path, {(path + "." if path else "") + "unexpected": True}, "unknown JSON field")
+    for field in ["snapshot_id", "account_id", "mode", "spendable_cash", "positions", "orders", "observed_at"]:
+        account = deepcopy(base["input"]["account"])
+        del account[field]
+        # The precise missing-field path is emitted by the real reference parser.
+        add("missing-account/" + field, {"input.account": account}, field)
+    for path, value, diagnostic in [
+        ("input.account.mode", None, "String expected"),
+        ("input.account.orders.0.side", False, "String expected"),
+        ("input.account.orders.0.status", 1, "String expected"),
+        ("input.account.orders.0.quantity", "NaN", "invalid checked decimal"),
+        ("input.account.orders.0.quantity", "79228162514264337593543950336", "invalid checked decimal"),
+        ("input.account.orders.0.filled_quantity", {}, "String expected"),
+        ("input.account.positions", {}, "array expected"),
+        ("input.account.orders", None, "array expected"),
+        ("input.quote.tradable", "true", "Bool expected"),
+    ]:
+        add("invalid-type/" + path + "/" + repr(value), {path: value}, diagnostic)
+    for value in ["2026-02-30T14:00:00Z", "2026-13-01T14:00:00Z", "2026-10-30T24:00:00Z",
+                  "2026-10-30T14:60:00Z", "2026-10-30T14:00:61Z", "2026-10-30T14:00:00+24:00",
+                  "-262143-01-01T00:00:00+00:01", "+262142-12-31T23:59:59-00:01",
+                  "+262142-12-31T23:59:60-00:01", "+262142-12-31T23:59:60.999999999-00:01"]:
+        add("invalid-calendar/" + value, {"input.quote.observed_at": value}, "Integer expected")
+    fx = {"from": "USD", "to": "EUR", "rate": "0.9", "observed_at": base["as_of"]}
+    add("fx/unknown-field", {"input.entry_costs.fx": {**fx, "unexpected": True}}, "unknown JSON field")
+    add("fx/invalid-currency", {"input.exit_costs.fx": {**fx, "from": "usd"}}, "currency must be three uppercase letters")
+    cases.append(MalformedFixture("parse/decimal/unknown-field", {"kind": "DECIMAL", "operation": "ADD", "a": "1", "b": "2", "unexpected": True}, "unknown JSON field"))
+    cases.append(MalformedFixture("parse/decimal/unknown-operation", {"kind": "DECIMAL", "operation": "EXP", "a": "1", "b": "2"}, "unknown enum value"))
+    return cases

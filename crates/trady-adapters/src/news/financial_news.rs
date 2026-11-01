@@ -69,6 +69,18 @@ pub(super) fn fetch<T: HttpTransport>(
         },
         now,
     )?;
+    if source.kind == SourceKind::Gdelt
+        && std::str::from_utf8(&response.body).is_ok_and(|text| {
+            text.trim_start()
+                .starts_with("Please limit requests to one every 5 seconds")
+        })
+    {
+        return Err(SourceFailure {
+            status: CollectionStatus::RateLimited,
+            reason: "gdelt_rate_limited".into(),
+            retry_at: Some(now + Duration::seconds(60)),
+        });
+    }
     let value: Value = serde_json::from_slice(&response.body)
         .map_err(|_| SourceFailure::unavailable("financial_news_json_invalid"))?;
     if value.get("error").is_some() || value.get("Information").is_some() {
@@ -79,7 +91,17 @@ pub(super) fn fetch<T: HttpTransport>(
     } else {
         value["articles"].as_array()
     }
-    .ok_or_else(|| SourceFailure::unavailable("financial_news_rows_missing"))?;
+    .ok_or_else(|| {
+        if source.kind == SourceKind::Gdelt {
+            SourceFailure {
+                status: CollectionStatus::Unavailable,
+                reason: "gdelt_articles_missing".into(),
+                retry_at: Some(now + Duration::seconds(60)),
+            }
+        } else {
+            SourceFailure::unavailable("financial_news_rows_missing")
+        }
+    })?;
     let saturated = rows.len() >= window.limit;
     let mut items = vec![];
     for row in rows.iter().take(window.limit) {

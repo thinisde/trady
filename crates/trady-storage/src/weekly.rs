@@ -529,6 +529,18 @@ impl PgReleaseStore {
         )?;
         let c: ReleaseCandidate = decode(resolved["candidate"].clone())?;
         c.validate()?;
+        let current: Value = self
+            .client
+            .query_one(
+                "SELECT release.current_active($1,$2)",
+                &[&c.account_id.as_str(), &mode_name(c.mode)],
+            )
+            .map_err(db)?
+            .get(0);
+        require(
+            current["release_id"].as_str() == Some(id),
+            "active release changed during resolution",
+        )?;
         let verification_id = resolved["evidence"]["verification"]
             .as_str()
             .ok_or_else(|| Error("verification missing".into()))?;

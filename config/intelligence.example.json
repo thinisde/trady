@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "scope": {"owner_id": "paper_owner", "account_id": "paper_demo"},
+  "enabled": [
+    "OPTIONS",
+    "COORDINATION",
+    "EVENT",
+    "SHORT_INTEREST",
+    "INSIDER",
+    "CROSS_ASSET",
+    "ATTENTION",
+    "ACCOUNTING",
+    "MICROSTRUCTURE",
+    "TAX"
+  ],
+  "sources": [],
+  "max_input_bytes": 1048576,
+  "max_query_records": 128
+}

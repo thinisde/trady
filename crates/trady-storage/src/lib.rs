@@ -2,6 +2,7 @@
 
 pub mod autonomous;
 pub mod financial;
+pub mod intelligence;
 pub mod research;
 pub mod research_jobs;
 pub mod sessions;
@@ -28,6 +29,10 @@ pub const VERIFIED_HOLDINGS_SQL: &str =
 pub const WEEKLY_LAB_SQL: &str = include_str!("../../../migrations/0006_weekly_lab.sql");
 pub const RESEARCH_JOBS_SQL: &str = include_str!("../../../migrations/0007_research_jobs.sql");
 pub const FINANCIAL_DATA_SQL: &str = include_str!("../../../migrations/0009_financial_data.sql");
+pub const OPTIONAL_INTELLIGENCE_SQL: &str =
+    include_str!("../../../migrations/0010_optional_intelligence.sql");
+pub const FAIL_CLOSED_STORAGE_SQL: &str =
+    include_str!("../../../migrations/0011_fail_closed_storage.sql");
 
 fn db(error: postgres::Error) -> Error {
     // Deliberately exclude connection strings and provider error detail from service output.
@@ -63,6 +68,8 @@ pub fn migrate(dsn: &str) -> Result<()> {
         (7, RESEARCH_JOBS_SQL),
         (8, VERIFIED_HOLDINGS_SQL),
         (9, FINANCIAL_DATA_SQL),
+        (10, OPTIONAL_INTELLIGENCE_SQL),
+        (11, FAIL_CLOSED_STORAGE_SQL),
     ] {
         if let Some(row) = tx
             .query_opt(

@@ -1,0 +1,335 @@
+{
+  "name": "news_status",
+  "command": [
+    "target/debug/trady",
+    "news",
+    "status"
+  ],
+  "exit": 0,
+  "response": {
+    "coverage_gaps": [
+      "Truth_Social_not_configured",
+      "live_entitlements_and_content_rights_require_operator_review"
+    ],
+    "entry_authorized": false,
+    "provider_access_verified": false,
+    "sources": [
+      {
+        "account": null,
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "primary_verification_required"
+        ],
+        "daily_request_limit": 100,
+        "delivery": "ON_DEMAND",
+        "enabled": false,
+        "interval_seconds": 3600,
+        "kind": "FINNHUB",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "finnhub_company_news"
+      },
+      {
+        "account": null,
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "primary_verification_required"
+        ],
+        "daily_request_limit": 100,
+        "delivery": "ON_DEMAND",
+        "enabled": false,
+        "interval_seconds": 3600,
+        "kind": "GDELT",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "gdelt_company_news"
+      },
+      {
+        "account": null,
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "primary_verification_required"
+        ],
+        "daily_request_limit": 400,
+        "delivery": "ON_DEMAND",
+        "enabled": false,
+        "interval_seconds": 900,
+        "kind": "GOOGLE_NEWS_RSS",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 168,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "google_market"
+      },
+      {
+        "account": null,
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "primary_verification_required"
+        ],
+        "daily_request_limit": 400,
+        "delivery": "ON_DEMAND",
+        "enabled": false,
+        "interval_seconds": 900,
+        "kind": "GOOGLE_NEWS_RSS",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 168,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "google_technology"
+      },
+      {
+        "account": null,
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "primary_verification_required"
+        ],
+        "daily_request_limit": 400,
+        "delivery": "ON_DEMAND",
+        "enabled": false,
+        "interval_seconds": 900,
+        "kind": "PUBLISHER_RSS",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 168,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "publisher_business"
+      },
+      {
+        "account": null,
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "primary_verification_required"
+        ],
+        "daily_request_limit": 25,
+        "delivery": "ON_DEMAND",
+        "enabled": false,
+        "interval_seconds": 900,
+        "kind": "ALPHA_VANTAGE",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "alpha_vantage"
+      },
+      {
+        "account": null,
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "primary_verification_required"
+        ],
+        "daily_request_limit": 100,
+        "delivery": "ON_DEMAND",
+        "enabled": false,
+        "interval_seconds": 60,
+        "kind": "X_LOOKUP",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "x_lookup"
+      },
+      {
+        "account": {
+          "handle": "realDonaldTrump",
+          "ownership_reference": "",
+          "person": "Donald Trump",
+          "priority": 0,
+          "scope": [
+            "trade_policy",
+            "tariffs",
+            "sanctions",
+            "macro"
+          ],
+          "user_id": null,
+          "verified_at": null
+        },
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "no_stream_or_webhooks",
+          "no_delete_or_unrepost_delivery",
+          "provider_limited_history",
+          "no_subsecond_latency_guarantee"
+        ],
+        "daily_request_limit": 100,
+        "delivery": "TIMELINE_POLLING",
+        "enabled": false,
+        "interval_seconds": 60,
+        "kind": "X_TIMELINE",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "x_trump"
+      },
+      {
+        "account": {
+          "handle": "elonmusk",
+          "ownership_reference": "",
+          "person": "Elon Musk",
+          "priority": 0,
+          "scope": [
+            "TSLA",
+            "AI",
+            "technology",
+            "crypto_context"
+          ],
+          "user_id": null,
+          "verified_at": null
+        },
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "no_stream_or_webhooks",
+          "no_delete_or_unrepost_delivery",
+          "provider_limited_history",
+          "no_subsecond_latency_guarantee"
+        ],
+        "daily_request_limit": 100,
+        "delivery": "TIMELINE_POLLING",
+        "enabled": false,
+        "interval_seconds": 60,
+        "kind": "X_TIMELINE",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "x_musk"
+      },
+      {
+        "account": {
+          "handle": "TheRoaringKitty",
+          "ownership_reference": "",
+          "person": "Keith Gill",
+          "priority": 0,
+          "scope": [
+            "GME_context",
+            "meme_stock_context"
+          ],
+          "user_id": null,
+          "verified_at": null
+        },
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "no_stream_or_webhooks",
+          "no_delete_or_unrepost_delivery",
+          "provider_limited_history",
+          "no_subsecond_latency_guarantee"
+        ],
+        "daily_request_limit": 100,
+        "delivery": "TIMELINE_POLLING",
+        "enabled": false,
+        "interval_seconds": 60,
+        "kind": "X_TIMELINE",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "x_gill"
+      },
+      {
+        "account": {
+          "handle": "BillAckman",
+          "ownership_reference": "",
+          "person": "Bill Ackman",
+          "priority": 1,
+          "scope": [
+            "activist_targets",
+            "macro"
+          ],
+          "user_id": null,
+          "verified_at": null
+        },
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "no_stream_or_webhooks",
+          "no_delete_or_unrepost_delivery",
+          "provider_limited_history",
+          "no_subsecond_latency_guarantee"
+        ],
+        "daily_request_limit": 100,
+        "delivery": "TIMELINE_POLLING",
+        "enabled": false,
+        "interval_seconds": 60,
+        "kind": "X_TIMELINE",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "x_ackman"
+      },
+      {
+        "account": {
+          "handle": "Carl_C_Icahn",
+          "ownership_reference": "",
+          "person": "Carl Icahn",
+          "priority": 1,
+          "scope": [
+            "activist_targets",
+            "corporate_actions"
+          ],
+          "user_id": null,
+          "verified_at": null
+        },
+        "activation_gap": "source_disabled",
+        "capability_gaps": [
+          "no_stream_or_webhooks",
+          "no_delete_or_unrepost_delivery",
+          "provider_limited_history",
+          "no_subsecond_latency_guarantee"
+        ],
+        "daily_request_limit": 100,
+        "delivery": "TIMELINE_POLLING",
+        "enabled": false,
+        "interval_seconds": 60,
+        "kind": "X_TIMELINE",
+        "rights": {
+          "llm_processing": false,
+          "retention_hours": 24,
+          "store_content": false,
+          "terms_reference": ""
+        },
+        "rule": null,
+        "source_id": "x_icahn"
+      }
+    ],
+    "x_budget": null
+  },
+  "error": ""
+}

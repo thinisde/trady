@@ -1,0 +1,1344 @@
+{
+  "tested_at": "2026-10-31T23:36:00.957560+00:00",
+  "trading212_api_excluded": true,
+  "scope": "Local implementation remediation; empty credentials, mock broker transports and disposable PostgreSQL. No deployment or real credential rotation.",
+  "checks": [
+    {
+      "step": "rust",
+      "command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked",
+        "--offline",
+        "--no-fail-fast"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:20:10.592018+00:00",
+      "seconds": 24.1,
+      "log": "/tmp/trady-remediation-20261031/rust.log",
+      "trading212_api_excluded": true,
+      "tests": 525,
+      "failed": 0,
+      "ignored": 34,
+      "targets": 56,
+      "output_tail": "d, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/research.rs (target/debug/deps/research-526d1758e11a15ba)\n\nrunning 2 tests\ntest durable_collection_replay_atomicity_corrections_retention_and_privileges ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest simultaneous_collectors_serialize_a_shared_x_edit_chain ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\n\ntest result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/research_jobs.rs (target/debug/deps/research_jobs-d475d654076eb5e8)\n\nrunning 2 tests\ntest durable_jobs_replay_budget_fencing_scope_and_real_finbert_client_fixture ... ignored, requires isolated PostgreSQL; run through root disposable PostgreSQL runner\ntest gateway_confirmation_is_owner_bound_replay_safe_and_control_results_are_durable_notifications ... ignored, requires isolated PostgreSQL; run through root disposable PostgreSQL runner\n\ntest result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/sessions.rs (target/debug/deps/sessions-1be187b5710dae37)\n\nrunning 1 test\ntest session_reconnect_scope_races_revisions_and_expired_worker_fencing ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/trading_research.rs (target/debug/deps/trading_research-ce4263354db5e6b6)\n\nrunning 1 test\ntest entry_context_resolves_persisted_economics_screening_and_feature_scope ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/verified_holdings.rs (target/debug/deps/verified_holdings-1e9c6824be6c74bd)\n\nrunning 3 tests\ntest holding_advice_requires_fresh_executor_economics_and_cannot_reverse_exit ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest holding_queue_locks_sources_and_tracks_later_retention_changes ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest queued_holding_research_retention_removes_payloads_and_keeps_scoped_identities ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\n\ntest result: ok. 0 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/weekly_durable.rs (target/debug/deps/weekly_durable-1d0d78644a09e2c9)\n\nrunning 6 tests\ntest release_evidence_requires_independent_roles_real_sessions_and_untampered_content ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest release_fixed_snapshots_cannot_reuse_readiness_or_replaced_active_pointer ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest release_sql_null_transitions_and_expired_runtime_readiness_fail_closed ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest weekly_checkpoints_are_monotonic_and_interrupted_holdout_is_never_replayed ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest weekly_sql_null_fences_missing_holdout_bindings_and_ledger_fields_fail_closed ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest weekly_store_restart_concurrency_fencing_and_campaign_budget_are_durable ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\n\ntest result: ok. 0 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/x_monitoring.rs (target/debug/deps/x_monitoring-43729a9e69499993)\n\nrunning 2 tests\ntest local_x_export_uses_ingestion_time_and_current_rights_without_backdating_late_edits ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\ntest shared_budget_survives_restarts_concurrency_revisions_failures_and_provider_reconciliation ... ignored, requires isolated PostgreSQL; run python3 scripts/test-postgres.py\n\ntest result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests trady_adapters\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests trady_application\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests trady_domain\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests trady_policy\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests trady_storage\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+    },
+    {
+      "step": "postgres",
+      "command": [
+        "python3",
+        "/tmp/trady-remediation-20261031/final-postgres.py"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:23:26.951113+00:00",
+      "seconds": 30.65,
+      "log": "/tmp/trady-remediation-20261031/postgres.log",
+      "trading212_api_excluded": true,
+      "tests": 34,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 16,
+      "output_tail": "\"service\": \"gateway\",\n  \"status\": \"foundation_probe_complete\"\n}\n{\n  \"account_id\": \"paper_demo_1793489001852552\",\n  \"cash\": {\n    \"amount\": \"1\",\n    \"currency\": \"EUR\"\n  },\n  \"duplicate_intent_created\": false,\n  \"entry_authorized\": false,\n  \"missing_response_state\": \"RECOVERY_REQUIRED\",\n  \"mode\": \"paper\",\n  \"note\": \"Offline fixture only. Protection and broker submission are not implemented.\",\n  \"positions\": [\n    {\n      \"instrument_id\": \"fixture_stock\",\n      \"quantity\": \"4.9\"\n    }\n  ],\n  \"reconciled_fill_state\": \"OPEN_UNPROTECTED\",\n  \"remaining_unresolved_intents\": 0,\n  \"storage\": \"postgres_after_reconnect\"\n}\n{\n  \"entry_authorized\": false,\n  \"reports\": [\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"finnhub_company_news\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"gdelt_company_news\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"google_market\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"google_technology\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"publisher_business\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"alpha_vantage\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"x_trump\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"x_musk\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"x_gill\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"x_ackman\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    },\n    {\n      \"changed_items\": 0,\n      \"gaps\": [\n        \"source_disabled\"\n      ],\n      \"pages\": 0,\n      \"retry_at\": null,\n      \"source_id\": \"x_icahn\",\n      \"status\": \"DISABLED\",\n      \"watermark\": null\n    }\n  ],\n  \"research_degraded\": true\n}\n{\n  \"entry_authorized\": false,\n  \"evidence_verified\": false,\n  \"items\": [],\n  \"untrusted_source_data\": true\n}\n{\n  \"account_id\": \"paper_demo\",\n  \"database\": \"restricted_role_verified\",\n  \"entry_authorized\": false,\n  \"entry_blockers\": [\n    \"research/readiness verifier is not implemented\",\n    \"approved skill bundle is not loaded\",\n    \"usable Perpetual assessment is unavailable\",\n    \"validated execution and protection workflow is not implemented\",\n    \"required provider capabilities are unknown, unsupported or expired\"\n  ],\n  \"mode\": \"paper\",\n  \"policy_version\": 1,\n  \"service\": \"analyst\",\n  \"status\": \"foundation_probe_complete\"\n}\n{\n  \"account_id\": \"paper_demo\",\n  \"database\": \"restricted_role_verified\",\n  \"entry_authorized\": false,\n  \"entry_blockers\": [\n    \"research/readiness verifier is not implemented\",\n    \"approved skill bundle is not loaded\",\n    \"usable Perpetual assessment is unavailable\",\n    \"validated execution and protection workflow is not implemented\",\n    \"required provider capabilities are unknown, unsupported or expired\"\n  ],\n  \"mode\": \"paper\",\n  \"policy_version\": 1,\n  \"service\": \"executor\",\n  \"status\": \"foundation_probe_complete\"\n}\n{\n  \"account_id\": \"paper_demo\",\n  \"database\": \"restricted_role_verified\",\n  \"entry_authorized\": false,\n  \"entry_blockers\": [\n    \"research/readiness verifier is not implemented\",\n    \"approved skill bundle is not loaded\",\n    \"usable Perpetual assessment is unavailable\",\n    \"validated execution and protection workflow is not implemented\",\n    \"required provider capabilities are unknown, unsupported or expired\"\n  ],\n  \"mode\": \"paper\",\n  \"policy_version\": 1,\n  \"service\": \"gateway\",\n  \"status\": \"foundation_probe_complete\"\n}\nDisposable credential plan, rotation and published-endpoint login checks passed.\nRead-only disposable SQL samples passed and were recorded.\nDisposable PostgreSQL integration and CLI checks passed.\n"
+    },
+    {
+      "step": "python_lab",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "lab/tests",
+        "-p",
+        "test_*.py"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:19:16.800144+00:00",
+      "seconds": 47.03,
+      "log": "/tmp/trady-remediation-20261031/python_lab.log",
+      "trading212_api_excluded": true,
+      "tests": 178,
+      "output_tail": "..................................................................................................................................................................................\n----------------------------------------------------------------------\nRan 178 tests in 46.901s\n\nOK\n"
+    },
+    {
+      "step": "proof_inputs",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "lab/proofs",
+        "-p",
+        "test_*.py"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:18:40.488402+00:00",
+      "seconds": 0.16,
+      "log": "/tmp/trady-remediation-20261031/proof_inputs.log",
+      "trading212_api_excluded": true,
+      "tests": 16,
+      "output_tail": "................\n----------------------------------------------------------------------\nRan 16 tests in 0.062s\n\nOK\n"
+    },
+    {
+      "step": "credential_unit_tests",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts/tests",
+        "-p",
+        "test_*.py"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:12:30.677597+00:00",
+      "seconds": 0.11,
+      "log": "/tmp/trady-remediation-20261031/credential_unit_tests.log",
+      "trading212_api_excluded": true,
+      "tests": 23,
+      "output_tail": ".......................\n----------------------------------------------------------------------\nRan 23 tests in 0.022s\n\nOK\n"
+    },
+    {
+      "step": "fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:19:48.695376+00:00",
+      "seconds": 0.82,
+      "log": "/tmp/trady-remediation-20261031/fmt.log",
+      "trading212_api_excluded": true,
+      "output_tail": ""
+    },
+    {
+      "step": "clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:22:59.647920+00:00",
+      "seconds": 2.02,
+      "log": "/tmp/trady-remediation-20261031/clippy.log",
+      "trading212_api_excluded": true,
+      "output_tail": "    Checking trady-storage v0.1.0 (/thinisde/trady/crates/trady-storage)\n    Checking trady-cli v0.1.0 (/thinisde/trady/crates/trady-cli)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.91s\n"
+    },
+    {
+      "step": "build",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--bin",
+        "trady"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:20:36.536778+00:00",
+      "seconds": 0.21,
+      "log": "/tmp/trady-remediation-20261031/build.log",
+      "trading212_api_excluded": true,
+      "output_tail": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s\n"
+    },
+    {
+      "step": "strip",
+      "command": [
+        "objcopy",
+        "--strip-all",
+        "target/debug/trady",
+        "/tmp/trady-remediation-20261031/trady-proof-fixture"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:20:43.076335+00:00",
+      "seconds": 0.17,
+      "log": "/tmp/trady-remediation-20261031/strip.log",
+      "trading212_api_excluded": true,
+      "output_tail": ""
+    },
+    {
+      "step": "proof",
+      "command": [
+        "python3",
+        "lab/proofs/self_test.py",
+        "--lake",
+        "/root/.cache/trady-tools/lean-4.19.0-linux/bin/lake",
+        "--rust",
+        "/tmp/trady-remediation-20261031/trady-proof-fixture",
+        "--output",
+        "/tmp/trady-remediation-20261031/proof-evidence"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:24:04.938449+00:00",
+      "seconds": 198.88,
+      "log": "/tmp/trady-remediation-20261031/proof.log",
+      "trading212_api_excluded": true,
+      "output_tail": "{\"axioms\": [\"Classical.choice\", \"Quot.sound\", \"propext\"], \"clean_build\": true, \"malformed_input_case_count\": 265, \"migration_source_pin_count\": 13, \"negative_checks\": 10, \"parity_case_count\": 937, \"revision_sha256\": \"680d8667ccc37af752b466118f3d656b461b6132f49442b6620f237fa6689869\", \"rust_sha256\": \"151514bd9d6399954ca2acb14daf03f90256db0036a1292ee171449d31238afc\", \"rust_source_pin_count\": 211, \"safety_sha256\": \"363fbb070b8e2f4b02cac63e707fdf6a1af140c78a612c1f4359a076af89f34b\", \"scope\": \"FORMULA_V1\", \"source_pin_count\": 20, \"theorem_count\": 26, \"toolchain\": {\"file_count\": 3019, \"sha256\": \"dde4425feb261ac42b3ee1b9b7371c0a79953e29bee790a347be28b01e11e95f\"}}\n"
+    },
+    {
+      "step": "assets",
+      "command": [
+        "python3",
+        "scripts/verify-assets.py"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:35:35.535807+00:00",
+      "seconds": 0.11,
+      "log": "/tmp/trady-remediation-20261031/assets.log",
+      "trading212_api_excluded": true,
+      "output_tail": "Verified 11 canonical JSON assets, 52 skill records, 195 Markdown files and 1471 local links.\n"
+    },
+    {
+      "step": "diff",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0,
+      "finished_at": "2026-10-31T23:35:36.877095+00:00",
+      "seconds": 0.03,
+      "log": "/tmp/trady-remediation-20261031/diff.log",
+      "trading212_api_excluded": true,
+      "output_tail": ""
+    },
+    {
+      "step": "credential_rotation_smoke",
+      "command": "python3 /tmp/trady-remediation-20261031/rotation-smoke.py",
+      "exit": 0,
+      "roles": 9,
+      "plan_checked": true,
+      "new_passwords_accepted": true,
+      "old_passwords_rejected": true,
+      "dsn_endpoints_verified": true,
+      "same_file_lock_rejected": true,
+      "cross_file_server_lock_rejected": true,
+      "partial_failure_all_original_passwords_restored": true,
+      "idle_timeout_override_verified": true,
+      "lost_session_cannot_rollback_competing_rotation": true,
+      "disposable_container_removed": true
+    }
+  ],
+  "automated_test_total": 776,
+  "automated_test_total_excludes": "18 offline examples, finite parity cases, helper negative checks and runtime/rotation smoke probes.",
+  "proof_summary": {
+    "axioms": [
+      "Classical.choice",
+      "Quot.sound",
+      "propext"
+    ],
+    "clean_build": true,
+    "malformed_input_case_count": 265,
+    "migration_source_pin_count": 13,
+    "negative_checks": 10,
+    "parity_case_count": 937,
+    "revision_sha256": "680d8667ccc37af752b466118f3d656b461b6132f49442b6620f237fa6689869",
+    "rust_sha256": "151514bd9d6399954ca2acb14daf03f90256db0036a1292ee171449d31238afc",
+    "rust_source_pin_count": 211,
+    "safety_sha256": "363fbb070b8e2f4b02cac63e707fdf6a1af140c78a612c1f4359a076af89f34b",
+    "scope": "FORMULA_V1",
+    "source_pin_count": 20,
+    "theorem_count": 26,
+    "toolchain": {
+      "file_count": 3019,
+      "sha256": "dde4425feb261ac42b3ee1b9b7371c0a79953e29bee790a347be28b01e11e95f"
+    }
+  },
+  "proof_lock": {
+    "adapter_sources": {
+      "lab/lean/bridge.py": "7e6f6e144589667aa1fe1ad24ffa2dbd98d307a00924d1274594d12a1d5ece21"
+    },
+    "approved_axioms": [
+      "Classical.choice",
+      "Quot.sound",
+      "propext"
+    ],
+    "lake_sha256": "5111aee5c9434ab05d4265606475ef22e8bda69aaf3a0657b61a7eec6e550bed",
+    "lean_sha256": "92c3d35b5bfaa5e0fea413a775d504cf46cd95e1345df61c2274f76779e7e023",
+    "revision": {
+      "candidate_id": "proof_fixture",
+      "request": {
+        "as_of": "2026-10-30T14:00:00Z",
+        "envelope": {
+          "max_entry_allowance_fraction": "0.005",
+          "max_stop_atr_multiple": "4",
+          "max_target_net_fraction": "0.03",
+          "min_stop_atr_multiple": "1",
+          "min_target_net_fraction": "0.01"
+        },
+        "input": {
+          "account": {
+            "account_id": "paper_limits_test",
+            "mode": "paper",
+            "observed_at": "2026-10-30T14:00:00Z",
+            "orders": [],
+            "positions": [],
+            "snapshot_id": "account_1",
+            "spendable_cash": {
+              "amount": "1000",
+              "currency": "EUR"
+            }
+          },
+          "entry_costs": {
+            "fixed": {
+              "amount": "0.1",
+              "currency": "EUR"
+            },
+            "fx": null,
+            "rate": "0.001",
+            "uncertainty": {
+              "amount": "0.1",
+              "currency": "EUR"
+            }
+          },
+          "entry_range": {
+            "currency": "EUR",
+            "maximum": "101",
+            "minimum": "99"
+          },
+          "evidence": {
+            "atr": "0.5",
+            "atr_lookback": 14,
+            "available_at": "2026-10-30T13:59:30Z",
+            "bar_seconds": 60,
+            "base_confidence_score": 100,
+            "completed_bars": 30,
+            "confidence_score": 100,
+            "exceptional_verified": false,
+            "family": "TREND",
+            "last_completed_at": "2026-10-30T13:59:15Z",
+            "minimum_stop_distance": "0.01",
+            "noise_distance": "0.1",
+            "sentiment_entry_allowed": true,
+            "sentiment_target_ceiling": "0.03",
+            "signal_eligible": true,
+            "snapshot_id": "bars_1",
+            "valid_until": "2026-10-30T14:05:00Z"
+          },
+          "exit_costs": {
+            "fixed": {
+              "amount": "0.1",
+              "currency": "EUR"
+            },
+            "fx": null,
+            "rate": "0.001",
+            "uncertainty": {
+              "amount": "0.1",
+              "currency": "EUR"
+            }
+          },
+          "holding_deadline_at": "2026-11-02T14:00:00Z",
+          "market_snapshot_id": "market_1",
+          "quote": {
+            "ask": "100",
+            "bid": "99.99",
+            "currency": "EUR",
+            "instrument_id": "test_stock",
+            "observed_at": "2026-10-30T14:00:00Z",
+            "received_at": "2026-10-30T14:00:00Z",
+            "tradable": true
+          },
+          "rules": {
+            "currency_unit": "0.01",
+            "minimum_quantity": "0.01",
+            "price_tick": "0.01",
+            "quantity_step": "0.01"
+          },
+          "valid_until": "2026-10-30T14:05:00Z"
+        },
+        "kind": "FORMULA",
+        "max_account_risk_fraction": "0.01",
+        "parameters": {
+          "atr_lookback": 14,
+          "bar_seconds": 60,
+          "entry_allowance_fraction": "0.001",
+          "family": "TREND",
+          "max_holding_sessions": 3,
+          "stop_atr_multiple": "2",
+          "target_net_fraction": "0.03",
+          "version": 1
+        },
+        "policy": {
+          "add_to_position": false,
+          "confidence_entry_min": 90,
+          "entry_cash_fraction": "0.98",
+          "exceptional_targets_enabled": false,
+          "leverage": false,
+          "max_holding_sessions": 5,
+          "max_initial_loss_fraction": "0.02",
+          "max_target_fraction": "0.10",
+          "min_reward_to_risk": "1.5",
+          "rotation_enabled": false,
+          "version": 1
+        }
+      },
+      "schema_version": 1,
+      "source_commit": "8bc58105fc3a451db88bfc4828e98d6726de8dad"
+    },
+    "revision_sha256": "680d8667ccc37af752b466118f3d656b461b6132f49442b6620f237fa6689869",
+    "rust_sha256": "151514bd9d6399954ca2acb14daf03f90256db0036a1292ee171449d31238afc",
+    "rust_sources": {
+      "Cargo.lock": "d1d5b5ba963551ea5e5d3b5e085a2100ffe1ee838b3b3b39ef6516600458e447",
+      "Cargo.toml": "494b04f6661d262f8ec99e29e6a69d2f55be72e082b821a0a280c1b18e9fb237",
+      "crates/trady-adapters/Cargo.toml": "5b152c8497ef72bb6486c8cfa9b7ab927bf0c5680ee82748b79d4cc90e8b6a73",
+      "crates/trady-adapters/src/api_health.rs": "5adb3a709768e0f900c6445e5aca51d85c295d6e19276525848848f3d5fe35ca",
+      "crates/trady-adapters/src/autonomous/market.rs": "5a1d96e41b2f8bf09d95f46fb804481c16324f64b9b9d64fd9b26347e2883722",
+      "crates/trady-adapters/src/autonomous/mod.rs": "81580464e4ed85ef418d58cb0e3ff3d7a685fe2e35fb0b08ff439f9152d8ab08",
+      "crates/trady-adapters/src/credentials.rs": "fa0df7d1955b2c46fe4163cc949da6091b923d32d52c4c2bac8b1daf8839fe5d",
+      "crates/trady-adapters/src/financial/mod.rs": "e70e3ec5eb3968834d75cb893e4c35613ff97e8c378f282d6342e3dd3ee1beef",
+      "crates/trady-adapters/src/financial/parse.rs": "50c8ce6b9ba1d0c81207bb90142b4280f6490824d6e14bc998161b3d563238bf",
+      "crates/trady-adapters/src/financial/tests.rs": "b15ea8285407b4ff7a50894be3cb63aa0e414d28775c7a8903799819981fd377",
+      "crates/trady-adapters/src/finbert/mod.rs": "850dcea5d419caaf6536720260496c4bf3fbb4aee6c53d503616e7810ad31c8f",
+      "crates/trady-adapters/src/inputs_service/calendar.rs": "06fd97e9f283a8ef1ce0a12458dfe1db572c82858986f888c4772c2c7b13e5a3",
+      "crates/trady-adapters/src/inputs_service/http.rs": "d36594e6eb8aca773458699084ca25d058d97c188526ff61810c87caf9c75c50",
+      "crates/trady-adapters/src/inputs_service/mod.rs": "cf8a5fe8b6e7fe822c199aad1e44535bdbfa024606991fe72c960ae83eae22b2",
+      "crates/trady-adapters/src/inputs_service/store.rs": "cd0fe4c7d74702cd440818ad36349bce952a9c386c9f1944217741d268df89dd",
+      "crates/trady-adapters/src/inputs_service/tests.rs": "d4345c4ff10e33e7600d07d6c6ef25229b2eef40686f82083032ce899d4fb87e",
+      "crates/trady-adapters/src/inputs_service/validate.rs": "fa12ccb105cdc660f0b1b13f353ec118dca12a772dc791148f1a6988f3747af3",
+      "crates/trady-adapters/src/intelligence/book.rs": "f1e4e0cdc2561b621cd2383235996735a3ac3c9ccfc9bcb6ef6a4ca21d70a302",
+      "crates/trady-adapters/src/intelligence/mod.rs": "8701bd196c1df8a44dd2c5f5db7c8898386a4d0f2b5ef0d33dcff164de1de3ae",
+      "crates/trady-adapters/src/intelligence/ownership.rs": "dfab7affae70f28989580341fab4a4df46edb0f9aed2c9b557298b9a4c62bbbb",
+      "crates/trady-adapters/src/intelligence/tools.rs": "f8c1a29bd9834dfba46e576076507c15d1cf522db516527be748a07345c3b7a1",
+      "crates/trady-adapters/src/lib.rs": "c4e19695b41de0a231fd9ade909ac3fe00463454b235e8707221df715240f003",
+      "crates/trady-adapters/src/news/alpha.rs": "b32db5ef6eee6269ab717de50def98df88182b944cc888785edb927881c2c409",
+      "crates/trady-adapters/src/news/financial_news.rs": "efd0dca382ba319ce2f6115b8601e9a67c9cc91426863d488b0d80868cc7d89b",
+      "crates/trady-adapters/src/news/http.rs": "5b9c11df8d206e70441e7ba1a4e3f26af1031a43b11321b0836c5fbbd1c3c07b",
+      "crates/trady-adapters/src/news/mod.rs": "0637db7c54b9fe4e974bfc791ab87cd215018376f114eefe7cde159db52e9359",
+      "crates/trady-adapters/src/news/rss.rs": "f9a9cf28e1b11002380f4f75600302158c2cc9bfa0e2a0e14f3c34c1686a2373",
+      "crates/trady-adapters/src/news/tests.rs": "8bcc77e80acc0371f6e5bb3b69986d0b6515b1223a80abacf2777c9699058ac2",
+      "crates/trady-adapters/src/news/x.rs": "bc64c91410cda9a419078b3377a6b7c2172721b3390ca9d682c7d29e3d4b6e77",
+      "crates/trady-adapters/src/news/x_meter.rs": "8198a34a90dea9982f10d7e70fe69074f8e61a3fe5a0553f9b46472ea9073369",
+      "crates/trady-adapters/src/opencode/llm.rs": "9f3ef89a46fc0664e2e51e06710cd2e25b8660398557f54de982ba77a13d9572",
+      "crates/trady-adapters/src/opencode/mod.rs": "ea1e589fffc2bac7a58487be69d88e3069d8a984c140ae2357d94cef9baeb8e1",
+      "crates/trady-adapters/src/opencode/runtime_tools.rs": "b07ac57bfee9ef00795583dba6de4cf56a3fcd604e0473931fc957a0791406ca",
+      "crates/trady-adapters/src/perpetual/holding_economics_tests.rs": "294f72ee015ed2d2e0d521f7e9f98f1c99846beecc6e81cf82dee6ae831bf447",
+      "crates/trady-adapters/src/perpetual/mod.rs": "f280b3b98f85f4a9d27f1d3b1e7c156dc23f6da2e6e6234ed1be8d6292af386c",
+      "crates/trady-adapters/src/perpetual/tests.rs": "aedf955889b67996774a1e19c2f2805f798cb010106bc91b20ce87fe784de359",
+      "crates/trady-adapters/src/research_jobs/mod.rs": "cdb1b8e6d890ce6efe2f08da359f266609d1f9e42a0153218b4289cdb58306d7",
+      "crates/trady-adapters/src/screening/mod.rs": "7cfd16cb2ce087dcb804aed3e09fb1f5240359ce433f7f60530cb5c61475707f",
+      "crates/trady-adapters/src/screening/tests.rs": "d3a7fcda0b760f0ba09b1909650f9b8319b661c649a184cd01af3278e1c93d86",
+      "crates/trady-adapters/src/sessions.rs": "a8a9b529c2621f4dfc48478fa7b029b875c9d54b0f56254de88f47d748bde94a",
+      "crates/trady-adapters/src/shadow.rs": "2f3a4c4cb01ff7747dbe92a9dc93739fb727f2ae022c29be8c84330b5531b006",
+      "crates/trady-adapters/src/telegram/mod.rs": "8ad44129cf7369ea246f9379a733645c73c37c8d5da13d9e4e457c64fbaeddf1",
+      "crates/trady-adapters/src/telegram/spool.rs": "b5ff8f69d7a3e3e9105da4c740dacc2dc5410cc77ad136f2096d922715cabb86",
+      "crates/trady-adapters/src/telegram/spool/tests.rs": "d835a2156e3d9b5d36ebb87abc16830153789b3326517722b67b8aecff263b2e",
+      "crates/trady-adapters/src/telegram/tests.rs": "b0537a7ea16de2ce33ed493d2d93af2621f4b7d8cac23c41d91424d603b0527f",
+      "crates/trady-adapters/src/trading212/autonomous.rs": "2224e5eba2cf1f8d064d60bb53b002fd87afbb54ea9ab145b221d1345f7d9351",
+      "crates/trady-adapters/src/trading212/autonomous_tests.rs": "3b32b90c7ae557d8ce00d7ce8defd49db819a4aac7451456b42527309bdce341",
+      "crates/trady-adapters/src/trading212/dto.rs": "c02653ec77fa951f3c478d9ac3b86254d30a71a781ef4f8d014261c36dd089e1",
+      "crates/trady-adapters/src/trading212/http.rs": "8cfd2bef0d78b4a1aa7443d8cfd451dec8995f6ba1609613bca4ec0e19ec5dd7",
+      "crates/trady-adapters/src/trading212/mod.rs": "faf5bf8bff6a8f808dd3a9026d81d6e782800eaf961c1cd260b15ca455b91389",
+      "crates/trady-adapters/src/trading212/tests.rs": "1f43cee8f836124f6b9682d4bba54f985decf70f13f302330683ade73d63ac40",
+      "crates/trady-adapters/src/weekly_lab/mod.rs": "4d17c1e37fcbba9137d2340e88b2a4d7684a07a4796857ff0fd846543905da79",
+      "crates/trady-adapters/src/weekly_lab/runner.rs": "f990b75978b6cb92350155012ff054c68f7702f14826785d64ddac9a11ad1f42",
+      "crates/trady-adapters/tests/credentials.rs": "36f222bb0efe287431ad9c3a2c65e9532cb080beafb8177a96000baf573dafae",
+      "crates/trady-adapters/tests/finbert/main.rs": "f01a3b125795332a2c4a4e6589beb828d77f6eadcb694bb67341dc458e32bc95",
+      "crates/trady-adapters/tests/harness.rs": "2268eee3918ad7d50fcf811a5615dc7a03df39298f253587f1e8ac2a95a23e07",
+      "crates/trady-adapters/tests/intelligence.rs": "533a06558d309fb30310325d46ac8c689e81571f3050628dea0b53dc3d8a8e6a",
+      "crates/trady-adapters/tests/intelligence_support/mod.rs": "ac01ce7640ba134ee767d1d3c7a77a1f2e0b4af3211b909054c7e4b7a0cc3c09",
+      "crates/trady-adapters/tests/research_jobs.rs": "537d37dc88eed06ac1c3defee49729a2ff2ef819970e42b02e6cbab42d64d680",
+      "crates/trady-adapters/tests/shadow_recording.rs": "74bbdf96fc94004f8d7ba6e365cc137c00456893ee2a8abba69882297d52d71d",
+      "crates/trady-adapters/tests/weekly_helpers.rs": "c5a67cb0df8d6bddd92fcde5ee03c0bf70c906c5953f8911435995b931830032",
+      "crates/trady-application/Cargo.toml": "5c715908eda6dfe08356d38ddc5ec9a25cdfb1158230bf153a10e7cbe60cf850",
+      "crates/trady-application/src/autonomous/mod.rs": "d54a66f3d50b249e21af55ea53ce2eb55db16aebe120a0f0aafa4f0c6df1a267",
+      "crates/trady-application/src/autonomous/readiness.rs": "f1b8ebd64d30d36cf4afbc66b17535cbf868a68586ab4e6b61e1c9ad33fa1e1e",
+      "crates/trady-application/src/autonomous/updates.rs": "ec20e7cdcb334c05fe5552e45790317ca15f856727c92666a6c83101ec2e80e6",
+      "crates/trady-application/src/broker.rs": "25dafffa18ea3433c9d7da5d75f6479eb1fbeac0390a1e0510ea38292f2ba0bf",
+      "crates/trady-application/src/contracts.rs": "6f6322b000d3d53286146c0d086f415df2e70b3322558cc5ec9051182fefdbeb",
+      "crates/trady-application/src/financial.rs": "6a69f34693b39b6cf99a34c19178c7692f1a2dd44ac2d9d98444172f47f9444e",
+      "crates/trady-application/src/harness.rs": "e6d9b3c541457380ed7b678ced43a7007de1f7b05b58e1a71dbe9f85ba4d39e7",
+      "crates/trady-application/src/intelligence.rs": "704e63170c5d501fafc8a80fd7abea4201d351ae6f00f213be1b7a235b491934",
+      "crates/trady-application/src/lib.rs": "a2dcf5037cefb29fb103f34b3c08194bbefa9e8eb759550744a0daa31360429a",
+      "crates/trady-application/src/model_lab/fit.rs": "4e0be364362cc40a896b69c00a7c84b5f1f315823bbfeecce50ec7a24342825a",
+      "crates/trady-application/src/model_lab/inference.rs": "eb11f36597354adcc5207c87a2eaf550e91e4351474baa6a89afad50f3185bb6",
+      "crates/trady-application/src/model_lab/journal.rs": "db995d207b2b523489ddb138abf663460ef0e2fc0b51bd666571a7a1711f4c29",
+      "crates/trady-application/src/model_lab/mod.rs": "8148f7a74c3b6335fa7da99f0d67a05676ca16ba5c64b2d4e48719464415f398",
+      "crates/trady-application/src/model_lab/tests.rs": "ec1839ae8a32c0fbc71ff4daa668322c5b05e6044d8cc5154bd06c01b6ed2f5a",
+      "crates/trady-application/src/optimization/mod.rs": "a98debab36ae60db38a217f8d754023e2c7f2faba120ce2e14ce7228992b8901",
+      "crates/trady-application/src/optimization/weekly.rs": "69f285ed1399a706bb1e762bd0cef4588b7351636e1ef2537caaa8fefad63340",
+      "crates/trady-application/src/perpetual.rs": "f39b699a40fa34843dceeaf04f67506b878407ee9b7bf328c8de38d580ae8d15",
+      "crates/trady-application/src/research.rs": "a951c68e30bc804f7e108b7f01356c20e397016c0eb149ef8e221a8e451b695d",
+      "crates/trady-application/src/research_jobs.rs": "87538dafcf52d25b5e1cb23ab2804dc3794cdceb20db05cff0010e4163e7898a",
+      "crates/trady-application/src/screening.rs": "54c08c57608f76dacea2b1a1d178c0e7a3159a87fecf7420eeb90d1b5b26a22a",
+      "crates/trady-application/src/sentiment/mod.rs": "b49f021810b13964133c555b6d397b5136304b2fa222d6d9a6061879d97e6c76",
+      "crates/trady-application/src/stock_report.rs": "f174fad0d1767ac7781e4d64f593e5f646d6ec93ef98fb05c9174342db802d65",
+      "crates/trady-application/src/telegram/gateway.rs": "d4dedd37b03507585e589619c5de0754233419e7a9fddfb147ddbf2f8abadac4",
+      "crates/trady-application/src/telegram/mod.rs": "c1338ead21823a9f2833a577907856c54466ce704acf8c60e65e6811a1efe8ba",
+      "crates/trady-application/src/telegram/tests.rs": "0515fe1a936e0e796558380c1e88aa2f1a8747d395c1b42332d11394df1ac1a3",
+      "crates/trady-application/src/x_monitoring.rs": "6ddcbafdfb46d4c47e748f8b349a98df7a98b0a1714907f851468c0aa3d63204",
+      "crates/trady-application/tests/autonomous.rs": "4090a9a80452c15bdfb520fdc966902042c6dab06a706938fb0c463246a9c60d",
+      "crates/trady-application/tests/formula_authority.rs": "0c3a4ea78a75ea0b17f8c6ecaa99e9f9f823d397ec6442ec1f23ae17a8b416f3",
+      "crates/trady-application/tests/optimization.rs": "23440499bee1d6e0b3f4ec980d480604d14a9e0589124b7d0e2f4b9582525658",
+      "crates/trady-application/tests/research.rs": "4f23d23fa96768580eb8827c66cd914de23601086f4d7a7be35424a68a0787fd",
+      "crates/trady-application/tests/research_jobs.rs": "2870427d00bf6ac332be1af744a1e83bd739b9e31c21ec7f42e544fbc4de228d",
+      "crates/trady-application/tests/screening.rs": "6ca25609a58619afba8e4f1bd513d8357274e4a68a82e810eae8ae11499a6ab9",
+      "crates/trady-application/tests/sentiment/main.rs": "35a62c742695c15e9f12973b8ca13b665bdc25d9ebc3be68b6a9a5d3b9c4532f",
+      "crates/trady-application/tests/x_monitoring.rs": "cf7d7ea34bb7859cad7f3b2e1bf4c31c98adb3fcc051824765cff876dea847e4",
+      "crates/trady-cli/Cargo.toml": "d9ec892c89e0232b367434c3bc99362dc85ee17adea82f4cb33483c3cefcaa3d",
+      "crates/trady-cli/src/api_health.rs": "07719c3f3ab8e4d305feef111e6ac5e899f675dc32d3fbcde166bd14afc8c304",
+      "crates/trady-cli/src/autonomous.rs": "495aed0e9d25d994cbce8868ceca397395883cf7fc4707d4dc8da3efeffaa69e",
+      "crates/trady-cli/src/autonomous_shadow.rs": "4c9382b8b7bcf1258098e2e19459dec49511842e63aa11118c02da96efb113d8",
+      "crates/trady-cli/src/autonomous_worker.rs": "a48e9debe2446bbf36acb9587b1a92385b32c0a4a42e94253e830abf9db4466a",
+      "crates/trady-cli/src/financial.rs": "9ba4ed1757b7a3fc423762caf02c766863db540e20e931df259d6a51f518da52",
+      "crates/trady-cli/src/finbert/mod.rs": "9e9d6945a362145275c1e813235d9bcb8f9d1c6a77ad14ddaca260d4a43941ff",
+      "crates/trady-cli/src/inputs_service.rs": "5055a99b24894c1b80da7f581668bc414733ad93116ef19bc128a2ead6f18886",
+      "crates/trady-cli/src/intelligence.rs": "aa7fa28182fc3b628fc5282e64838ea62d4feed3056b10d0f887385c6fab671c",
+      "crates/trady-cli/src/main.rs": "f0d48147254f5cd3e0dee775f3d3afc1800aa89e628fe13ce2454af16bcf14b3",
+      "crates/trady-cli/src/model_lab.rs": "c14e4d2c510f0301bc14f38ef3cc4f5ec0e1ed699b019522af98817721ae246a",
+      "crates/trady-cli/src/news.rs": "01923f0b97303126e05517107ef6f73f9564ef01213e8422ed6773dda34614dc",
+      "crates/trady-cli/src/opencode/mod.rs": "57da1ab135af5906b52947639579e01cc3c688363b1b72ef170424697814298b",
+      "crates/trady-cli/src/release.rs": "feef957ee87d59d369cde5d3a7e58dec948931a477b602998c9173a81375896a",
+      "crates/trady-cli/src/stock_report.rs": "a67cb036af116dab416dc4b01babbb8896567c0f783867bfc29dc5d505a552a7",
+      "crates/trady-cli/src/telegram/gateway.rs": "8399cdf6403bf5b1ac2f31358408fb5f43d1b505a032a808e6a4c81b5e63488e",
+      "crates/trady-cli/src/telegram/mod.rs": "b783bd921813696cb7a77306d9a2a322c20c676c92cde0c68aa544d66d5daf99",
+      "crates/trady-cli/src/telegram/tests.rs": "06250db985ff41f065714c674077a7318dc28fc78c59f30d7c1553921a67d04a",
+      "crates/trady-cli/src/weekly.rs": "d25c1ce20c356808fe38d16b7317060d245aee04486119abfc745ebad3ed3279",
+      "crates/trady-cli/tests/autonomous_cli.rs": "1234492e8d89fce3503fa5e458bff652ddba54e5eab0bb2220944c83b2130765",
+      "crates/trady-cli/tests/cli.rs": "72ba48ca8a641499400cc662a02cf53868f93a224275c4d0073da6dafa3f37cc",
+      "crates/trady-cli/tests/credentials_cli.rs": "2b86aed0206c3007ddb9fbdcb0a3569072036a077a08a88b5155268df32bcd91",
+      "crates/trady-cli/tests/financial_cli.rs": "16cb3fcf81076b5540e075bbd81e5a1134083d9fa430387d9b1752246690e318",
+      "crates/trady-cli/tests/inputs_model_pipeline.rs": "75b9c9eff1ea44676e8c027d6cea43193e0262736f2b995b7913cb26abee7ef4",
+      "crates/trady-cli/tests/intelligence.rs": "6fcacd171829a286b863b5ec4b1587b6fa3cef11e7a0970cdd54c2222400fdce",
+      "crates/trady-cli/tests/news.rs": "43549e292bcb6606aa052badeb3eac261527c84cd254d93124faefd2ad31d9af",
+      "crates/trady-cli/tests/opencode.rs": "c89ce16d4203f36e6f8895e4a9ac81548e2af179571aa532ab0fa3817e544212",
+      "crates/trady-cli/tests/telegram_cli.rs": "9883e7fc02c51e05818d9a4098b7a094702374577410d6bf8109d3835015708b",
+      "crates/trady-cli/tests/telegram_jobs_cli.rs": "ec51be1d7f971a322d4da0732378535a6f91d46fe3b9fee69ad94bba327e981b",
+      "crates/trady-cli/tests/trading212_cli.rs": "d8b3291e0d7b9025b966540a19198214e003c8205b67ff47277d82fde3f0b6a9",
+      "crates/trady-cli/tests/weekly_cli.rs": "c201b767c50f09a452cfc38e24749faf7eda00d6a253fd6121230ce539efc5dc",
+      "crates/trady-domain/Cargo.toml": "ac01f4de2e32d1d85fecf7abe66e89463802aa0eca3b6981286d20779fc8f935",
+      "crates/trady-domain/src/financial.rs": "bc1021bf443b56cf7ca891a0a827bd62f9be1d354bedb677482f111204717c46",
+      "crates/trady-domain/src/intelligence/accounting.rs": "728069a4fb2ccec032bdc13e01fbc6337892ee0c06dc46d7fbbedf8b1ae34e99",
+      "crates/trady-domain/src/intelligence/attention.rs": "431cdfe4b6bad51733744c8faa499c1760a5536f1139899331ef5f7b687d0e9a",
+      "crates/trady-domain/src/intelligence/coordination.rs": "ac5128f416790b9fe01fca39888d6b07aacaeeb9dba06c796f35e471365012c4",
+      "crates/trady-domain/src/intelligence/cross_asset.rs": "b0c6c47645af947e9aaae50ef83ec1ddf8833feceb0fe3f71deee9c6655b477b",
+      "crates/trady-domain/src/intelligence/event.rs": "34510ccc6d336f5819c84f8fbc9694f4fa5a456c1097176d841ef2b9b20839a8",
+      "crates/trady-domain/src/intelligence/insider.rs": "c1ad573e73d795a399c337af6858fcdb5b9daf6a6abbe3e8f3d7bf5716f6a410",
+      "crates/trady-domain/src/intelligence/microstructure.rs": "33baf40768cc14d1b7e59db4522983e66fb0de0d3f1f75d990181d2166692ea8",
+      "crates/trady-domain/src/intelligence/mod.rs": "1c4bc9f9c3881a03053cc3a57eeea69ff11dc6ba30c95a86be136afce5fe8b9d",
+      "crates/trady-domain/src/intelligence/options.rs": "afb10e36a709c66db0b1b5f3068bf4f9e5995a3fdc444c1b2fa785aa5433e623",
+      "crates/trady-domain/src/intelligence/short_interest.rs": "0fe8f6262e0d089ca8d55f4c5a1de842448fe85f210be00952c5dfa11f441b3b",
+      "crates/trady-domain/src/intelligence/tax.rs": "5bf50699986d3980ab030fbd3714e72523101bcb6d72859f82cb649b7b162b17",
+      "crates/trady-domain/src/lib.rs": "321ea2c1312451c3b67d115d461aaefd341e43aec858735783f28837c8fbd8b6",
+      "crates/trady-domain/src/perpetual.rs": "766d2664f377c7e040e095c8ffb39ccda70cbc7a38a6cd50701b0b829979f111",
+      "crates/trady-domain/src/prediction.rs": "2ff5a7f87c94fb58ade2a3499e3adf09ccae6f328d132954485056f241380853",
+      "crates/trady-domain/src/research.rs": "eb8b898a02d8e9ecbc3e40a90bd99c5956efda2eff6e031f0f24a71ee8a090e2",
+      "crates/trady-domain/src/screening.rs": "9ab29c29741b8b9602a40bd7d7fefd32b2eba069daa05e73ec0feb1ce4a16dc2",
+      "crates/trady-domain/src/sentiment/mod.rs": "fe101f389e5b748ca15d7c1101fad6c10bd17778280689be57b5a034731643c9",
+      "crates/trady-domain/tests/research.rs": "99885b25038233182de5caa6a5ff0c75651ce4d0cfabdeac970d97e4c95c5009",
+      "crates/trady-domain/tests/screening.rs": "89bb46507cf4d989dc1a4403c684c4a0d8ab9d4cc423f91144101e3d617ee0c8",
+      "crates/trady-policy/Cargo.toml": "271b93894e7d3eb1db207a38d1763a2b4db399afaaf410ad3a37bab9d25f31a1",
+      "crates/trady-policy/src/capital.rs": "186f561eb51218001a4d6060b6a2b21d489132c2dc14306e2669f8bad821c9b5",
+      "crates/trady-policy/src/economics.rs": "8eb2dd69ca40eeb74e301aa9cc3eb6865074473ae48cae9121bff71c950d9f31",
+      "crates/trady-policy/src/holding.rs": "3769b62475da82933fd367e540b1d536fb586e73a596a565ca08ce5230639e2d",
+      "crates/trady-policy/src/intelligence/accounting.rs": "f3f3f946d6757837e9044e7cee0f61d704d0b61c3182182a9dfc735e94bb1838",
+      "crates/trady-policy/src/intelligence/attention.rs": "bb57037e4832ebdb6fe2f156d2e0745057c7b6b3491f211517b998438b8c3c89",
+      "crates/trady-policy/src/intelligence/coordination.rs": "2ea98a8bfbbc8c315840808362324224a4fc7b677e8396c996ace63ab960eb01",
+      "crates/trady-policy/src/intelligence/cross_asset.rs": "b200e6ac6c2f4a76dc329a7f449ee728e23f35c77feb5884da546185e8784618",
+      "crates/trady-policy/src/intelligence/event.rs": "8250cd069d4afe09bb3de358fde27b46dae19d60286cf2fb8ebcc425afaeeb60",
+      "crates/trady-policy/src/intelligence/insider.rs": "e2528c1d6fb08b6783f3947cd5d7c09e026def3877f13e24ada6db31d841a319",
+      "crates/trady-policy/src/intelligence/microstructure.rs": "677f5d48ba28c2861611a7a2e1487d7c311659ae801ff434b406eca3b4846b44",
+      "crates/trady-policy/src/intelligence/mod.rs": "bf1669df705f6eb99a95f311f7d9cdf362b4f99f78b3eb3054d843453dce47a6",
+      "crates/trady-policy/src/intelligence/options.rs": "dac181c923c779101d2f1556dd70cff85eddaafc318ee789f2514429e281e886",
+      "crates/trady-policy/src/intelligence/short_interest.rs": "1235aac339b7f884bed759f6d13319b863696297b3d9751cb7d0f7942793abdc",
+      "crates/trady-policy/src/intelligence/tax.rs": "3edb570b9a50f424d41ea259e4edf2beff6782feb5785717f9af4d8441262d46",
+      "crates/trady-policy/src/lib.rs": "b5bf061feaa599d8391e6e5151c09050fe971ae327f9063c903f2a2f524ad395",
+      "crates/trady-policy/src/limits/mod.rs": "84c7a196dba8f8d8a782cc466ea046890fcbba4abb8d6b435c80642c9a59565f",
+      "crates/trady-policy/src/limits/proof_bridge.rs": "fc4b199d377908924c7efc955938b218241b1d6a2ba14dd21a3222fdc80509cc",
+      "crates/trady-policy/src/prediction/history.rs": "59edb566fc38e21cf52aef036633264f81d5437e01a742ec5030afc1ac5d7e1e",
+      "crates/trady-policy/src/prediction/mod.rs": "4b0d8a2edfbc24ad1a57f3b5bd1168d075b6935c465e6065a8a6c5d0fdf0d674",
+      "crates/trady-policy/src/sentiment/mod.rs": "d510f5860a333edb0f4c8e61d11612d1e206e6764560dee714908500dddbcb11",
+      "crates/trady-policy/tests/financial.rs": "fea6ad6aaa1977960ec2ba7bcd1c349d9f74bffe4473347bdad1d8871c3db1f4",
+      "crates/trady-policy/tests/limits.rs": "303245da78585548a1bd7fab5ae92b35794187793c3f40705c1e20f895a48341",
+      "crates/trady-policy/tests/prediction.rs": "d83947a426c8ae90f0f0e8db82d954db56923d5baed3bcbf726a1bbc2773f81d",
+      "crates/trady-policy/tests/sentiment/main.rs": "339f677dea01f944e5935f7f1dbd0c6be41260348784c180fa0af3cfcaeddefc",
+      "crates/trady-storage/Cargo.toml": "438bbd141ed8d96f222a9faf2fe0cc16fa1ea950835884b198764e37de51671b",
+      "crates/trady-storage/src/autonomous.rs": "7a16ff3e83c13bbc27a509680e13ab501c62d4318f19f2dff7059f2a69b38967",
+      "crates/trady-storage/src/financial.rs": "88c6462c80712d19fda4823ec174d20c7cca8adac9d8c49085d0e1e39482ab1a",
+      "crates/trady-storage/src/holding_research.rs": "4334e7b174be2fdee20f17158c5099daddd52f21535375d1ed286d025ee73cde",
+      "crates/trady-storage/src/intelligence.rs": "3f51ef4c5e217227e8daef8c8453f18d1b9e0f0fcc0fdf6a9993146914e1968c",
+      "crates/trady-storage/src/lib.rs": "37252540ad29317dafeb22122855bb29df945fa95c607790639b830187e4cbe5",
+      "crates/trady-storage/src/research.rs": "0b748e24aac0e3cd3c28ab7e09be8d5de8733b2173ae511801b840f875c6728a",
+      "crates/trady-storage/src/research_jobs.rs": "3b244eba649f75d23fb75aaef9719dfee079e0a712817f39178025d8a3cef6f1",
+      "crates/trady-storage/src/sessions.rs": "7f34855bd48e28c23c7f5f74251c2caadf17f626c2c5e934bdef5976865e0e7f",
+      "crates/trady-storage/src/trading_research.rs": "0161658f318c4f9b9715667f2e4d305814d6aebc48e7a90c25cb810b3bfbab12",
+      "crates/trady-storage/src/transport.rs": "8e470fdc5baead7eb2d0977c7da7701f0dd13d079e85fa80b74bfc5ce90baebd",
+      "crates/trady-storage/src/weekly.rs": "f03ec9fa711cb3943de61e43cb47deb872b5e373a690807c4f255fe8c83407cf",
+      "crates/trady-storage/src/x_monitoring.rs": "ff91b8f746d3ba00d451c9e30494671a325cc7551494f341715b4a627d140d4e",
+      "crates/trady-storage/tests/autonomous.rs": "3733b2daa97f72ae022043915fcbf1d896574f9ed1ec4b5f358b02f5c20d829e",
+      "crates/trady-storage/tests/financial.rs": "36ee5a2d0eeb9efdcd0c42c4a3a9514fd65ba24d7067b741cee87139d2c2158a",
+      "crates/trady-storage/tests/holding_economics.rs": "31cb8561375bb6f8f6907c98a982ca9a2ea894de379d6cb65ccb9272789642cd",
+      "crates/trady-storage/tests/intelligence.rs": "56b00e021e265e9a0db28e663e2c6e518d537b3c3c1d3a9cb1489c7f3eab0f59",
+      "crates/trady-storage/tests/postgres.rs": "11cd071b06e319194e02629e7e49e68442d1a31a4c0e364d63c8f93fa2eb92d8",
+      "crates/trady-storage/tests/research.rs": "fcebe743e6a8a165b549f90ef6a10bec967a780d95622671cf75d9b494a7c1ca",
+      "crates/trady-storage/tests/research_jobs.rs": "0fb2124c7921be85056416f48d40344374d8e2654edcae44937421fe78d3cb51",
+      "crates/trady-storage/tests/sessions.rs": "a04ae5ef8c29e73a47ef0213b2f39b48fa0c988be26888c14d19955fbe0b6715",
+      "crates/trady-storage/tests/trading_research.rs": "396e8640079150c4f8cbf62935746ed2ad71a3c6b01aa9263a2e3f5a2981b686",
+      "crates/trady-storage/tests/verified_holdings.rs": "40efd34c4965d534a4e2f517b7b4076015f9e9e5a23b889d849653f4bb78e4ff",
+      "crates/trady-storage/tests/weekly_durable.rs": "e7fc41d4c798cf09672deadcf160ddc7886c6b5a80db80d8e9cdadd05faa423d",
+      "crates/trady-storage/tests/x_monitoring.rs": "d6abc74975cd7015b77084c5db6a40e9387fd46f13ea475655a1a463b8eafadd",
+      "migrations/0000_lab_roles.sql": "964c8ba7a54476051b5803232b9991123f780a3385db685f899c3920b24f2583",
+      "migrations/0000_roles.sql": "813dd40f552eb2b65875c80d5e75b313edb2f4ec927715f6099217945adfb4e4",
+      "migrations/0001_foundation.sql": "a1d61df5e1436c7dbe51edec4fad8bc8d891d4c557443d47c280666abbd98093",
+      "migrations/0002_model_sessions.sql": "78e35d0641567bc031841450325fb260fd7c78b72944d502427855e758c5f738",
+      "migrations/0003_research_sources.sql": "07a33e3693c2a400d873995a5dcf3434016ad76ec54891250bf7c9f5c6dda44c",
+      "migrations/0004_autonomous_execution.sql": "befeab90b72d1246b83f7deadcadcb05fb1882507f8d40793f1a16b1add16d0a",
+      "migrations/0005_x_api_monitoring.sql": "d2e2abd39c951331e32be3bd3b7684c84fab7c6f5980bae282f9bd8561d0ce9b",
+      "migrations/0006_weekly_lab.sql": "ec54eb1d32f77b452c0cdbd54f3a3126cf5424069a57fdb5e5b08228f6f367a9",
+      "migrations/0007_research_jobs.sql": "f8572389ae7d0653ec03e31ad0f62e4c050c17d001d8e32af855995ae6dcb441",
+      "migrations/0008_verified_holdings.sql": "e32b5f92129609f8782ad5843237034ebd33598e136b10aac6b629e59fd677b2",
+      "migrations/0009_financial_data.sql": "7afabbba23848165ce5fbb39aec8dbf9ef94e033177f8bd211f330567c4a5162",
+      "migrations/0010_optional_intelligence.sql": "9339bfd4361431c33fce0e7bd612b61aa09cf150f5876e98bb971ad2215e8496",
+      "migrations/0011_fail_closed_storage.sql": "5d78a0d5c64620271752079db2498bf44b33e4503ad4f70fdd11826368dea39a"
+    },
+    "safety_sha256": "363fbb070b8e2f4b02cac63e707fdf6a1af140c78a612c1f4359a076af89f34b",
+    "schema_version": 2,
+    "scope": "FORMULA_V1",
+    "sources": {
+      "Audit.lean": "45158a6589fa73475199c323291d9c958a0366050193bcbf31c98f209e46d0e1",
+      "FormulaMain.lean": "e84c62e426ca18cefefee25b2313bcd9346d21f98a411e2d29d56f10947878a3",
+      "Main.lean": "a9a03676bf1443071ebe77beb78b2865344b23336745edb6c9a85abfa6a000b7",
+      "TradyProof.lean": "dd78dc205f39ac5441c708a0d15eeea4285aa9f99750cba65db740c24c07bc51",
+      "TradyProof/CheckedDecimal.lean": "fec6edd218426dd4a034882f27f6b0259b97e9429617c720d41474fa09a3e4fa",
+      "TradyProof/Formula.lean": "ee9d491f3e380198b451da2c51ff450d014818b86d35eab1becfd22c2033531c",
+      "TradyProof/Holding.lean": "23cfe8515069084323dff9a08a13b1152338cad03f7dba57b18a14969d4561cb",
+      "TradyProof/Parsing.lean": "ccab3a5e4eaaf63c45e1738c720103233fd45fbe4e5a81e778f33fa98711b704",
+      "TradyProof/Revision.lean": "ae39b8a24ae03abe82128f23f85100a563f117a8b79f2f39cbb06916397d9999",
+      "TradyProof/Safety.lean": "f5b6b14024d959b04a2da0d72055b02f6e936c5d529b49f2503750e717eec260",
+      "TradyProof/Witness.lean": "81a68134844887209c33ba6f807589f8ac1b3c2075b93c80279898abca652012",
+      "bindings.py": "3f902d736219393aa54f2a321f120cc5f08e65b1adbc73da139c2edbb647c358",
+      "check.py": "2b6dc96360339db328aacaaeb4fe128be7a076f6b319d34279dca0f8f16c7400",
+      "fixtures.py": "c182caad35fd51c68ca7dce84755689de64334d0558c9640672a9d120a76763a",
+      "lakefile.lean": "1b513f6549158d69f9fcc80fb5f2b86a6e8a3232d4cae34f2ffc64ab39bce034",
+      "lean-toolchain": "55e97be96000b5e9e290c9e74482e5e317861499a5540353ce845471bded8cea",
+      "parity.py": "943f9136c9894daf7c886b0e3ce9ad568f8359af74350972104c3cb9fc874437",
+      "pin.py": "994ce31bdbb32936d8c1c853b6aaaca7b56fbe4352809b4f47f54fbfe81fbc35",
+      "self_test.py": "47a3d45f889b9b9c50fbd06a751011b23fc01363f6e90a1671ff22fda31b203a",
+      "test_inputs.py": "f7f3d91c670ff45e745ec7f457966e3a0a2f7eb79eddaaa23e98a7a4ec64738e"
+    },
+    "theorem_bindings": {
+      "TradyProof.CheckedDecimal.division_by_zero_rejects": {
+        "file": "TradyProof/CheckedDecimal.lean",
+        "file_sha256": "fec6edd218426dd4a034882f27f6b0259b97e9429617c720d41474fa09a3e4fa"
+      },
+      "TradyProof.CheckedDecimal.floor_checked": {
+        "file": "TradyProof/CheckedDecimal.lean",
+        "file_sha256": "fec6edd218426dd4a034882f27f6b0259b97e9429617c720d41474fa09a3e4fa"
+      },
+      "TradyProof.CheckedDecimal.representable": {
+        "file": "TradyProof/CheckedDecimal.lean",
+        "file_sha256": "fec6edd218426dd4a034882f27f6b0259b97e9429617c720d41474fa09a3e4fa"
+      },
+      "TradyProof.CheckedDecimal.ties_from_odd": {
+        "file": "TradyProof/CheckedDecimal.lean",
+        "file_sha256": "fec6edd218426dd4a034882f27f6b0259b97e9429617c720d41474fa09a3e4fa"
+      },
+      "TradyProof.CheckedDecimal.ties_to_even": {
+        "file": "TradyProof/CheckedDecimal.lean",
+        "file_sha256": "fec6edd218426dd4a034882f27f6b0259b97e9429617c720d41474fa09a3e4fa"
+      },
+      "TradyProof.Formula.accepted_account_input": {
+        "file": "TradyProof/Formula.lean",
+        "file_sha256": "ee9d491f3e380198b451da2c51ff450d014818b86d35eab1becfd22c2033531c"
+      },
+      "TradyProof.Formula.accepted_checks": {
+        "file": "TradyProof/Formula.lean",
+        "file_sha256": "ee9d491f3e380198b451da2c51ff450d014818b86d35eab1becfd22c2033531c"
+      },
+      "TradyProof.Formula.accepted_stop_before_target": {
+        "file": "TradyProof/Formula.lean",
+        "file_sha256": "ee9d491f3e380198b451da2c51ff450d014818b86d35eab1becfd22c2033531c"
+      },
+      "TradyProof.Formula.accepted_target_holding_caps": {
+        "file": "TradyProof/Formula.lean",
+        "file_sha256": "ee9d491f3e380198b451da2c51ff450d014818b86d35eab1becfd22c2033531c"
+      },
+      "TradyProof.Formula.fx_model_non_vacuous": {
+        "file": "TradyProof/Witness.lean",
+        "file_sha256": "81a68134844887209c33ba6f807589f8ac1b3c2075b93c80279898abca652012"
+      },
+      "TradyProof.Formula.fx_witness_accepted": {
+        "file": "TradyProof/Witness.lean",
+        "file_sha256": "81a68134844887209c33ba6f807589f8ac1b3c2075b93c80279898abca652012"
+      },
+      "TradyProof.Formula.invalid_account_input_cannot_accept": {
+        "file": "TradyProof/Formula.lean",
+        "file_sha256": "ee9d491f3e380198b451da2c51ff450d014818b86d35eab1becfd22c2033531c"
+      },
+      "TradyProof.Formula.model_non_vacuous": {
+        "file": "TradyProof/Witness.lean",
+        "file_sha256": "81a68134844887209c33ba6f807589f8ac1b3c2075b93c80279898abca652012"
+      },
+      "TradyProof.Formula.total_calculation": {
+        "file": "TradyProof/Formula.lean",
+        "file_sha256": "ee9d491f3e380198b451da2c51ff450d014818b86d35eab1becfd22c2033531c"
+      },
+      "TradyProof.Formula.witness_accepted": {
+        "file": "TradyProof/Witness.lean",
+        "file_sha256": "81a68134844887209c33ba6f807589f8ac1b3c2075b93c80279898abca652012"
+      },
+      "TradyProof.Holding.accepted_update_monotone": {
+        "file": "TradyProof/Holding.lean",
+        "file_sha256": "23cfe8515069084323dff9a08a13b1152338cad03f7dba57b18a14969d4561cb"
+      },
+      "TradyProof.Holding.latched_exit_preserved": {
+        "file": "TradyProof/Holding.lean",
+        "file_sha256": "23cfe8515069084323dff9a08a13b1152338cad03f7dba57b18a14969d4561cb"
+      },
+      "TradyProof.Holding.maximum_preserves_left": {
+        "file": "TradyProof/Holding.lean",
+        "file_sha256": "23cfe8515069084323dff9a08a13b1152338cad03f7dba57b18a14969d4561cb"
+      },
+      "TradyProof.Holding.trailing_floor_monotone": {
+        "file": "TradyProof/Holding.lean",
+        "file_sha256": "23cfe8515069084323dff9a08a13b1152338cad03f7dba57b18a14969d4561cb"
+      },
+      "TradyProof.Revision.accepted_revision_bound": {
+        "file": "TradyProof/Revision.lean",
+        "file_sha256": "ae39b8a24ae03abe82128f23f85100a563f117a8b79f2f39cbb06916397d9999"
+      },
+      "TradyProof.Revision.mismatched_source_rejects": {
+        "file": "TradyProof/Revision.lean",
+        "file_sha256": "ae39b8a24ae03abe82128f23f85100a563f117a8b79f2f39cbb06916397d9999"
+      },
+      "TradyProof.cap_le": {
+        "file": "TradyProof/Safety.lean",
+        "file_sha256": "f5b6b14024d959b04a2da0d72055b02f6e936c5d529b49f2503750e717eec260"
+      },
+      "TradyProof.cap_nonzero": {
+        "file": "TradyProof/Safety.lean",
+        "file_sha256": "f5b6b14024d959b04a2da0d72055b02f6e936c5d529b49f2503750e717eec260"
+      },
+      "TradyProof.floor_le_ceil": {
+        "file": "TradyProof/Safety.lean",
+        "file_sha256": "f5b6b14024d959b04a2da0d72055b02f6e936c5d529b49f2503750e717eec260"
+      },
+      "TradyProof.non_vacuous": {
+        "file": "TradyProof/Safety.lean",
+        "file_sha256": "f5b6b14024d959b04a2da0d72055b02f6e936c5d529b49f2503750e717eec260"
+      },
+      "TradyProof.stop_before_target": {
+        "file": "TradyProof/Safety.lean",
+        "file_sha256": "f5b6b14024d959b04a2da0d72055b02f6e936c5d529b49f2503750e717eec260"
+      }
+    },
+    "toolchain": {
+      "file_count": 3019,
+      "sha256": "dde4425feb261ac42b3ee1b9b7371c0a79953e29bee790a347be28b01e11e95f"
+    }
+  },
+  "proof_artifacts": {
+    "binding": {
+      "path": "/tmp/trady-remediation-20261031/proof-evidence/binding.json",
+      "sha256": "ea906121e43933e41b362d22478ab5734867b829ca7eed86c564c6427a5167ce"
+    },
+    "request": {
+      "path": "/tmp/trady-remediation-20261031/proof-evidence/request.json",
+      "sha256": "7d1937b60bfaf313b647a0d4edd426a1e504843b2e10105996afd809ac29c947"
+    },
+    "lock": {
+      "path": "/tmp/trady-remediation-20261031/proof-evidence/lock.json",
+      "sha256": "beb0360e1908fc08a1deb5d9013088158742ba734ed9c823e22f4d51690aab56"
+    },
+    "proof": {
+      "path": "/tmp/trady-remediation-20261031/proof-evidence/proof.json",
+      "sha256": "211cba61d0e8f6393e7a3a3f850abcb616ae0905e9d23694281bc58fb76c5e12"
+    },
+    "parity": {
+      "path": "/tmp/trady-remediation-20261031/proof-evidence/parity.json",
+      "sha256": "36200d0bd5fb4723fbe32071aff7ce42e52ac32796c4c32797e38e55ce65d35a"
+    },
+    "summary": {
+      "path": "/tmp/trady-remediation-20261031/proof-evidence/summary.json",
+      "sha256": "44d311d34215401e4152eb13e8a361630ac6ccab2760b817a5ab05937d1f3333"
+    }
+  },
+  "proof_fixture_bytes": 61055632,
+  "proof_limit": "Finite executable parity and kernel proofs of the Lean definitions do not establish a complete Rust refinement or deployment approval.",
+  "fresh_reviews": {
+    "evaluator": {
+      "path": "/tmp/trady-remediation-20261031/evaluator-review/goldfish-verification.md",
+      "sha256": "b21db093db4a45de931244e49f515f351d9fde7050ba00fcd02339a87ce3e90d",
+      "method": "Independent fresh-context static review; parent owns execution.",
+      "actionable_findings": 0,
+      "subsequent_review": "Evaluator isolation/diagnostics source remains unchanged. The later bridge wire/error classification change and its contract are covered by the final proof review.",
+      "retained_artifact": "docs/audit-2026-10-31/reviews/evaluator-r1.md",
+      "retained_sha256": "b21db093db4a45de931244e49f515f351d9fde7050ba00fcd02339a87ce3e90d"
+    },
+    "credential_rotation": {
+      "path": "/tmp/trady-remediation-20261031/rotation-review-r3/goldfish-verification.md",
+      "sha256": "8e60896057bd5d49e30ce88fc26cd986eb468e98166d660d5f41734187ee68de",
+      "method": "Independent fresh-context static review; parent owns execution.",
+      "actionable_findings": 0,
+      "post_review_change": "Only scripts/test-postgres.py and scripts/README.md subsequently set/document RUST_TEST_THREADS=1 to prevent global-purge interference between database test cases. Credential rotation implementation is unchanged; full disposable execution passed afterward.",
+      "retained_artifact": "docs/audit-2026-10-31/reviews/credential-rotation-r3.md",
+      "retained_sha256": "8e60896057bd5d49e30ce88fc26cd986eb468e98166d660d5f41734187ee68de"
+    },
+    "storage": {
+      "path": "/tmp/trady-remediation-20261031/storage-review-r2/goldfish-verification.md",
+      "sha256": "046e654e2164c44953cb53099d4829fcaec33c729e6b239f2dc1390313c0a180",
+      "method": "Independent fresh-context static review; parent owns execution.",
+      "actionable_findings": 0,
+      "retained_artifact": "docs/audit-2026-10-31/reviews/storage-r2.md",
+      "retained_sha256": "046e654e2164c44953cb53099d4829fcaec33c729e6b239f2dc1390313c0a180"
+    },
+    "proof_parser_and_helpers": {
+      "path": "/tmp/trady-remediation-20261031/proof-review-r2/goldfish-verification.md",
+      "sha256": "bd41e349621daeaed19356ad2322a8c7bb9414e82c29483f92d1575d5a70bf31",
+      "method": "Independent fresh-context static review; parent owns execution.",
+      "actionable_findings": 0,
+      "retained_link_rewrite": "Only repository source-link destinations were made relative with line fragments; the original report digest is retained separately.",
+      "retained_artifact": "docs/audit-2026-10-31/reviews/proof-r2.md",
+      "retained_sha256": "49e12306d3864006e9a06f31a47be9404e0cbb58653c99bc6848c14d4e7a2d30"
+    }
+  },
+  "documentation": {
+    "contracts_read": 52,
+    "contract_lines_read": 7643,
+    "changed_contracts": [
+      "README.md",
+      "config/credentials/postgresql/README.md",
+      "crates/trady-adapters/src/README.md",
+      "crates/trady-adapters/src/news/README.md",
+      "crates/trady-adapters/src/weekly_lab/README.md",
+      "crates/trady-application/src/README.md",
+      "crates/trady-cli/src/README.md",
+      "crates/trady-storage/README.md",
+      "crates/trady-storage/src/README.md",
+      "lab/evaluator/README.md",
+      "lab/lean/README.md",
+      "lab/proofs/README.md",
+      "lab/proofs/TradyProof/README.md",
+      "migrations/README.md",
+      "scripts/README.md",
+      "services/runtime/README.md"
+    ],
+    "local_links_checked": 413,
+    "source_file_citations_checked": 1598,
+    "inline_cargo_commands_checked": 107,
+    "audit_json_files_parsed": 46,
+    "errors": [],
+    "contract_set_sha256": "ef6836aadf363f09485d1a2b5929eeae02526f66793ff2bee5f5c2eeba0156fb",
+    "contract_hashes": {
+      "README.md": "b5753de79ccd9ec0f9ebbc6c557a9eed5f0c2460f7821d6bfb8c325dab6d2595",
+      "config/credentials/postgresql/README.md": "8e4f97087a9395bf02a035850e52c6720391ae7f501b219f561fb2960d502f3c",
+      "crates/README.md": "243d6c0b70732a62a271347c68461795c24a24ab3f20b02bd215272f3caaace4",
+      "crates/trady-adapters/README.md": "f5e464fb3003b970fd30a79af549e64dc4dd2a0bbb21a21656aadc39433291fe",
+      "crates/trady-adapters/src/README.md": "36c35b959ed377d32a03b1e2b7bf83e3a16c999e64853663cb04b4f69d08e410",
+      "crates/trady-adapters/src/autonomous/README.md": "601f9afd382bfcf3f1885aa9e1a109490911245f58e0d56b0c2450bcad6e1cb3",
+      "crates/trady-adapters/src/financial/README.md": "65d6f9de24a23bb85c0580dbd0c1fe8743283228db457a310e8faabc2e85fd78",
+      "crates/trady-adapters/src/finbert/README.md": "ae0c8a1b0e4e1ec437b53a81678525073cad7f03745e790411d5a666b7432744",
+      "crates/trady-adapters/src/inputs_service/README.md": "1bc3f94d483241fc368536e2431b992e6283e5893bb3e82249132c8bb3470b03",
+      "crates/trady-adapters/src/intelligence/README.md": "5620b79b69a0c554f8eef408fd6281b65ed80173bdf6bc0bde76e0b5aa9e3e76",
+      "crates/trady-adapters/src/news/README.md": "fc1a975598be074488ac9285c8653e2174e66cf12f07333b8c8bcf3833bdebb8",
+      "crates/trady-adapters/src/opencode/README.md": "5ffa9e58c0411acd4a65a19925edc2cc6d80b98af38e12b829dda25f769820f7",
+      "crates/trady-adapters/src/perpetual/README.md": "5a3e7bfb47acf236e0f05642088c315a7ed322a142382edf683ea874be902988",
+      "crates/trady-adapters/src/research_jobs/README.md": "5d44a41bc0a07a09783b742c6eb3af6789a8af8ec0ff0b1e2bab4e0ddc52913f",
+      "crates/trady-adapters/src/screening/README.md": "db6b4e53fbc05a89d34f743da86bee0171b2db13becf76ae5bd97b2899332b4c",
+      "crates/trady-adapters/src/telegram/README.md": "2f029da8e748d8544cff5a4eea21dd4711d57903948316d809f9964d04b0fe6e",
+      "crates/trady-adapters/src/trading212/README.md": "68d6bf8a6abbc8f2f976b92727e1fad1691f74f540ccca75d2325c71bc4abbc6",
+      "crates/trady-adapters/src/weekly_lab/README.md": "6326f5375df04559f3a843671d7a3a04aa4174a4f5547be1405b7d3491129fdd",
+      "crates/trady-application/README.md": "1b11afafa8791e60d12df2c34bf504512fe0aa9f392cb0a0bdc5b31273e8e7af",
+      "crates/trady-application/src/README.md": "328229898a3f2944774cd6c786007312974b144f0c01655c39d04ccba0e2b811",
+      "crates/trady-application/src/autonomous/README.md": "3db64284b077480b78b2b9c11a30eeddbdc14cbefaa714476ad07154760c3c09",
+      "crates/trady-application/src/model_lab/README.md": "03b268c1229f14e04e1700c1a88acb99f8a8ead3931e56659340484da32eb15a",
+      "crates/trady-application/src/optimization/README.md": "520d0975c124ed6505015e69fec51cef019b56febc6359e52712441ae441b5e2",
+      "crates/trady-application/src/sentiment/README.md": "f5ca85da9e708116809dd7b883f811d442a6faa325832ed8a8eb91f48aad0f1f",
+      "crates/trady-application/src/telegram/README.md": "5e98c5aff1aff2ca0774b789f752458c75994c5a63331bfbed0c7db2303f2ac9",
+      "crates/trady-cli/README.md": "906a201de613dc633a6d4c73071c31897d37670248b6ddfeb8c9517f1480fdf0",
+      "crates/trady-cli/src/README.md": "77035f591590897dc065554432527121840966f78164fe6d505d4eaf9bb97321",
+      "crates/trady-cli/src/finbert/README.md": "5c27fc6878d0676abab469081b5c361a08b1d47b71708a1507f8834c8398a5e4",
+      "crates/trady-cli/src/opencode/README.md": "08450f2d2abe6b6b412fd6e00ed8f7a5d4e5aeae869cb6bd60a593ae4881fb05",
+      "crates/trady-cli/src/telegram/README.md": "11df6d1f483384ceec8e0ebac7b402ba8e8d7de3ed5d703a63995ce62714ef1b",
+      "crates/trady-domain/README.md": "16bdfb1ff8a9eca59d4d6ceea10b9ba1823bd1e3b856f25c0b7fe0224947c9de",
+      "crates/trady-domain/src/README.md": "c36a720f93d23cbbf53c40888ebd8d88e780ff52004d167a0e944d88f825d771",
+      "crates/trady-domain/src/intelligence/README.md": "b1f2f58f8c5ca1174014a60d2d8fbbcf46bb126572c4fc560a3dc975a2a51eec",
+      "crates/trady-domain/src/sentiment/README.md": "f2e607e1a510bbe969505bc87a9373686302cd3e749cb5631a9eb8e31e78396f",
+      "crates/trady-policy/README.md": "406494e1839eec3466cab2c8df33aac8d291499b616fe87a68264f91a0bc1917",
+      "crates/trady-policy/src/README.md": "61f604b45538274680285fddc9165183f95f3bb4c4d638a26721bf9598f084bf",
+      "crates/trady-policy/src/intelligence/README.md": "2019fabf72d744a2887cb292ba86e524afa13869f44eb4ffde66b568b5eb8261",
+      "crates/trady-policy/src/limits/README.md": "1a268e060761136a7cb9b19b265eca0e4c437d7d351aadaee3ee5d21c315c267",
+      "crates/trady-policy/src/prediction/README.md": "4441837baf999a4622b0493ca5f6f2f14da2eccac1b0d19418f5d1b4438fc37d",
+      "crates/trady-policy/src/sentiment/README.md": "d9e87493e19c6011e43f7f2f8418fa55924f80dde42215d6800303701ca67ba2",
+      "crates/trady-storage/README.md": "d9a72558ac9c2f634e3ec61c5d3ee2ea2616a78b15ddcbfef0cfd6469ce11305",
+      "crates/trady-storage/src/README.md": "727daf761ab1cb87609c8c6f2fb68aace1a7e46a6d19fbbf2693bc93c1048d32",
+      "lab/README.md": "4c3039a4fbaf8ff47de8ee62e208885ba8e278905a4c298db025120dcbf0817a",
+      "lab/evaluator/README.md": "614788c4728a1365eab12f6ec5fb47b28f1ae05debc595a8aaeb618a4768dd98",
+      "lab/lean/README.md": "49332be5cbc572a403f3a3121e4f6c767eafed2fbf529c7f30bec40981ccff03",
+      "lab/proofs/README.md": "e28da3a5a56c945e38ff566c8f4ee281794ea5c92b4fe7f00dd6666deae41a9c",
+      "lab/proofs/TradyProof/README.md": "b19c8e33937b8e22299e03ef444d64d3bf73c86a9df526ad05eb6f1da95d6882",
+      "migrations/README.md": "f15798b903869ed2e15f6b5759f22e23631ad2c4bf9248097986201c5958a380",
+      "scripts/README.md": "f058dea3172ae1eeef15ddba268651d5d2b438f416c29d2006b0a3b4fcb6feb5",
+      "services/README.md": "151e144eb15d9f22826e58cb2ca0aa9e92c853f1bcaa8bc9aa8129cdd38c887c",
+      "services/finbert/README.md": "f547989f7677b80bdf9842d372be38e3e9fc784c51cb3ae9da8a989fa41238d7",
+      "services/runtime/README.md": "571b7ccb819b45446fa37ac62a95c16d4cc80128b6409392d5547f7c23313457"
+    },
+    "scope_note": "Structural/link/source-file checks; fresh source reviews establish semantic correspondence."
+  },
+  "preservation": {
+    "baseline_files": 561,
+    "baseline_deletions": [],
+    "prior_migrations_and_cargo_manifests_unchanged": 20,
+    "staged_files": [],
+    "historical_drift_prefix_unchanged": true,
+    "disposable_container_leftovers": []
+  },
+  "changed_implementation_sha256": {
+    "crates/trady-adapters/src/api_health.rs": "5adb3a709768e0f900c6445e5aca51d85c295d6e19276525848848f3d5fe35ca",
+    "crates/trady-adapters/src/news/financial_news.rs": "efd0dca382ba319ce2f6115b8601e9a67c9cc91426863d488b0d80868cc7d89b",
+    "crates/trady-adapters/src/news/tests.rs": "8bcc77e80acc0371f6e5bb3b69986d0b6515b1223a80abacf2777c9699058ac2",
+    "crates/trady-adapters/src/weekly_lab/mod.rs": "4d17c1e37fcbba9137d2340e88b2a4d7684a07a4796857ff0fd846543905da79",
+    "crates/trady-adapters/tests/intelligence.rs": "533a06558d309fb30310325d46ac8c689e81571f3050628dea0b53dc3d8a8e6a",
+    "crates/trady-adapters/tests/weekly_helpers.rs": "c5a67cb0df8d6bddd92fcde5ee03c0bf70c906c5953f8911435995b931830032",
+    "crates/trady-application/src/intelligence.rs": "704e63170c5d501fafc8a80fd7abea4201d351ae6f00f213be1b7a235b491934",
+    "crates/trady-cli/src/intelligence.rs": "aa7fa28182fc3b628fc5282e64838ea62d4feed3056b10d0f887385c6fab671c",
+    "crates/trady-storage/src/financial.rs": "88c6462c80712d19fda4823ec174d20c7cca8adac9d8c49085d0e1e39482ab1a",
+    "crates/trady-storage/src/intelligence.rs": "3f51ef4c5e217227e8daef8c8453f18d1b9e0f0fcc0fdf6a9993146914e1968c",
+    "crates/trady-storage/src/lib.rs": "37252540ad29317dafeb22122855bb29df945fa95c607790639b830187e4cbe5",
+    "crates/trady-storage/src/weekly.rs": "f03ec9fa711cb3943de61e43cb47deb872b5e373a690807c4f255fe8c83407cf",
+    "crates/trady-storage/tests/financial.rs": "36ee5a2d0eeb9efdcd0c42c4a3a9514fd65ba24d7067b741cee87139d2c2158a",
+    "crates/trady-storage/tests/intelligence.rs": "56b00e021e265e9a0db28e663e2c6e518d537b3c3c1d3a9cb1489c7f3eab0f59",
+    "crates/trady-storage/tests/weekly_durable.rs": "e7fc41d4c798cf09672deadcf160ddc7886c6b5a80db80d8e9cdadd05faa423d",
+    "lab/evaluator/isolation.py": "c77600d47744fe5cc5faa3df38d72925c459b15ff0ce50d3e1688ecf17eb1928",
+    "lab/evaluator/run.py": "b29f79a6a69289880f42d66c4b4441525d6ed6abb85c029391bf584c146abdc2",
+    "lab/evaluator/transport.py": "ae6e554e9668cd014685c55c130690d827598b5fafecf4d4a211a0672de38455",
+    "lab/lean/bridge.py": "7e6f6e144589667aa1fe1ad24ffa2dbd98d307a00924d1274594d12a1d5ece21",
+    "lab/proofs/Audit.lean": "45158a6589fa73475199c323291d9c958a0366050193bcbf31c98f209e46d0e1",
+    "lab/proofs/FormulaMain.lean": "e84c62e426ca18cefefee25b2313bcd9346d21f98a411e2d29d56f10947878a3",
+    "lab/proofs/TradyProof/Formula.lean": "ee9d491f3e380198b451da2c51ff450d014818b86d35eab1becfd22c2033531c",
+    "lab/proofs/TradyProof/Parsing.lean": "ccab3a5e4eaaf63c45e1738c720103233fd45fbe4e5a81e778f33fa98711b704",
+    "lab/proofs/bindings.py": "3f902d736219393aa54f2a321f120cc5f08e65b1adbc73da139c2edbb647c358",
+    "lab/proofs/check.py": "2b6dc96360339db328aacaaeb4fe128be7a076f6b319d34279dca0f8f16c7400",
+    "lab/proofs/fixtures.py": "c182caad35fd51c68ca7dce84755689de64334d0558c9640672a9d120a76763a",
+    "lab/proofs/parity.py": "943f9136c9894daf7c886b0e3ce9ad568f8359af74350972104c3cb9fc874437",
+    "lab/proofs/self_test.py": "47a3d45f889b9b9c50fbd06a751011b23fc01363f6e90a1671ff22fda31b203a",
+    "lab/proofs/test_inputs.py": "f7f3d91c670ff45e745ec7f457966e3a0a2f7eb79eddaaa23e98a7a4ec64738e",
+    "lab/tests/test_evaluator_security.py": "dcfc7d4357bb5f5a910c3c676fd525df25c23cc0b34533df0bc4f7a54b9153d0",
+    "lab/tests/test_lean_bridge_errors.py": "cdfde8701d9741a71cd32f2866e9539a74d9af60fc085e42d03b7c4e80faa0a9",
+    "lab/tests/test_lean_integrity.py": "149bd2a7810c18babc01ff15cf0bed2fa6cc17af543b608a6be516dd79b164e9",
+    "lab/tests/test_sealed_evaluator.py": "8abda6ddcdfa08610769475724084ae95a67664fc9ed0783bdb54687bbabe771",
+    "migrations/0011_fail_closed_storage.sql": "5d78a0d5c64620271752079db2498bf44b33e4503ad4f70fdd11826368dea39a",
+    "scripts/rotate-postgres-credentials.py": "01d997fe4d33b0583aa7e4f9e4b7b5f8cc382ab8f5c05021a8232256ac4c128f",
+    "scripts/test-postgres.py": "75e654db9a2ebae574a43c547fdef84cdaaf16d18c5be61231b0edb8249a4edc",
+    "scripts/tests/test_rotate_postgres_credentials.py": "e9db8155dd48a2096c95f7cd2bbc93f5021a5fd8784a9e60bebff5f9fecefb1b",
+    "services/runtime/trady-evaluator.service": "a8935543585c367432f291bd6acfb91c23257af54f63dee9a8901a486fb3efc5"
+  },
+  "gdelt_online": {
+    "exit": 0,
+    "seconds": 29.06,
+    "report": {
+      "checked_at": "2026-10-31T22:30:35.180282715Z",
+      "checks": [
+        {
+          "credential_configured": false,
+          "credential_name": null,
+          "failure_code": null,
+          "http_status": 429,
+          "latency_ms": 13760,
+          "network_requests": 1,
+          "provider": "gdelt",
+          "response_records": null,
+          "retry_after_seconds": 60,
+          "status": "rate_limited"
+        }
+      ],
+      "collection_settings_changed": false,
+      "entry_authorized": false,
+      "mode": "ONLINE",
+      "network_requests": 1,
+      "schema_version": 1
+    },
+    "stderr_tail": ""
+  },
+  "offline_samples_binary_sha256": "13cfa15bbe7d6e35e58d2189d942715de1f9a9028db564e4ddd183757e753e7b",
+  "offline_samples": [
+    {
+      "name": "options",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/options.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/options.observation.json",
+        "--as-of",
+        "2026-10-30T20:00:00Z"
+      ],
+      "exit": 0,
+      "status": "PARTIAL",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.727500+00:00",
+      "response_sha256": "f2abff0a33f5cf7a3337746bc306eceaaebd9db2c3b4e44b2fac5329bf04e74c",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-options.json"
+    },
+    {
+      "name": "coordination",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/coordination.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/coordination.observation.json",
+        "--as-of",
+        "2026-10-31T14:00:00Z"
+      ],
+      "exit": 0,
+      "status": "PARTIAL",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.735512+00:00",
+      "response_sha256": "c3932ab958c4723ce311f873f05f0849f08ef0d2af244d786b9edb9c8f1c0d1a",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-coordination.json"
+    },
+    {
+      "name": "event",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/event.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/event.observation.json",
+        "--as-of",
+        "2026-10-30T15:40:00Z"
+      ],
+      "exit": 0,
+      "status": "AVAILABLE",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.743936+00:00",
+      "response_sha256": "eed056fae1021206af4a126a64d484fce2903b9d2aa2a2a6f663d2f34558a21b",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-event.json"
+    },
+    {
+      "name": "short_interest",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/short_interest.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/short_interest.observation.json",
+        "--as-of",
+        "2026-10-30T20:00:00Z"
+      ],
+      "exit": 0,
+      "status": "PARTIAL",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.752672+00:00",
+      "response_sha256": "f9eb43cc31f453ccab138d1a8e92819bf6a85e37b39193bfe7fba0536321ce96",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-short_interest.json"
+    },
+    {
+      "name": "insider",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/insider.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/insider.observation.json",
+        "--as-of",
+        "2026-10-31T14:00:00Z"
+      ],
+      "exit": 0,
+      "status": "PARTIAL",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.762695+00:00",
+      "response_sha256": "68740d4d8208ae877e727d7e35e92454934ef0622fececa485797dbe1af45b92",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-insider.json"
+    },
+    {
+      "name": "cross_asset",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/cross_asset.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/cross_asset.observation.json",
+        "--as-of",
+        "2026-10-30T20:00:00Z"
+      ],
+      "exit": 0,
+      "status": "PARTIAL",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.772616+00:00",
+      "response_sha256": "9bdccd758219b547abf082a2c8f12bc281b04d29bcb125967404c379ca83e5a7",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-cross_asset.json"
+    },
+    {
+      "name": "attention",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/attention.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/attention.observation.json",
+        "--as-of",
+        "2026-10-31T14:00:00Z"
+      ],
+      "exit": 0,
+      "status": "AVAILABLE",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.781681+00:00",
+      "response_sha256": "6bff0a292bcbde474678b079dcfac0ca6a0bab42db085b71da6843b6a062aeab",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-attention.json"
+    },
+    {
+      "name": "accounting",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/accounting.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/accounting.observation.json",
+        "--as-of",
+        "2026-10-31T14:00:00Z"
+      ],
+      "exit": 0,
+      "status": "PARTIAL",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.790213+00:00",
+      "response_sha256": "5841bd21cb670b4c6b15d6f08fbf023bbaf2a06be86a70454e5127eafb104efb",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-accounting.json"
+    },
+    {
+      "name": "microstructure",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "assess",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/microstructure.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/microstructure.observation.json",
+        "--as-of",
+        "2026-10-30T20:00:00Z"
+      ],
+      "exit": 0,
+      "status": "PARTIAL",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.797455+00:00",
+      "response_sha256": "46fa0b6d880c1b9340b837cb196a2b039c83550cc5b91cff324af01bec166c0d",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-microstructure.json"
+    },
+    {
+      "name": "tax",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "tax-scenarios",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/tax.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/tax.observation.json",
+        "--as-of",
+        "2026-10-31T14:00:00Z"
+      ],
+      "exit": 0,
+      "status": "PARTIAL",
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.805449+00:00",
+      "response_sha256": "9d0cdaf45e96e8bf4dab2d6985a3da72cbffd7dc2c81e5eac63f87032090af24",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-tax.json"
+    },
+    {
+      "name": "accounting_replay",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "replay",
+        "--config",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/accounting.config.json",
+        "--input",
+        "/thinisde/trady/docs/audit-2026-10-31/samples/accounting.replay.json"
+      ],
+      "exit": 0,
+      "status": null,
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.815431+00:00",
+      "response_sha256": "362d73425f983db0da1ecccbae2f7a05e0b1ace1efa67df027cc9e2455d2c88b",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-accounting_replay.json"
+    },
+    {
+      "name": "paper_demo",
+      "command": [
+        "target/debug/trady",
+        "demo"
+      ],
+      "exit": 0,
+      "status": null,
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.821062+00:00",
+      "response_sha256": "09b6d9c554a6af66b5da74bd5d59d562d6541f3f7e5df722140d5f585c854e57",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-paper_demo.json"
+    },
+    {
+      "name": "stock_report",
+      "command": [
+        "target/debug/trady",
+        "research-report",
+        "docs/research-us-eu-2026-10-31.input.json",
+        "--as-of",
+        "2026-10-31T20:00:00Z"
+      ],
+      "exit": 0,
+      "status": null,
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.826960+00:00",
+      "response_sha256": "c49a8cfd24b335b8746b904ff88eb7114ce9bd94e898175670a101b52ce9879a",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-stock_report.json"
+    },
+    {
+      "name": "intelligence_status",
+      "command": [
+        "target/debug/trady",
+        "intelligence",
+        "status"
+      ],
+      "exit": 0,
+      "status": null,
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.832678+00:00",
+      "response_sha256": "7550de4e9a7d47a04340ebd8d2d1849c904f5581f5c4db18d5b7ea27cc02c75b",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-intelligence_status.json"
+    },
+    {
+      "name": "api_health_offline",
+      "command": [
+        "target/debug/trady",
+        "api-health"
+      ],
+      "exit": 0,
+      "status": null,
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.838356+00:00",
+      "response_sha256": "3a4b8b4c17918f0afb4c131345ac3d601bc0204cff9f4ff65e8bfcfa21444feb",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-api_health_offline.json"
+    },
+    {
+      "name": "financial_status",
+      "command": [
+        "target/debug/trady",
+        "financial",
+        "status"
+      ],
+      "exit": 0,
+      "status": null,
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.846497+00:00",
+      "response_sha256": "505c6aa13650ae60a2e205bc2d08cad8bf45fedc8990d2c428f31c3b41ea7b48",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-financial_status.json"
+    },
+    {
+      "name": "news_status",
+      "command": [
+        "target/debug/trady",
+        "news",
+        "status"
+      ],
+      "exit": 0,
+      "status": null,
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.854243+00:00",
+      "response_sha256": "9a9c071002e8910b4ba130fb9d39d314e4b625c3d0a0986ca58783204b10478e",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-news_status.json"
+    },
+    {
+      "name": "sentiment_status",
+      "command": [
+        "target/debug/trady",
+        "sentiment",
+        "status",
+        "--config",
+        "config/finbert/config.example.json"
+      ],
+      "exit": 0,
+      "status": null,
+      "entry_authorized": false,
+      "seconds": 0.01,
+      "finished_at": "2026-10-31T23:20:48.859625+00:00",
+      "response_sha256": "e2c6d4bc12f830f79b934d9f17a2a72f332763419c4337b96e22a4d30f653e86",
+      "response_artifact": "/tmp/trady-remediation-20261031/sample-sentiment_status.json"
+    }
+  ],
+  "postgres_samples": {
+    "finished_at": "2026-10-31T23:23:26.693123+00:00",
+    "scope": "Read-only administrative inspection of synthetic disposable test data; role privileges queried explicitly.",
+    "query": "BEGIN READ ONLY;\nSELECT json_build_object(\n  'feature_observations', (\n    SELECT json_object_agg(feature, observations)\n    FROM (SELECT feature, count(*) AS observations\n          FROM research.intelligence_observations GROUP BY feature) AS counts),\n  'retained_tax_rows', (\n    SELECT count(*) FROM research.intelligence_observations WHERE feature = 'TAX'),\n  'erased_observation_rows', (\n    SELECT count(*) FROM research.intelligence_observations WHERE document IS NULL),\n  'permanently_retired_registry_hashes', (\n    SELECT count(*) FROM research.intelligence_registry_retirements),\n  'select_privileges', (\n    SELECT json_object_agg(role_name,\n      has_table_privilege(role_name, 'research.intelligence_observations', 'SELECT'))\n    FROM (VALUES ('trady_analyst'), ('trady_executor'), ('trady_gateway'),\n                 ('trady_shadow'), ('trady_lab'), ('trady_verifier')) AS roles(role_name)),\n  'application_base_tables', (\n    SELECT json_object_agg(table_schema, base_tables)\n    FROM (SELECT table_schema, count(*) AS base_tables\n          FROM information_schema.tables\n          WHERE table_type = 'BASE TABLE'\n            AND table_schema NOT IN ('pg_catalog', 'information_schema')\n          GROUP BY table_schema) AS counts)\n);\nROLLBACK;\n",
+    "result": {
+      "feature_observations": {
+        "CROSS_ASSET": 1,
+        "EVENT": 1,
+        "ATTENTION": 1,
+        "SHORT_INTEREST": 1,
+        "ACCOUNTING": 28,
+        "MICROSTRUCTURE": 1,
+        "OPTIONS": 1,
+        "INSIDER": 1,
+        "COORDINATION": 1
+      },
+      "retained_tax_rows": 0,
+      "erased_observation_rows": 21,
+      "permanently_retired_registry_hashes": 10,
+      "select_privileges": {
+        "trady_analyst": true,
+        "trady_executor": false,
+        "trady_gateway": false,
+        "trady_shadow": false,
+        "trady_lab": false,
+        "trady_verifier": false
+      },
+      "application_base_tables": {
+        "audit": 1,
+        "control": 9,
+        "execution": 7,
+        "policy": 1,
+        "public": 1,
+        "release": 4,
+        "research": 34,
+        "weekly": 8
+      }
+    },
+    "trading212_api_excluded": true
+  }
+}

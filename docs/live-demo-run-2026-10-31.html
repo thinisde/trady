@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trady live demo evidence · 31 October 2026</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:transparent;color:var(--foreground,#182129);font-family:var(--font-sans,system-ui,sans-serif);font-size:14px;line-height:1.5}h2{font-size:19px;font-weight:650;letter-spacing:-.025em;margin:0 0 5px}p{margin:0 0 14px}.muted{color:var(--muted-foreground,#616a73)}.section{margin:0 0 26px}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:12px 0}select,button{font:inherit;color:inherit;background:var(--card,#f4f6f8);border:1px solid var(--border,#d9dfe4);border-radius:7px;padding:6px 10px}select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--primary,#2270cf);outline-offset:3px}.label{font-size:12px;font-weight:600;color:var(--muted-foreground,#616a73)}table{width:100%;border-collapse:collapse;text-align:left}th{font-size:11px;font-weight:650;text-transform:uppercase;letter-spacing:.065em;color:var(--muted-foreground,#616a73);padding:9px 8px;border-bottom:1px solid var(--border,#d9dfe4)}td{vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--border,#d9dfe4)}td:first-child{font-weight:550;width:29%}td:nth-child(2){width:25%}td:last-child{color:var(--muted-foreground,#616a73);font-size:12px}.status{font-size:12px;white-space:normal;font-weight:600;display:inline-flex;gap:6px;align-items:baseline}.dot{width:7px;height:7px;border-radius:50%;flex:none;display:inline-block;background:currentColor}.ok{color:var(--success,#23815a)}.warn{color:var(--warning,#a9660b)}.bad{color:var(--destructive,#bf3b3b)}.off{color:var(--muted-foreground,#616a73)}.caption{font-size:12px;color:var(--muted-foreground,#616a73);margin-top:10px}.panel{background:var(--card,#f5f7f9);border:1px solid var(--border,#dde2e7);padding:18px;border-radius:var(--radius,12px)}.chart-row{margin:0 0 19px}.chart-row:last-child{margin-bottom:0}.row-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:7px}.row-title{font-weight:550}.date{font-size:11px;white-space:nowrap;color:var(--muted-foreground,#616a73)}.stack{display:flex;height:20px;overflow:hidden;border-radius:5px;background:var(--muted,#e6eaef)}.seg{height:20px;min-width:0;transition:opacity .15s}.negative{background:#cf675d}.neutral{background:#8e9db2}.positive{background:#3f9e87}.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted-foreground,#616a73);margin-bottom:16px}.swatch{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px}.prob-row{display:flex;justify-content:space-between;gap:6px;margin-top:5px;font:11px var(--font-mono,monospace);color:var(--muted-foreground,#616a73)}details{margin-top:16px}summary{cursor:pointer;font-size:12px;color:var(--muted-foreground,#616a73)}.raw td,.raw th{padding:7px 4px;font:11px var(--font-mono,monospace)}.raw td:first-child{width:auto}.raw td:nth-child(2){width:auto}.raw td:last-child{font-size:11px;color:inherit}.mono{font-family:var(--font-mono,monospace)}.mini-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.mini{padding:16px;border-radius:var(--radius,12px);background:var(--card,#f5f7f9);border:1px solid var(--border,#dde2e7)}.number{font-size:25px;font-weight:600;letter-spacing:-.04em}.mini .label{font-size:11px;font-weight:500}a{color:var(--primary,#266dbb);text-decoration:none}a:hover{text-decoration:underline}[hidden]{display:none!important}@media(max-width:480px){th,td{padding:9px 5px}td:last-child{font-size:11px}.mini-grid{gap:6px}.mini{padding:16px}.number{font-size:21px}.date{font-size:10px}.raw{display:block;overflow:auto}}
+</style>
+</head>
+<body>
+<section class="section" aria-labelledby="integrations-heading">
+  <h2 id="integrations-heading">Live integration evidence</h2>
+  <p class="muted">31 October 2026 · actual provider calls. A successful response alone does not establish trading readiness.</p>
+  <div class="controls">
+    <span id="row-count" class="label" aria-live="polite"></span>
+    <label class="label">Show <select id="filter"><option value="all">All integrations</option><option value="ok">Responded</option><option value="issue">Issues and unavailable paths</option></select></label>
+  </div>
+  <table aria-label="Live integration results"><thead><tr><th scope="col">Integration</th><th scope="col">Result</th><th scope="col">Returned evidence</th></tr></thead><tbody id="integrations"></tbody></table>
+  <p class="caption">X: eight post reads were billed in the local estimate, but the batch failed <span class="mono">x_repost_exclusion_not_verified</span>. Estimated diagnostic cost $0.10 of a $0.25 cap; final provider billing may differ.</p>
+</section>
+<section class="section" aria-labelledby="finbert-heading">
+  <h2 id="finbert-heading">What FinBERT returned</h2>
+  <p class="muted">Actual historical Federal Reserve text · scored 20:16 UTC. Native production sentiment rejected these inputs for age and missing language metadata.</p>
+  <div class="panel">
+    <div class="legend"><span><i class="swatch negative"></i>Negative</span><span><i class="swatch neutral"></i>Neutral</span><span><i class="swatch positive"></i>Positive</span></div>
+    <div id="scores"></div>
+    <details><summary>Exact returned probabilities</summary><table class="raw" aria-label="Exact FinBERT probabilities"><thead><tr><th>Source</th><th>Negative</th><th>Neutral</th><th>Positive</th></tr></thead><tbody id="raw"></tbody></table></details>
+  </div>
+  <p class="caption">ProsusAI/finbert · revision <span class="mono">0bc2ac1…</span> · three matching text hashes, no truncation. Sentiment labels describe text; they are not stock-return forecasts. Sources: <a href="https://www.federalreserve.gov/newsevents/pressreleases/orders20261029a.htm">29 Oct</a>, <a href="https://www.federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm">28 Oct</a>, <a href="https://www.federalreserve.gov/newsevents/pressreleases/enforcement20261016a.htm">16 Oct</a>.</p>
+</section>
+<section class="section" aria-labelledby="llm-heading">
+  <h2 id="llm-heading">What OpenCode Go returned</h2>
+  <p class="muted"><span class="mono">deepseek-v4.1-flash</span> · completed · 12,574 charged tokens · no tool calls or trade proposal.</p>
+  <details><summary>Read the exact model reply</summary><div class="panel" style="white-space:pre-line;margin-top:12px">Demo run summary (broker snapshot 2026-10-31T20:11:49Z, demo environment, 0 order mutations).
+
+Cash budget: 5,000.00 EUR cash; the 98% entry fraction yields a maximum entry spend of 4,900.00 EUR before cost constraints, leaving a 100.00 EUR minimum unallocated buffer.
+
+FinBERT diagnostic (ProsusAI/finbert, revision 0bc2ac1; three scored texts, none truncated):
+1) 2026-10-29 Bank of Nova Scotia application approval — negative 0.027076375, neutral 0.879452109, positive 0.093471549.
+2) 2026-10-28 FOMC statement — negative 0.074908398, neutral 0.899334848, positive 0.025756782.
+3) 2026-10-16 enforcement-action terminations — negative 0.922517955, neutral 0.063065670, positive 0.014416309.
+
+The production planner returned no stock selection, buy limit, stop trigger, target sell limit or quantity; each is null. Entry is unauthorized: production_sentiment_readiness is false, with native rejection of aged evidence and missing language metadata, alongside blockers — no approved input service, native prediction model, formula authority or tradable universe, unknown broker capabilities, and Saturday with no verified open exchange session. No order is authorized or proposed.</div>
+  <p class="caption">The model summarized supplied diagnostic context. Its null values mean unavailable fields; the native planner stopped before calculation.</p></details>
+</section>
+<section class="section" aria-labelledby="tests-heading">
+  <h2 id="tests-heading">Verification results</h2>
+  <div class="mini-grid">
+    <div class="mini"><div class="number">506</div><div class="label">Workspace tests passed</div></div>
+    <div class="mini"><div class="number">21</div><div class="label">Separate DB checks passed</div></div>
+    <div class="mini"><div class="number">6</div><div class="label">FinBERT tests passed</div></div>
+  </div>
+  <p class="caption">Zero failures. The workspace run skipped 21 database-dependent checks; the separate disposable PostgreSQL run passed 21 checks and verified migrations through version 10.</p>
+</section>
+<script>
+const integrations=[
+['Trading 212 demo','ok','Responded','Before and after: €5,000 cash, zero positions, zero pending orders.'],
+['FinBERT','ok','Responded','Pinned model loaded; three actual inference responses.'],
+['OpenCode Go','ok','Completed','Persisted model: deepseek-v4.1-flash. Summary returned; no proposal.'],
+['Telegram','ok','Delivered','Native startup/status and final result messages reached the verified private owner.'],
+['X','warn','Batch rejected','Identity and counts succeeded; eight returned posts failed repost-exclusion verification.'],
+['SEC','ok','HTTP 200','Expected payload; 1,000 health-probe records.'],
+['FRED','ok','HTTP 200','Expected observation payload.'],
+['Twelve Data','ok','HTTP 200','Expected price payload.'],
+['Finnhub','ok','HTTP 200','Expected quote payload.'],
+['Alpha Vantage','ok','HTTP 200','Expected quote payload.'],
+['FMP','ok','HTTP 200','Expected financial payload.'],
+['CoinGecko','ok','HTTP 200','Expected market payload.'],
+['Tiingo','ok','HTTP 200','Five health-probe records; about 10 seconds latency.'],
+['Massive','ok','HTTP 200','Expected daily-price payload.'],
+['Google News RSS','ok','HTTP 200','38 parseable health-probe records.'],
+['BBC business RSS','ok','HTTP 200','50 parseable health-probe records.'],
+['GDELT','bad','Transport failed','http_transport_failed; no HTTP status.'],
+['yfinance','off','Offline only','Import adapter; no live collection client in this configuration.']
+];
+const scores=[
+{label:'Nova Scotia application approval',short:'29 Oct',date:'29 Oct 2026',negative:'0.027076375',neutral:'0.879452109',positive:'0.093471549'},
+{label:'FOMC statement',short:'28 Oct',date:'28 Oct 2026',negative:'0.074908398',neutral:'0.899334848',positive:'0.025756782'},
+{label:'Enforcement-action terminations',short:'16 Oct',date:'16 Oct 2026',negative:'0.922517955',neutral:'0.063065670',positive:'0.014416309'}
+];
+function node(tag,text,cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el}
+function tableRows(){const filter=document.getElementById('filter').value;const selected=integrations.filter(x=>filter==='all'||(filter==='ok'?x[1]==='ok':x[1]!=='ok'));const body=document.getElementById('integrations');body.replaceChildren();for(const [name,kind,status,evidence] of selected){const tr=node('tr');tr.append(node('td',name));const cell=node('td');const label=node('span',undefined,'status '+kind);label.append(node('i',undefined,'dot'),document.createTextNode(status));cell.append(label);tr.append(cell,node('td',evidence));body.append(tr)}document.getElementById('row-count').textContent=selected.length+' of '+integrations.length+' integrations'}
+document.getElementById('filter').addEventListener('change',tableRows);tableRows();
+for(const source of scores){const row=node('div',undefined,'chart-row');const top=node('div',undefined,'row-top');top.append(node('span',source.label,'row-title'),node('span',source.date,'date'));const stack=node('div',undefined,'stack');stack.setAttribute('role','img');stack.setAttribute('aria-label',source.label+': negative '+source.negative+', neutral '+source.neutral+', positive '+source.positive);const values=node('div',undefined,'prob-row');for(const kind of ['negative','neutral','positive']){const seg=node('span',undefined,'seg '+kind);seg.style.width=(Number(source[kind])*100)+'%';seg.title=kind+': '+source[kind];stack.append(seg);values.append(node('span',(Number(source[kind])*100).toFixed(2)+'%'))}row.append(top,stack,values);document.getElementById('scores').append(row);const raw=node('tr');raw.append(node('td',source.short),node('td',source.negative),node('td',source.neutral),node('td',source.positive));document.getElementById('raw').append(raw)}
+console.log('Evidence rendered:',integrations.length,'integrations,',scores.length,'FinBERT responses.');
+</script>
+</body>
+</html>

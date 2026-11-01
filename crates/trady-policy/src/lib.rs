@@ -3,6 +3,7 @@
 pub mod capital;
 pub mod economics;
 pub mod holding;
+pub mod intelligence;
 pub mod limits;
 pub mod prediction;
 pub mod sentiment;

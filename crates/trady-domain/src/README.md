@@ -14,6 +14,14 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
 
 ## Interface
 
+- [Optional intelligence](./intelligence/README.md): `[intelligence/mod.rs:FeatureKind]`,
+  `FeatureInput`, `FeatureAssessment`, `IntelligenceScope`, `SourceEvidence`, `FeatureObservation` and
+  `AssessmentRecord` define ten feature kinds with stable tool mappings and typed
+  scope, chronology, provenance, audience and missingness envelopes.
+  The public record modules are `accounting`, `attention`, `coordination`,
+  `cross_asset`, `event`, `insider`, `microstructure`, `options`, `short_interest`
+  and `tax` (`[intelligence/mod.rs:FeatureKind]`).
+
 - `[financial.rs:Provider]`, `DataRights`, `Capability`, `FinancialPayload`,
   `FinancialObservation`, `FinancialSnapshot` and `FinancialSignals` define
   attributed research context, consumer permissions, version/receipt metadata
@@ -36,6 +44,8 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
   `SentimentBatch`, `SentimentEvidence`, `SentimentAssessment`: provider-neutral
   sentiment records. Constants expose schema version, shipped model/revision and
   batch/text bounds; see the [component contract](./sentiment/README.md).
+  These are `[sentiment/mod.rs:SENTIMENT_VERSION]`, `FINBERT_MODEL`,
+  `FINBERT_REVISION`, `MAX_SENTIMENT_ITEMS` and `MAX_SENTIMENT_CHARS`.
 
 - `[lib.rs:Error]`, `Result<T>` and `require`: common fallible validation.
 - `[lib.rs:identifier]`: internal macro generating public `AccountId`, `InstrumentId`,
@@ -129,8 +139,8 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
 
 - `[sentiment/mod.rs:SentimentAssessment]` supports serialization only, with public
   fields; DTO shape alone grants no authority. Other sentiment DTOs deny unknown
-  fields when deserialized. Application correlation and policy validation enforce
-  semantic bounds, permissions, model matching and freshness.
+  fields when deserialized. Callers must establish semantic bounds, permissions,
+  model matching and freshness through application correlation and policy validation.
 
 - Identifier construction/deserialization allows 1–96 ASCII letters, digits,
   underscores or hyphens; currency requires three uppercase letters
@@ -194,6 +204,8 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
   bounded support/tolerances and valid ordered feature schema/drift thresholds.
   It does not validate runtime-version/source-revision/model-format strings.
   `supports` and `check_features` do not call manifest validation themselves.
+  `supports` does not validate context freshness; `check_features` calls
+  `AssessmentContext::validate(now)` before checking feature order/drift.
   `ScenarioSupport` stop bounds are signed `(entry - stop) / entry` distances.
   Zero/negative bounds require explicit `supports_positions`; existing positive
   ranges never acquire profitable-stop support by taking an absolute value.
@@ -224,7 +236,9 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
 - `[screening.rs:evaluate_member]` requires one current market/priority observation,
   positive bid/ask and notionals, bounded spread/cost/participation, sufficient
   liquidity, a current clear exchange window and five known priority components
-  in `0..=4`. Zero is an observed score; missing is rejected. Notional checks do
+  in `0..=4`. It also requires `material_exposure=true`; false yields
+  `NoMaterialExposure` regardless of the scores. Zero is an observed score;
+  missing is rejected. Notional checks do
   not establish account cash affordability or whole-share quantity feasibility.
 - `[screening.rs:screen_universe]` ranks by total score descending, fifth component
   descending, spread ascending, daily notional descending and instrument ID.
@@ -251,6 +265,34 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
   deserialization. `[prediction.rs:MaturedOutcome]` has no validator; its `None`
   outcome denotes censored/ambiguous evidence by documented convention, rather
   than an enforced winning/losing classification.
+
+`[research.rs:SourceCoverage]`, `XCountBucket` and `XCountsMeasurement` reject
+unknown fields but have no local validator for approval, interval chronology,
+hashes or agreement between buckets and totals. `[prediction.rs:Prediction::validate]`
+checks calibration provenance and training/validation chronology only for
+`Validated` calibration. It does not require the current regime in
+`supported_regimes` or match uncertainty units to payload variants. Quantitative
+payloads may contain no indicators; momentum, VWAP distance and relative strength
+receive no additional bounds here.
+
+`[screening.rs:valid_gics_pair]` uses a fixed 11-sector/25-industry-group table;
+`taxonomy_edition` syntax does not select another table. `[screening.rs:screen_universe]`
+checks provenance digest shape and an HTTPS URL prefix without recomputing the
+digest or fully validating the URL. `[screening.rs:evaluate_member]` accepts
+1–64 syntactically valid priority evidence IDs without requiring uniqueness,
+computes spread from the bid/ask midpoint and requires round-trip cost to cover
+that spread. Remaining session time must strictly exceed the close buffer.
+
+`[lib.rs:Mode]` uses snake-case serialization; `PositionState`, `Side`,
+`OrderStatus`, `Support` and `IntentState` use `SCREAMING_SNAKE_CASE`.
+`[financial.rs:FinancialPayload]` uses the `kind` tag with uppercase variants.
+`[financial.rs:FinancialObservation::validate]` has no current-time argument:
+temporal ordering neither establishes present freshness nor recomputes hashes.
+`[perpetual.rs:Assessment::validate]` permits an OK assessment without an expected
+return or return interval, but requires target-hit probability; any supplied
+interval has nominal coverage in `[0,1]`. `[perpetual.rs:AssessmentRecord]` and
+`PerpetualReview` expose deserializable fields without local validators for
+nested-record correspondence, review references, immutability or retention.
 
 ## Side Effects
 

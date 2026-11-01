@@ -8,6 +8,15 @@ inputs, native advisory inference and Telegram delivery state.
 
 ## Interface
 
+- [Optional intelligence adapters](./intelligence/README.md): bounded normalized
+  JSON imports, SEC Forms 3/4/5 XML parsing, sequence-checked displayed books,
+  immutable memory replay storage and nine optional read-only research tools.
+
+- `[api_health.rs:run]` and `PROVIDERS` expose explicit metadata-only or bounded
+  GET diagnostics over fixed API routes. `HealthCheck` contains sanitized status,
+  timing, record counts and credential availability; see the
+  [operator guide](../../../docs/api-health.md). No database or broker port is used.
+
 - [Financial adapters](./financial/README.md): `[financial/mod.rs:FinancialClient]`
   implements the application `FinancialProvider` port with fixed routes and central
   credential lookup; `offline_page` handles explicit yfinance research imports.
@@ -59,8 +68,9 @@ inputs, native advisory inference and Telegram delivery state.
   `[opencode/llm.rs:OpenCodeGoConfig::default]` uses `deepseek-v4.1-flash`.
   [Setup](../../../docs/opencode/README.md).
 - `[sessions.rs:MemorySessionRepository]`: owner/account/policy-scoped session
-  fixtures implementing `SessionRepository::{create, load, list, acquire, save,
-  release}`, with generation and revision checks.
+  fixtures implementing `SessionRepository::{is_ephemeral, create, load, list,
+  acquire, save, release}`, with generation and revision checks and explicit
+  in-process conversation storage.
 - [News source contract](./news/README.md): `SourceClient`, safe HTTPS transport,
   RSS/Atom/news API normalization and X identity/timeline/lookup adapters.
 
@@ -84,6 +94,17 @@ inputs, native advisory inference and Telegram delivery state.
 
 ## Invariants
 
+- `[api_health.rs:run]` always reports `entry_authorized=false` and
+  `collection_settings_changed=false`. `[api_health.rs:probe]` makes no transport
+  calls offline, leaves X behind its existing cost gate and treats yfinance as
+  offline-import-only. Missing required credentials prevent diagnostic requests;
+  reports omit raw response bodies and credential values.
+  `[api_health.rs:probe]` assigns `gdelt_response_invalid` specifically when a
+  GDELT response is classified `invalid_response`. GDELT invalid/rate-limited
+  diagnostics receive a suggested 60-second backoff when no parsed retry delay
+  is available; other classified provider failures retain their own status.
+  A valid empty article array remains `empty_data`.
+
 - `[weekly_lab/mod.rs:HelperLab]` accepts candidate parameters as data;
   `[weekly_lab/runner.rs:HelperCommand::run_linux]` clears inherited environment.
   `[weekly_lab/mod.rs:HelperLab::verify_candidate]` distinguishes full formula
@@ -97,9 +118,10 @@ inputs, native advisory inference and Telegram delivery state.
   `[shadow.rs:BrokerExecutionPort for ShadowBroker]` returns `Unsupported` after
   successful suppression recording; recording failures return their own errors.
   These operations create no broker acknowledgement or fill.
-- `[shadow.rs:ShadowBroker::new]` requires a nonsymlink private recording directory.
-  `write_once` checks existing records for regular nonsymlink/private files,
-  exact bytes and a 4 MiB ceiling; that size ceiling does not guard initial writes.
+- `[shadow.rs:ShadowBroker::new]` requires a nonsymlink recording directory.
+  `write_once` checks existing records for regular nonsymlink files, exact bytes
+  and a 4 MiB ceiling. Unix additionally requires group/other permission bits
+  clear for the directory and existing records; that size ceiling does not guard initial writes.
 
 - `[credentials.rs:CredentialStore::read_file]` requires a regular UTF-8 file,
   private Unix group/other permission bits, at most 262,144 bytes and strict
@@ -112,7 +134,8 @@ inputs, native advisory inference and Telegram delivery state.
   `[credentials.rs:CredentialStore::status]` reports known and file-defined names,
   rather than discovering arbitrary environment-variable names.
 - `[sessions.rs:MemorySessionRepository::create]` validates scope/limits and
-  requires version 1, revision 0 and a globally unique valid session ID.
+  requires version 1, revision 0 and a valid session ID unique across scopes in
+  this shared repository map. Independently constructed repositories have separate maps.
   `acquire` requires a valid worker, expired lease and TTL 1–300 seconds, then
   increments generation. `save` checks scope, worker, generation, unexpired lease
   and revision before incrementing revision. `release` checks worker/generation
@@ -141,11 +164,14 @@ inputs, native advisory inference and Telegram delivery state.
   overflow. `[lib.rs:FakeCalendar::session]` selects the first
   `opens_at <= now < closes_at` session; `[lib.rs:FakeQuotes::quote]` does not
   independently validate quote freshness.
+- `[lib.rs:MemoryExecutionRepository::register_paper_account]` requires account
+  identifiers beginning with `paper_`.
 - `[lib.rs:ttl]` bounds leases to 1–300 seconds. Acquisition increments the fencing
   generation, rejects time overflow and requires reconciliation after takeover.
   `[lib.rs:check]` rejects stale/expired fences for writes.
-- `[lib.rs:MemoryExecutionRepository::save_reconciliation]` requires nonfuture
-  snapshots no older than 60 seconds through `trady_policy_fresh`. It rejects
+- `[lib.rs:MemoryExecutionRepository::save_reconciliation]` requires snapshots
+  for the fenced account in Paper mode, nonfuture and no older than 60 seconds
+  through `trady_policy_fresh`. It rejects
   regressing snapshots, currency changes, reused snapshot IDs with different content,
   and unknown resolution IDs before mutating intents. Outbox keys deduplicate snapshots.
 - `[lib.rs:MemoryExecutionRepository::reserve_paper_intent]` supports prepared buy
@@ -161,6 +187,10 @@ inputs, native advisory inference and Telegram delivery state.
   binding and stock metadata before sending; ambiguous outcomes require recovery.
 
 ## Side Effects
+
+`[api_health.rs:run]` loads the credential store even offline. Eligible online
+probes perform at most one transport GET per provider through `SafeHttp` and
+measure elapsed time; no database or broker mutation port is used.
 
 `[weekly_lab/runner.rs:HelperCommand::run_linux]` spawns resource-bounded local
 processes and persists hashed tool artifacts, including fixed `prlimit`/`kill`

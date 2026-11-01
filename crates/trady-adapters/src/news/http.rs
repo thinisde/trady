@@ -173,6 +173,13 @@ impl SafeHttp {
                 .host_str()
                 .ok_or_else(|| SourceFailure::unavailable("url_host_missing"))?;
             let addresses = resolve(host)?;
+            // GDELT's TLS handshake can exceed the default connection bound.
+            // Keep both deadlines finite and retain the single-request policy.
+            let (timeout_seconds, connect_seconds) = if host == "api.gdeltproject.org" {
+                (30, 15)
+            } else {
+                (15, 5)
+            };
             let client = Client::builder()
                 .no_proxy()
                 .https_only(true)
@@ -182,8 +189,8 @@ impl SafeHttp {
                 .no_brotli()
                 .no_deflate()
                 .no_zstd()
-                .timeout(Duration::from_secs(15))
-                .connect_timeout(Duration::from_secs(5))
+                .timeout(Duration::from_secs(timeout_seconds))
+                .connect_timeout(Duration::from_secs(connect_seconds))
                 .resolve_to_addrs(host, &addresses)
                 .user_agent("Trady/0.1 research-reader")
                 .build()
@@ -217,9 +224,15 @@ impl SafeHttp {
             if let Some(last_modified) = &request.last_modified {
                 builder = builder.header("If-Modified-Since", last_modified);
             }
-            let response = builder
-                .send()
-                .map_err(|_| SourceFailure::unavailable("http_transport_failed"))?;
+            let response = builder.send().map_err(|error| {
+                SourceFailure::unavailable(if error.is_timeout() {
+                    "http_timeout"
+                } else if error.is_connect() {
+                    "http_connection_failed"
+                } else {
+                    "http_transport_failed"
+                })
+            })?;
             if response.status().is_redirection() && response.status().as_u16() != 304 {
                 // Authenticated API calls never follow a redirect, including query-string API keys.
                 if request.redirects == 0

@@ -13,6 +13,12 @@ redaction operation (`[src/research.rs:SourceItem::redact]`).
 
 ## Interface
 
+- [Optional intelligence contract](./src/intelligence/README.md):
+  `[src/intelligence/mod.rs:FeatureKind]`, `FeatureInput`, `FeatureAssessment`,
+  `IntelligenceScope`, `SourceEvidence`, `FeatureObservation` and `AssessmentRecord`
+  define ten feature kinds, stable tool mappings and typed research records with
+  explicit scope/evidence/envelope validation.
+
 - `[src/sentiment/mod.rs:SentimentAssessment]` and related DTOs/constants: decimal
   probabilities, exact text/model identity and source lineage/expiry observations.
 
@@ -25,6 +31,10 @@ redaction operation (`[src/research.rs:SourceItem::redact]`).
   metadata; explicit checks include `DataRights::permits` and `Capability::current`.
 - `[src/lib.rs:research]` exports research records and collection state, including
   `[src/research.rs:SourceItem]`, `SourceRights` and `SourceState`.
+  `[src/research.rs:SourceCoverage]`, `XCountBucket` and `XCountsMeasurement`
+  preserve versioned coverage and preflight intervals/buckets/completeness.
+  Callers must preserve the original collection interval when continuing
+  `SourceState` pagination.
 - `[src/perpetual.rs:ModelManifest]`, `AssessmentContext`, `Assessment`,
   `AssessmentRecord`, `PerpetualReview`: scenario/feature/model provenance,
   explicit approval/drift/shape validation and advisory reviews.

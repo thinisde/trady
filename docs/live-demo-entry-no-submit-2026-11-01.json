@@ -1,0 +1,106 @@
+{
+  "after": {
+    "cash": {
+      "amount": "5000.00",
+      "currency": "EUR"
+    },
+    "observed_at": "2026-10-31T23:47:48.040096385Z",
+    "pending_orders": 0,
+    "positions": 0
+  },
+  "before": {
+    "cash": {
+      "amount": "5000.00",
+      "currency": "EUR"
+    },
+    "observed_at": "2026-10-31T23:47:31.348870891Z",
+    "pending_orders": 0,
+    "positions": 0
+  },
+  "broker_environment": "demo",
+  "broker_state_unchanged": true,
+  "cli_sha256": "13cfa15bbe7d6e35e58d2189d942715de1f9a9028db564e4ddd183757e753e7b",
+  "config": "config/autonomous.demo-no-submit.json",
+  "entry_decisions_enabled": true,
+  "finished_at": "2026-10-31T23:47:48.381985+00:00",
+  "journal_files": [
+    "cycle_9bfff99e1d27b123361044d206d6ec775cff7bcfacc761f99e5ce052b562d7be.json",
+    "cycle_edf7038a12e0eceb8ad0cd5ddaa41097c5bf3aaeaa4011426976c4d1510bba4d.json"
+  ],
+  "local_database_passwords_rotated": 2,
+  "mode": "shadow",
+  "old_database_passwords_rejected": true,
+  "order_api_calls": 0,
+  "runtime": [
+    {
+      "cycle": {
+        "account_id": "shadow_demo_no_submit_20261101",
+        "configuration_hash": "923aca8cda87d3bacfd4b6a2a2d80fe9b23d97d51c4c7ee779ab89c3d99414d1",
+        "finished_at": "2026-10-31T23:47:40.030391307Z",
+        "mode": "shadow",
+        "order_mutations": 0,
+        "result": {
+          "reason": "trading input provider unavailable",
+          "status": "blocked"
+        },
+        "schema_version": 1,
+        "started_at": "2026-10-31T23:47:39.688115329Z"
+      },
+      "shadow_cycle_hash": "9bfff99e1d27b123361044d206d6ec775cff7bcfacc761f99e5ce052b562d7be"
+    },
+    {
+      "cycles": 1,
+      "order_mutations": 0,
+      "status": "shadow_stopped"
+    }
+  ],
+  "runtime_enabled": true,
+  "schema_version": 1,
+  "started_at": "2026-10-31T23:47:23.343038+00:00",
+  "configuration_check": {
+    "account_id": "shadow_demo_no_submit_20261101",
+    "approved_models": 0,
+    "blockers": [
+      "approved_model_registry_empty",
+      "approved_input_service_unconfigured",
+      "universe_source_disabled",
+      "approved_skill_hashes_missing",
+      "approved_formula_unavailable"
+    ],
+    "entry_authorized": false,
+    "mode": "shadow",
+    "status": "configuration_checked"
+  },
+  "entry_order_generated": false,
+  "entry_candidate_evaluation_reached": false,
+  "submission_guard": {
+    "mechanism": "Existing shadow runner constructs Trading212Reader, then records any validated request locally with ShadowBroker.record_proposal. It constructs no executable broker order client.",
+    "sources": [
+      "crates/trady-cli/src/autonomous.rs:244",
+      "crates/trady-cli/src/autonomous_shadow.rs:78",
+      "crates/trady-cli/src/autonomous_shadow.rs:221",
+      "crates/trady-adapters/src/shadow.rs:149"
+    ],
+    "verification": "cargo test --locked -p trady-adapters --test shadow_recording",
+    "test_result": "1 passed; 0 failed"
+  },
+  "initial_attempt": {
+    "started_at": "2026-10-31T23:46:40.255935377Z",
+    "finished_at": "2026-10-31T23:46:40.368866075Z",
+    "status": "blocked",
+    "reason": "broker RateLimited (HTTP 429); retry after at least 6s",
+    "order_mutations": 0
+  },
+  "database_connection": {
+    "scope": "trady-live-demo-db-20261031",
+    "analyst_endpoint": "127.0.0.1:32811",
+    "override": "Applied only to the child process environment; saved DSN endpoints preserved."
+  },
+  "credential_incident": {
+    "affected_roles": [
+      "trady_analyst",
+      "trady_shadow"
+    ],
+    "remediation": "Rotated the two local database passwords in the named diagnostic database and the private credential store; verified new passwords accepted and old passwords rejected."
+  }
+}

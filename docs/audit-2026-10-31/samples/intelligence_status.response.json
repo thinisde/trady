@@ -1,0 +1,78 @@
+{
+  "name": "intelligence_status",
+  "command": [
+    "target/debug/trady",
+    "intelligence",
+    "status"
+  ],
+  "exit": 0,
+  "response": {
+    "entry_authorized": false,
+    "features": [
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "OPTIONS",
+        "tool": "options.expectations"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "COORDINATION",
+        "tool": "market.coordination_check"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "EVENT",
+        "tool": "event.surprise_check"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "SHORT_INTEREST",
+        "tool": "short.crowding"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "INSIDER",
+        "tool": "issuer.insider_activity"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "CROSS_ASSET",
+        "tool": "macro.cross_asset_context"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "ATTENTION",
+        "tool": "attention.snapshot"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "ACCOUNTING",
+        "tool": "issuer.earnings_quality"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "MICROSTRUCTURE",
+        "tool": "market.microstructure"
+      },
+      {
+        "authority": "RESEARCH_ONLY_UNCALIBRATED",
+        "enabled": true,
+        "feature": "TAX",
+        "tool": "account.tax_scenarios"
+      }
+    ],
+    "registry_hash": "8dfe0af353f41d5ce1089c0dec4c8c137eac1d1bbd05d0afc4f4acc468a3614a",
+    "schema_version": 1,
+    "sources": []
+  },
+  "error": ""
+}

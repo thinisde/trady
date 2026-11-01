@@ -1,0 +1,253 @@
+{
+  "name": "accounting",
+  "command": [
+    "target/debug/trady",
+    "intelligence",
+    "assess",
+    "--config",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/accounting.config.json",
+    "--input",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/accounting.observation.json",
+    "--as-of",
+    "2026-10-31T14:00:00Z"
+  ],
+  "exit": 0,
+  "response": {
+    "assessment_id": "intel_d6ae861fba01008eaaf0f24d0007ec5a4fd53770f1e28a8dd0f7e3d3243f699e",
+    "calibration": "RESEARCH_ONLY_UNCALIBRATED",
+    "computed_at": "2026-10-31T21:49:12.869942602Z",
+    "decision_at": "2026-10-31T14:00:00Z",
+    "entity_id": "issuer",
+    "entry_authorized": false,
+    "evidence": [
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-31T13:59:59Z",
+        "complete": true,
+        "content_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-07T14:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-30T14:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-31T13:59:58Z",
+        "received_at": "2026-10-31T14:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "sec:filing#a0",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-31T13:59:59Z",
+        "complete": true,
+        "content_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-07T14:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-30T14:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-31T13:59:58Z",
+        "received_at": "2026-10-31T14:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "sec:filing#a1",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-31T13:59:59Z",
+        "complete": true,
+        "content_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-07T14:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-30T14:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-31T13:59:58Z",
+        "received_at": "2026-10-31T14:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "sec:filing#ni",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-31T13:59:59Z",
+        "complete": true,
+        "content_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+        "currency": "USD",
+        "entity_id": "issuer",
+        "expires_at": "2026-11-07T14:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-30T14:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-31T13:59:58Z",
+        "received_at": "2026-10-31T14:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "sec:filing#ocf",
+        "unit": "normalized_research",
+        "venue": null
+      }
+    ],
+    "expires_at": "2026-11-07T14:00:00Z",
+    "feature": "ACCOUNTING",
+    "feature_version": "trady-intelligence-v1",
+    "input_hash": "7901b300e72f7a2e2f4942d51fc7b447b6630e2dede44d9574396941ba67acd8",
+    "observation_id": "fixture_observation",
+    "reasons": [
+      "uncalibrated_research_no_expected_return_or_order_authority"
+    ],
+    "registry_hash": "8999921c1d98d0330aa14ce7ea515ccce5b8d481c0f9efa614ef04d7a77554ba",
+    "result": {
+      "assessment": {
+        "as_of": "2026-10-31T14:00:00Z",
+        "cohort": {
+          "industry_id": "manufacturer",
+          "inventory_relevant": true,
+          "model_revision": "industry-v1"
+        },
+        "comparison_period": {
+          "end": "2025-09-30",
+          "fiscal_label": "2025-Q3",
+          "fiscal_weeks": 13,
+          "kind": "QUARTER",
+          "start": "2025-07-01"
+        },
+        "crosswalk_revision": "crosswalk-v1",
+        "current_period": {
+          "end": "2026-09-30",
+          "fiscal_label": "2026-Q3",
+          "fiscal_weeks": 13,
+          "kind": "QUARTER",
+          "start": "2026-07-01"
+        },
+        "issuer_id": "issuer",
+        "one_off_disclosures": [],
+        "reasons": [
+          "ratios_and_empirical_ranks_are_research_context_not_fraud_or_return_probabilities",
+          "long_horizon_accounting_features_require_separate_short_horizon_validation"
+        ],
+        "restatements": [],
+        "signals": [
+          {
+            "abstention_reasons": [],
+            "cohort_size": 0,
+            "cohort_source_refs": [],
+            "empirical_percentile": null,
+            "fact_ids": [
+              "ni",
+              "ocf",
+              "a0",
+              "a1"
+            ],
+            "formula": "(net_income - operating_cash_flow) / ((opening_assets + closing_assets) / 2)",
+            "formula_revision": "earnings-quality-v1",
+            "metric": "ACCRUALS_TO_AVERAGE_ASSETS",
+            "rank_abstention_reason": "insufficient_comparable_industry_cohort",
+            "value": "0.10"
+          },
+          {
+            "abstention_reasons": [],
+            "cohort_size": 0,
+            "cohort_source_refs": [],
+            "empirical_percentile": null,
+            "fact_ids": [
+              "ni",
+              "ocf"
+            ],
+            "formula": "operating_cash_flow / materially_positive_net_income",
+            "formula_revision": "earnings-quality-v1",
+            "metric": "CASH_CONVERSION",
+            "rank_abstention_reason": "insufficient_comparable_industry_cohort",
+            "value": "0.50"
+          },
+          {
+            "abstention_reasons": [
+              "missing_or_misaligned_TradeReceivables_period"
+            ],
+            "cohort_size": 0,
+            "cohort_source_refs": [],
+            "empirical_percentile": null,
+            "fact_ids": [],
+            "formula": "(receivables_current / receivables_prior - 1) - (revenue_current / revenue_prior - 1)",
+            "formula_revision": "earnings-quality-v1",
+            "metric": "RECEIVABLES_REVENUE_GROWTH_GAP",
+            "rank_abstention_reason": "ratio_unavailable",
+            "value": null
+          },
+          {
+            "abstention_reasons": [
+              "missing_or_misaligned_Inventory_period"
+            ],
+            "cohort_size": 0,
+            "cohort_source_refs": [],
+            "empirical_percentile": null,
+            "fact_ids": [],
+            "formula": "(inventory_current / inventory_prior - 1) - (revenue_current / revenue_prior - 1)",
+            "formula_revision": "earnings-quality-v1",
+            "metric": "INVENTORY_REVENUE_GROWTH_GAP",
+            "rank_abstention_reason": "ratio_unavailable",
+            "value": null
+          },
+          {
+            "abstention_reasons": [
+              "missing_or_misaligned_DilutedWeightedAverageShares_period"
+            ],
+            "cohort_size": 0,
+            "cohort_source_refs": [],
+            "empirical_percentile": null,
+            "fact_ids": [],
+            "formula": "split_adjusted_diluted_weighted_shares_current / split_adjusted_diluted_weighted_shares_prior - 1",
+            "formula_revision": "earnings-quality-v1",
+            "metric": "DILUTED_WEIGHTED_SHARE_GROWTH",
+            "rank_abstention_reason": "ratio_unavailable",
+            "value": null
+          },
+          {
+            "abstention_reasons": [
+              "missing_or_misaligned_OutstandingShares_period"
+            ],
+            "cohort_size": 0,
+            "cohort_source_refs": [],
+            "empirical_percentile": null,
+            "fact_ids": [],
+            "formula": "split_adjusted_outstanding_shares_current / split_adjusted_outstanding_shares_prior - 1",
+            "formula_revision": "earnings-quality-v1",
+            "metric": "OUTSTANDING_SHARE_GROWTH",
+            "rank_abstention_reason": "ratio_unavailable",
+            "value": null
+          }
+        ],
+        "version": "earnings-quality-v1"
+      },
+      "feature": "ACCOUNTING"
+    },
+    "schema_version": 1,
+    "scope": {
+      "account_id": "paper_synthetic",
+      "owner_id": "synthetic_owner"
+    },
+    "status": "PARTIAL"
+  },
+  "error": ""
+}

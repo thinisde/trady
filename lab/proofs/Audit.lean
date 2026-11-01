@@ -10,6 +10,8 @@ import TradyProof
 #print axioms TradyProof.CheckedDecimal.ties_to_even
 #print axioms TradyProof.CheckedDecimal.ties_from_odd
 #print axioms TradyProof.Formula.accepted_checks
+#print axioms TradyProof.Formula.accepted_account_input
+#print axioms TradyProof.Formula.invalid_account_input_cannot_accept
 #print axioms TradyProof.Formula.total_calculation
 #print axioms TradyProof.Formula.accepted_stop_before_target
 #print axioms TradyProof.Formula.accepted_target_holding_caps

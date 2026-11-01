@@ -1,0 +1,208 @@
+{
+  "as_of": "2026-10-31T19:38:05Z",
+  "candidates": [
+    {
+      "catalysts": [
+        "Continued growth in payment and cross-border volumes",
+        "Fiscal 2027 operating execution"
+      ],
+      "company": "Visa",
+      "currency": "USD",
+      "entry_authorized": false,
+      "evidence_gaps": [],
+      "financial_period_end": "2026-09-30",
+      "financial_period_start": "2025-10-01",
+      "free_cash_flow_margin_pct": "48.0513",
+      "fundamentals": "SUPPORTED",
+      "operating_margin_pct": "61.2378",
+      "pe_ttm": "33.5706",
+      "publication_age_days": 4,
+      "published_at": "2026-10-27T00:00:00Z",
+      "quote": {
+        "currency": "USD",
+        "observed_at": "2026-10-30T20:00:00Z",
+        "price": "413.59",
+        "source_url": "https://investor.visa.com/stock-information/quote-chart/default.aspx"
+      },
+      "region": "US",
+      "revenue_growth_pct": "14.7575",
+      "risks": [
+        "Payment regulation and litigation",
+        "Consumer or cross-border spending slowdown",
+        "Valuation premium and EUR/USD exposure"
+      ],
+      "sector": "Payments",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1403161/000140316126000126/q42026earningsrelease.htm",
+      "symbol": "V",
+      "thesis": "Payment-network scale and strong cash generation make Visa a priority for valuation review.",
+      "trailing_eps_evidence": {
+        "currency": "USD",
+        "diluted_eps": "12.32",
+        "period_end": "2026-09-30",
+        "period_start": "2025-10-01",
+        "published_at": "2026-10-27T00:00:00Z",
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1403161/000140316126000126/q42026earningsrelease.htm"
+      },
+      "valuation_review_required": true
+    },
+    {
+      "catalysts": [
+        "Conversion of cloud backlog into revenue",
+        "Execution against the approximately EUR 10 billion 2026 free cash flow outlook"
+      ],
+      "company": "SAP SE",
+      "currency": "EUR",
+      "entry_authorized": false,
+      "evidence_gaps": [
+        "quote_unavailable",
+        "trailing_eps_unavailable"
+      ],
+      "financial_period_end": "2026-09-30",
+      "financial_period_start": "2026-07-01",
+      "free_cash_flow_margin_pct": "16.7283",
+      "fundamentals": "SUPPORTED",
+      "operating_margin_pct": "28.5297",
+      "pe_ttm": null,
+      "publication_age_days": 10,
+      "published_at": "2026-10-21T00:00:00Z",
+      "quote": null,
+      "region": "EU",
+      "revenue_growth_pct": "13.1556",
+      "risks": [
+        "Premium valuation",
+        "Cloud migration execution and customer spending",
+        "Foreign-exchange effects and cloud infrastructure costs"
+      ],
+      "sector": "Enterprise software",
+      "source_url": "https://www.sap.com/docs/download/investors/2026/sap-2026-q3-statement.pdf",
+      "symbol": "SAP",
+      "thesis": "Cloud backlog and cash generation support further research into SAP's recurring enterprise revenue.",
+      "trailing_eps_evidence": null,
+      "valuation_review_required": true
+    },
+    {
+      "catalysts": [
+        "Azure and enterprise subscription demand",
+        "Evidence that AI investment converts into durable cash earnings"
+      ],
+      "company": "Microsoft",
+      "currency": "USD",
+      "entry_authorized": false,
+      "evidence_gaps": [
+        "quote_unavailable",
+        "trailing_eps_unavailable"
+      ],
+      "financial_period_end": "2026-09-30",
+      "financial_period_start": "2026-07-01",
+      "free_cash_flow_margin_pct": "20.192",
+      "fundamentals": "SUPPORTED",
+      "operating_margin_pct": "49.7567",
+      "pe_ttm": null,
+      "publication_age_days": 3,
+      "published_at": "2026-10-28T00:00:00Z",
+      "quote": null,
+      "region": "US",
+      "revenue_growth_pct": "18.8045",
+      "risks": [
+        "Rapidly rising AI infrastructure capex and depreciation",
+        "Cloud competition and execution",
+        "Premium valuation and EUR/USD exposure"
+      ],
+      "sector": "Enterprise software",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526436133/msft-20260930.htm",
+      "symbol": "MSFT",
+      "thesis": "Profitable cloud and enterprise demand support business quality; AI capital intensity makes cash conversion a key review condition.",
+      "trailing_eps_evidence": null,
+      "valuation_review_required": true
+    },
+    {
+      "catalysts": [
+        "Delivery of the upgraded 2026 target",
+        "Conversion of data-center demand into cash-generating sales"
+      ],
+      "company": "Schneider Electric",
+      "currency": "EUR",
+      "entry_authorized": false,
+      "evidence_gaps": [
+        "prior_year_revenue_unavailable",
+        "operating_income_unavailable",
+        "same_period_free_cash_flow_unavailable",
+        "quote_unavailable",
+        "trailing_eps_unavailable"
+      ],
+      "financial_period_end": "2026-09-30",
+      "financial_period_start": "2026-07-01",
+      "free_cash_flow_margin_pct": null,
+      "fundamentals": "INCOMPLETE",
+      "operating_margin_pct": null,
+      "pe_ttm": null,
+      "publication_age_days": 15,
+      "published_at": "2026-10-16T00:00:00Z",
+      "quote": null,
+      "region": "EU",
+      "revenue_growth_pct": null,
+      "risks": [
+        "Capital-spending cycle and AI demand concentration",
+        "Input costs and execution",
+        "Q3 revenue release does not establish same-quarter profit or cash flow"
+      ],
+      "sector": "Electrical equipment",
+      "source_url": "https://www.se.com/ww/en/assets/pdf/release-Q3-revenues-2026",
+      "symbol": "SU.PA",
+      "thesis": "Electrical distribution, automation and data-center demand offer a different business exposure from software.",
+      "trailing_eps_evidence": null,
+      "valuation_review_required": true
+    },
+    {
+      "catalysts": [
+        "Execution against upgraded 2026 guidance",
+        "Dupixent and new-medicine performance"
+      ],
+      "company": "Sanofi",
+      "currency": "EUR",
+      "entry_authorized": false,
+      "evidence_gaps": [
+        "prior_year_revenue_unavailable",
+        "operating_income_unavailable",
+        "quote_unavailable",
+        "trailing_eps_unavailable"
+      ],
+      "financial_period_end": "2026-09-30",
+      "financial_period_start": "2026-07-01",
+      "free_cash_flow_margin_pct": "22.6322",
+      "fundamentals": "INCOMPLETE",
+      "operating_margin_pct": null,
+      "pe_ttm": null,
+      "publication_age_days": 1,
+      "published_at": "2026-10-30T06:30:00Z",
+      "quote": null,
+      "region": "EU",
+      "revenue_growth_pct": null,
+      "risks": [
+        "Dependence on Dupixent growth",
+        "Clinical, patent and reimbursement risk",
+        "Vaccine timing and foreign-exchange effects"
+      ],
+      "sector": "Pharmaceuticals",
+      "source_url": "https://www.sanofi.com/en/media-room/press-releases/2026/2026-10-30-06-30-00-3392028",
+      "symbol": "SAN.PA",
+      "thesis": "Medicine demand and cash generation provide a research alternative to the AI investment theme.",
+      "trailing_eps_evidence": null,
+      "valuation_review_required": true
+    }
+  ],
+  "entry_authorized": false,
+  "horizon_months": 12,
+  "market": "US_EU",
+  "purpose": "RESEARCH_ONLY",
+  "risk_profile": "MODERATE",
+  "schema_version": 1,
+  "sector_counts": {
+    "Electrical equipment": 1,
+    "Enterprise software": 2,
+    "Payments": 1,
+    "Pharmaceuticals": 1
+  },
+  "source_verification": "SUPPLIED_REFERENCES"
+}
+

@@ -4,7 +4,7 @@ description: >-
   Finalize a possible Trady entry only after required research, source comparison,
   high computed confidence and current financial checks are complete; otherwise record blockers.
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Entry readiness
@@ -33,10 +33,10 @@ when the needed validated calculator and readiness records do not exist.
 
 ## Finalize or block
 
-Return JSON `research.entry_readiness` with each required check, `PASS`/`FAIL`/`UNKNOWN`, evidence/tool/snapshot references, calculated score/economics IDs and blockers. When every mandatory check passes, provide a complete final `ENTRY_PROPOSAL` with the supported entry range, stop, target, evidence and expiry.
+Return JSON `research.entry_readiness` with each required check, `PASS`/`FAIL`/`UNKNOWN`, evidence/tool/snapshot references, calculated score/economics IDs and blockers. When every mandatory check passes, provide a complete final `ENTRY_PROPOSAL` body with the supported entry range, stop, target and evidence, using only canonical model-owned fields. Cite time-sensitive evidence in research; the application assigns proposal-envelope expiry and readiness authority. Do not add an application-owned expiry to the model payload.
 
 If anything mandatory is unresolved, return a no-action/incomplete/clarification outcome and say what is missing. A score above 90 cannot compensate for a failed checklist, and a complete checklist cannot compensate for a score below 90. Do not enter because a budget or deadline is running out.
 
-The application validates these artifacts and constructs readiness records. Rust rechecks current inputs and reserves/submits any eligible entry; the model does not execute it. There is no extra owner approval for each otherwise eligible automated entry, and this skill cannot waive the separate live-deployment authorization.
+The application validates these artifacts and constructs readiness records. In an execution-enabled deployment, Rust rechecks current inputs and may reserve/submit an eligible entry; the model does not execute it. Record-only shadow mode journals eligible proposals/intents and makes no broker order submission. There is no extra owner approval for each otherwise eligible automated entry within an authorized execution-enabled deployment, and this skill cannot waive the separate live-deployment authorization or switch submission mode.
 
 Use the [JSON/tool protocol](../../docs/v1/llm-and-tools.md). A finalized proposal is still a proposal until the executor accepts it.

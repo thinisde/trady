@@ -1,0 +1,300 @@
+{
+  "name": "financial_status",
+  "command": [
+    "target/debug/trady",
+    "financial",
+    "status"
+  ],
+  "exit": 0,
+  "response": {
+    "config_version": 1,
+    "entry_authorized": false,
+    "research_only": true,
+    "sources": [
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": false,
+        "credential_name": "TRADY_SEC_USER_AGENT",
+        "enabled": false,
+        "endpoint": {
+          "cik": "0000320193",
+          "concept": "Revenues",
+          "endpoint": "SEC_CONCEPT",
+          "taxonomy": "us-gaap"
+        },
+        "entity_id": "issuer_320193",
+        "limits": {
+          "per_day": 200,
+          "per_minute": 30,
+          "per_month": 1000
+        },
+        "provider": "SEC",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 168,
+          "terms_reference": ""
+        },
+        "source_id": "sec_revenue"
+      },
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": false,
+        "credential_name": "TRADY_SEC_USER_AGENT",
+        "enabled": false,
+        "endpoint": {
+          "cik": "0000320193",
+          "endpoint": "SEC_SUBMISSIONS"
+        },
+        "entity_id": "issuer_320193",
+        "limits": {
+          "per_day": 200,
+          "per_minute": 30,
+          "per_month": 1000
+        },
+        "provider": "SEC",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 168,
+          "terms_reference": ""
+        },
+        "source_id": "sec_filings"
+      },
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": false,
+        "credential_name": "TRADY_FRED_API_KEY",
+        "enabled": false,
+        "endpoint": {
+          "endpoint": "FRED_OBSERVATIONS",
+          "series_id": "DGS10",
+          "vintage": null
+        },
+        "entity_id": "macro_us",
+        "limits": {
+          "per_day": 200,
+          "per_minute": 20,
+          "per_month": 1000
+        },
+        "provider": "FRED",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 168,
+          "terms_reference": ""
+        },
+        "source_id": "fred_treasury_10y"
+      },
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": false,
+        "credential_name": "TRADY_TWELVE_DATA_API_KEY",
+        "enabled": false,
+        "endpoint": {
+          "endpoint": "TWELVE_DAILY",
+          "exchange": "NASDAQ",
+          "symbol": "AAPL"
+        },
+        "entity_id": "example_stock",
+        "limits": {
+          "per_day": 200,
+          "per_minute": 5,
+          "per_month": 1000
+        },
+        "provider": "TWELVE_DATA",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 168,
+          "terms_reference": ""
+        },
+        "source_id": "twelve_daily"
+      },
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": false,
+        "credential_name": "TRADY_FMP_API_KEY",
+        "enabled": false,
+        "endpoint": {
+          "endpoint": "FMP_INCOME",
+          "metric": "revenue",
+          "symbol": "AAPL"
+        },
+        "entity_id": "example_stock",
+        "limits": {
+          "per_day": 20,
+          "per_minute": 5,
+          "per_month": 100
+        },
+        "provider": "FMP",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 168,
+          "terms_reference": ""
+        },
+        "source_id": "fmp_revenue"
+      },
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": false,
+        "credential_name": "TRADY_COINGECKO_API_KEY",
+        "enabled": false,
+        "endpoint": {
+          "coin_id": "bitcoin",
+          "endpoint": "COIN_GECKO_MARKETS"
+        },
+        "entity_id": "crypto_bitcoin_context",
+        "limits": {
+          "per_day": 100,
+          "per_minute": 5,
+          "per_month": 500
+        },
+        "provider": "COIN_GECKO",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 24,
+          "terms_reference": ""
+        },
+        "source_id": "crypto_context"
+      },
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": false,
+        "credential_name": "TRADY_TIINGO_API_KEY",
+        "enabled": false,
+        "endpoint": {
+          "endpoint": "TIINGO_DAILY",
+          "symbol": "AAPL"
+        },
+        "entity_id": "example_stock",
+        "limits": {
+          "per_day": 20,
+          "per_minute": 5,
+          "per_month": 100
+        },
+        "provider": "TIINGO",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 168,
+          "terms_reference": ""
+        },
+        "source_id": "tiingo_daily"
+      },
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": false,
+        "credential_name": "TRADY_MASSIVE_API_KEY",
+        "enabled": false,
+        "endpoint": {
+          "endpoint": "MASSIVE_DAILY",
+          "symbol": "AAPL"
+        },
+        "entity_id": "example_stock",
+        "limits": {
+          "per_day": 20,
+          "per_minute": 5,
+          "per_month": 100
+        },
+        "provider": "MASSIVE",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 168,
+          "terms_reference": ""
+        },
+        "source_id": "massive_daily"
+      },
+      {
+        "account_enabled": false,
+        "capability": "UNKNOWN",
+        "capability_current": false,
+        "collection_ready": false,
+        "credential_configured": true,
+        "credential_name": null,
+        "enabled": false,
+        "endpoint": {
+          "endpoint": "YFINANCE_IMPORT"
+        },
+        "entity_id": "example_stock",
+        "limits": {
+          "per_day": 5,
+          "per_minute": 1,
+          "per_month": 20
+        },
+        "provider": "YFINANCE",
+        "rights": {
+          "display": false,
+          "export": false,
+          "external_llm": false,
+          "local_inference": false,
+          "model_training": false,
+          "normalized_storage": false,
+          "retention_hours": 24,
+          "terms_reference": ""
+        },
+        "source_id": "yfinance_offline"
+      }
+    ]
+  },
+  "error": ""
+}

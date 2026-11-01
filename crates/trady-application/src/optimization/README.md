@@ -57,7 +57,9 @@ trusted-lab ports. Research decisions carry no entry or live activation authorit
 - `[mod.rs:FormulaAuthority::validate]` checks parameter/policy hashes, evidence
   IDs, `approved_at <= effective_from < valid_until`, and positive account risk
   no greater than policy's maximum initial loss. Active use additionally requires
-  `effective_from <= now < valid_until`.
+  `effective_from <= now < valid_until`. Structural validation permits an expired
+  approval to remain attached to an open plan; it does not resolve the referenced
+  approval evidence or make that approval active again.
 - `[mod.rs:calculate_authoritative_limits]` caps calculation expiry at approval
   expiry. `[mod.rs:FormulaProposal::validate]` requires exact original replay and
   matching current-quote recalculation after normalizing calculation time.

@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-10-31T19:41:46.482238678Z",
+  "checks": [
+    {
+      "credential_configured": false,
+      "credential_name": null,
+      "failure_code": "http_transport_failed",
+      "http_status": null,
+      "latency_ms": 5018,
+      "network_requests": 1,
+      "provider": "gdelt",
+      "response_records": null,
+      "retry_after_seconds": null,
+      "status": "transport_failed"
+    }
+  ],
+  "collection_settings_changed": false,
+  "entry_authorized": false,
+  "mode": "ONLINE",
+  "network_requests": 1,
+  "schema_version": 1
+}
+

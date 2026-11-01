@@ -1,6 +1,6 @@
-# Options market intelligence (proposed)
+# Options market intelligence (research implementation)
 
-Status: new feature design, 2026-10-31. Documentation only; no options feed, subscription, prediction feature, order permission or deployment exists.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research. [Policy](../../../crates/trady-policy/src/intelligence/options.rs) implements European Black-Scholes bid/mid/ask IV intervals, move scales, matched skew, term structure and explicit-baseline event variance. Unsupported American exercise and missing assumptions remain unavailable. Normalized approved inputs use the [shared service](./implementation-report.md); feed subscriptions, historical calibration and live activation remain separate gates.
 
 ## Purpose and distinction
 
@@ -70,7 +70,7 @@ Build historical snapshots where both chain quotes and source availability actua
 - High IV alone -> no BUY, target increase or stop relaxation.
 - Known rights expiration -> invalidate downstream model features; existing holding protections continue.
 - Tests: put/call parity tolerance with dividends/carry caveats, near-zero time to expiry, crossed quotes, illiquid tails, adjusted multiplier, odd holiday expiry, split, inconsistent timestamps, and duplicate-source lineage.
-- Only enable in paper/shadow research after entitlement review, deterministic fixture tests and prospective signal-ablation results.
+- Consume reviewed inputs in paper/shadow research after entitlement review and deterministic validation; require prospective signal-ablation results before promotion into a trading dependency.
 
 ## Boundaries and references
 

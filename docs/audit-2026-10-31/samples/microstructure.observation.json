@@ -1,0 +1,86 @@
+{
+  "entity_id": "synthetic_equity_42",
+  "evidence": [
+    {
+      "adjustment_basis": "as_filed_or_explicit_input_basis",
+      "available_at": "2026-10-30T19:59:59Z",
+      "complete": true,
+      "content_hash": "c3cdfa77920fca2a365f7687e78769f79578aa2e8f00f3c118308ff1a06415de",
+      "currency": "USD",
+      "entity_id": "synthetic_equity_42",
+      "expires_at": "2026-11-06T20:00:00Z",
+      "gaps": [],
+      "lineage_ids": [
+        "same_underlying_fixture_origin"
+      ],
+      "observed_at": "2026-10-29T20:00:00Z",
+      "provider": "synthetic_only",
+      "published_at": "2026-10-30T19:59:58Z",
+      "received_at": "2026-10-30T20:00:00Z",
+      "rights_revision": "synthetic_rights_v1",
+      "source_id": "synthetic_source",
+      "source_reference": "synthetic_microstructure_v1",
+      "unit": "normalized_research",
+      "venue": null
+    }
+  ],
+  "observation_id": "fixture_observation",
+  "payload": {
+    "feature": "MICROSTRUCTURE",
+    "input": {
+      "auction": null,
+      "book": {
+        "asks": [
+          {
+            "price": "100.01",
+            "size_shares": "450"
+          },
+          {
+            "price": "100.03",
+            "size_shares": "550"
+          }
+        ],
+        "available_at": "2026-10-30T20:00:00Z",
+        "bids": [
+          {
+            "price": "100",
+            "size_shares": "800"
+          },
+          {
+            "price": "99.98",
+            "size_shares": "200"
+          }
+        ],
+        "book_version": "synthetic_depth_v1",
+        "epoch": "synthetic_session_1",
+        "exchange_time": "2026-10-30T19:59:59.985Z",
+        "feed_kind": "SEQUENCED_BOOK",
+        "instrument_id": "synthetic_equity_42",
+        "received_at": "2026-10-30T20:00:00Z",
+        "sequence": 95002,
+        "source_ref": "synthetic_microstructure_v1",
+        "state": "VALID_PARTIAL_DEPTH",
+        "venue": "XNAS"
+      },
+      "capacity_band_ticks": 5,
+      "currency": "USD",
+      "depth_limit": 10,
+      "history": [],
+      "instrument_id": "synthetic_equity_42",
+      "markout": null,
+      "max_age_milliseconds": 100,
+      "max_clock_skew_milliseconds": 20,
+      "routing": "UNKNOWN",
+      "size_increment": "1",
+      "tick_size": "0.01",
+      "venue": "XNAS"
+    }
+  },
+  "payload_hash": "c3cdfa77920fca2a365f7687e78769f79578aa2e8f00f3c118308ff1a06415de",
+  "schema_version": 1,
+  "scope": {
+    "account_id": "paper_synthetic",
+    "owner_id": "synthetic_owner"
+  },
+  "supersedes": null
+}

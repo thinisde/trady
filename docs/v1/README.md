@@ -28,7 +28,7 @@ The ordinary objective is approximately 1% daily growth, with position profit ta
 | [Research and sources](./research.md) | X, news APIs, RSS, website collectors, evidence quality, and submitted URLs |
 | [Free financial data integration](./free-financial-data.md) | Shared Rust data layer, point-in-time snapshots, LLM/ML consumers, quotas, safeguards and delivery gates |
 | [Free financial API catalog](./free-financial-api-catalog.md) | Provider endpoints, verified public limits, access caveats, authentication and primary references |
-| [Proposed market intelligence extensions](./features/README.md) | Ten new optional feature specifications with data contracts, Rust boundaries, evaluation and safeguards; no implementation or deployment |
+| [Optional market intelligence](./features/README.md) | Ten implemented deterministic research services with typed contracts, approved imports, replay and optional analyst storage; enabled by default for research, uncalibrated and without live authority |
 | [Proposed OpenCodeGo LLM research features](./llm-features/README.md) | Twelve optional new LLM workflows, typed artifacts, costs, validation and acceptance; no activated agents |
 | [Strict OpenCodeGo model policy](./llm-features/model-routing-and-governance.md) | Default `deepseek-v4.1-flash`, reserved verified/approved `deepseek-v4.1-pro`, no alternate generative models/fallback; enforcement pending |
 | [Sector and subsector funnel](./sector-workflow.md) | S&P 500 eligibility, all-sector comparison, group/branch filtering and finalist selection |

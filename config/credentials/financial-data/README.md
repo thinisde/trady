@@ -19,6 +19,7 @@ contains setup documentation only.
 | `TRADY_COINGECKO_API_KEY` | Your [CoinGecko Demo API](https://docs.coingecko.com/demo/reference/introduction) key; no Pro hostname fallback |
 | `TRADY_TIINGO_API_KEY` | Your [Tiingo](https://www.tiingo.com/) account token for the reviewed EOD endpoint |
 | `TRADY_MASSIVE_API_KEY` | Your [Massive](https://massive.com/) account key for the reviewed daily aggregate route |
+| `TRADY_ALPACA_API_KEY` / `TRADY_ALPACA_SECRET_KEY` | Your [Alpaca](https://docs.alpaca.markets/us/docs/about-market-data-api) key pair for the explicitly reviewed paper/data account; Basic real-time equities are IEX-only |
 
 Alpha Vantage keeps its [existing credential entry](../alpha-vantage/README.md).
 GDELT's implemented public route and offline yfinance imports use no API key.

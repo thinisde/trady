@@ -1,0 +1,176 @@
+{
+  "tested_at": "2026-10-31",
+  "trading212_api_excluded": true,
+  "automated_tests": [
+    {
+      "step": "rust_tests",
+      "command": "cargo test --workspace --locked --offline --no-fail-fast",
+      "exit": 0,
+      "seconds": 12.42,
+      "passed": 519,
+      "failed": 0,
+      "ignored": 21,
+      "binaries": 56,
+      "feature_counts": {
+        "intelligence": 127,
+        "accounting": 11,
+        "options": 16,
+        "insider": 8,
+        "short": 11,
+        "attention": 8,
+        "event": 21,
+        "tax": 18,
+        "cross_asset": 16,
+        "microstructure": 14,
+        "coordination": 8,
+        "sentiment": 6,
+        "financial": 17,
+        "research": 11,
+        "holding": 16,
+        "weekly": 6,
+        "release": 4,
+        "session": 13,
+        "telegram": 26,
+        "model": 18,
+        "limit": 7,
+        "prediction": 4
+      },
+      "tail": "\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n"
+    },
+    {
+      "step": "python_lab",
+      "command": "python3 -m unittest discover -s lab/tests -p test_*.py",
+      "exit": 0,
+      "seconds": 78.36,
+      "unittest_count": 154,
+      "tail": "Ran 154 tests in 78.244s\n\nOK"
+    },
+    {
+      "step": "python_scripts",
+      "command": "python3 -m unittest discover -s scripts/tests -p test_*.py",
+      "exit": 0,
+      "seconds": 0.18,
+      "unittest_count": 4,
+      "tail": "Ran 4 tests in 0.005s\n\nOK"
+    },
+    {
+      "step": "rust_format",
+      "command": "cargo fmt --all -- --check",
+      "exit": 0,
+      "seconds": 1.25,
+      "tail": ""
+    },
+    {
+      "step": "rust_clippy",
+      "command": "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+      "exit": 0,
+      "seconds": 0.8,
+      "tail": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.60s"
+    },
+    {
+      "step": "postgres_integration",
+      "command": "python3 scripts/test-postgres.py",
+      "exit": 0,
+      "seconds": 25.65,
+      "passed": 21,
+      "failed": 0,
+      "ignored": 0,
+      "binaries": 16,
+      "cli_sample_outputs": [],
+      "tail": "  \"untrusted_source_data\": true\n}\nDisposable PostgreSQL integration and CLI checks passed."
+    }
+  ],
+  "automated_passed": 698,
+  "proof_checks": [
+    {
+      "step": "lean_build",
+      "command": "/root/.cache/trady-tools/lean-4.19.0-linux/bin/lake -d lab/proofs build",
+      "exit": 0,
+      "seconds": 1.5,
+      "output_tail": "Build completed successfully.\n"
+    },
+    {
+      "step": "lean_axiom_audit",
+      "command": "/root/.cache/trady-tools/lean-4.19.0-linux/bin/lake -d lab/proofs env lean lab/proofs/Audit.lean",
+      "exit": 0,
+      "seconds": 2.51,
+      "output_tail": "'TradyProof.cap_le' depends on axioms: [propext, Quot.sound]\n'TradyProof.cap_nonzero' depends on axioms: [propext, Quot.sound]\n'TradyProof.floor_le_ceil' depends on axioms: [propext, Quot.sound]\n'TradyProof.stop_before_target' depends on axioms: [propext, Quot.sound]\n'TradyProof.non_vacuous' does not depend on any axioms\n'TradyProof.CheckedDecimal.representable' does not depend on any axioms\n'TradyProof.CheckedDecimal.floor_checked' depends on axioms: [propext]\n'TradyProof.CheckedDecimal.division_by_zero_rejects' depends on axioms: [propext]\n'TradyProof.CheckedDecimal.ties_to_even' depends on axioms: [propext, Quot.sound]\n'TradyProof.CheckedDecimal.ties_from_odd' depends on axioms: [propext]\n'TradyProof.Formula.accepted_checks' depends on axioms: [propext, Quot.sound]\n'TradyProof.Formula.total_calculation' depends on axioms: [propext, Quot.sound]\n'TradyProof.Formula.accepted_stop_before_target' depends on axioms: [propext, Quot.sound]\n'TradyProof.Formula.accepted_target_holding_caps' depends on axioms: [propext, Classical.choice, Quot.sound]\n'TradyProof.Formula.witness_accepted' depends on axioms: [propext, Quot.sound]\n'TradyProof.Formula.model_non_vacuous' depends on axioms: [propext, Quot.sound]\n'TradyProof.Formula.fx_witness_accepted' depends on axioms: [propext, Quot.sound]\n'TradyProof.Formula.fx_model_non_vacuous' depends on axioms: [propext, Quot.sound]\n'TradyProof.Holding.accepted_update_monotone' depends on axioms: [propext, Quot.sound]\n'TradyProof.Holding.maximum_preserves_left' depends on axioms: [propext]\n'TradyProof.Holding.trailing_floor_monotone' depends on axioms: [propext]\n'TradyProof.Holding.latched_exit_preserved' does not depend on any axioms\n'TradyProof.Revision.accepted_revision_bound' depends on axioms: [propext, Quot.sound]\n'TradyProof.Revision.mismatched_source_rejects' depends on axioms: [propext, Quot.sound]\n"
+    },
+    {
+      "step": "rust_fixture_binary",
+      "command": "objcopy --strip-debug /thinisde/trady/target/debug/trady /tmp/trady-egm-audit-20261031/trady-proof-fixture",
+      "exit": 0,
+      "seconds": 0.29,
+      "output_tail": ""
+    },
+    {
+      "step": "lean_rust_parity",
+      "command": "python3 lab/proofs/parity.py --rust /tmp/trady-egm-audit-20261031/trady-proof-fixture",
+      "exit": 0,
+      "seconds": 42.64,
+      "output_tail": "recision\", \"final formula quantity fails allocation or account-risk budget\", \"formula FX validity timestamp overflow\", \"formula parameters exceed the approved domain\", \"formula requires current, warmed, causal volatility and an eligible signal\", \"formula stop is nonpositive or inside spread, noise or venue minimum\", \"formula target or entry violates the confidence/sentiment gate\", \"formula target ordering or reward/risk failed\", \"formula validity timestamp overflow\", \"holding limit must be one through five sessions\", \"initial loss exceeds 2% or is nonpositive\", \"insufficient reward/risk\", \"invalid broker quantity\", \"invalid entry range or currency\", \"invalid formula liquidation costs\", \"invalid initial loss\", \"invalid instrument increments\", \"invalid or duplicate broker order\", \"invalid or stale FX\", \"invalid owner-approved formula envelope\", \"invalid rounding step or value\", \"leverage, additions and rotation are unsupported by the foundation\", \"missing, stale or expired formula inputs\", \"negative costs\", \"negative spendable cash\", \"no feasible positive modeled downside\", \"no marketable formula tick inside range\", \"no remaining valid formula input lifetime\", \"no supported quantity within account risk\", \"owner account-risk budget is missing or exceeds policy\", \"partial order must have positive filled and remaining quantities\", \"policy version must be positive\", \"position must be positive; shorting is unsupported\", \"quantity solver precision cannot certify the largest lot\", \"reward/risk must be at least 1.5\", \"rounded cost exceeds allocation\", \"rounding precision exhausted\", \"snapshot ID is required\", \"stale or future quote\", \"target ceiling exceeds 10% or is nonpositive\", \"target price cannot conservatively satisfy net proceeds\", \"unusable bid/ask\"], \"scope\": \"FORMULA_V1\", \"trust_boundary\": \"finite parity reduces translation risk; it is not a formal refinement proof\"}\n"
+    },
+    {
+      "step": "proof_helper_self_test",
+      "command": "python3 lab/proofs/self_test.py --lake /root/.cache/trady-tools/lean-4.19.0-linux/bin/lake --rust /tmp/trady-egm-audit-20261031/trady-proof-fixture --output /tmp/trady-egm-audit-20261031/proof-evidence",
+      "exit": 0,
+      "seconds": 79.88,
+      "output_tail": "{\"axioms\": [\"Classical.choice\", \"Quot.sound\", \"propext\"], \"clean_build\": true, \"migration_source_pin_count\": 12, \"negative_checks\": 10, \"parity_case_count\": 647, \"revision_sha256\": \"680d8667ccc37af752b466118f3d656b461b6132f49442b6620f237fa6689869\", \"rust_sha256\": \"fb2b45a506495575d38970592d638cadc6b09dcc597e9f0424e14c91ee6920fc\", \"rust_source_pin_count\": 210, \"safety_sha256\": \"508278ec6aa71c0fec2acc0f9f680894624a3c14030de8bf86e31082e4d1b396\", \"scope\": \"FORMULA_V1\", \"source_pin_count\": 18, \"theorem_count\": 24, \"toolchain\": {\"file_count\": 3019, \"sha256\": \"dde4425feb261ac42b3ee1b9b7371c0a79953e29bee790a347be28b01e11e95f\"}}\n"
+    }
+  ],
+  "proof_summary": {
+    "axioms": [
+      "Classical.choice",
+      "Quot.sound",
+      "propext"
+    ],
+    "clean_build": true,
+    "migration_source_pin_count": 12,
+    "negative_checks": 10,
+    "parity_case_count": 647,
+    "revision_sha256": "680d8667ccc37af752b466118f3d656b461b6132f49442b6620f237fa6689869",
+    "rust_sha256": "fb2b45a506495575d38970592d638cadc6b09dcc597e9f0424e14c91ee6920fc",
+    "rust_source_pin_count": 210,
+    "safety_sha256": "508278ec6aa71c0fec2acc0f9f680894624a3c14030de8bf86e31082e4d1b396",
+    "scope": "FORMULA_V1",
+    "source_pin_count": 18,
+    "theorem_count": 24,
+    "toolchain": {
+      "file_count": 3019,
+      "sha256": "dde4425feb261ac42b3ee1b9b7371c0a79953e29bee790a347be28b01e11e95f"
+    }
+  },
+  "gdelt_followup": {
+    "provider": "gdelt",
+    "http_status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body": {},
+    "additional_requests": 1
+  },
+  "final_repository_checks": {
+    "asset_verification": {
+      "command": "python3 scripts/verify-assets.py",
+      "exit_code": 0,
+      "canonical_json_assets": 11,
+      "skill_records": 52,
+      "markdown_files": 190,
+      "local_links": 1442
+    },
+    "audit_json_validation": {
+      "files": 45,
+      "parse_errors": 0
+    },
+    "diff_check": {
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    "preservation": {
+      "baseline_file_hashes_checked": 510,
+      "changed_existing_readmes": 17,
+      "existing_drift_report_updated": true,
+      "other_baseline_file_changes": 0,
+      "baseline_files_deleted": 0,
+      "audit_artifact_files": 48
+    }
+  }
+}

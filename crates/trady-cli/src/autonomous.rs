@@ -167,6 +167,84 @@ fn models(config: &RuntimeConfig, config_path: &str) -> Result<NativePerpetualAd
     NativePerpetualAdvisor::from_approved_artifacts(artifacts, Utc::now())
 }
 
+fn configuration_check(config: &RuntimeConfig, path: &str) -> Result<Value> {
+    let advisor = models(config, path)?;
+    let now = Utc::now();
+    let mut blockers = vec![];
+    if !config.enabled {
+        blockers.push("runtime_disabled");
+    }
+    if advisor.model_count() == 0 {
+        blockers.push("approved_model_registry_empty");
+    }
+    if config.inputs.uses_placeholder_endpoint() {
+        blockers.push("approved_input_service_unconfigured");
+    }
+    if !config.universe.enabled {
+        blockers.push("universe_source_disabled");
+    }
+    if config.inputs.screening.owner_allowlist.is_empty() {
+        blockers.push("owner_allowlist_empty");
+    }
+    if config.trading.approved_skills.is_empty() {
+        blockers.push("approved_skill_hashes_missing");
+    }
+    // Match the unconditional entry requirements in validate_account_entry.
+    // Fractional support is checked separately when sizing requests fractions.
+    let capabilities = &config.trading.capabilities;
+    let unverified_entry_capabilities: Vec<_> = [
+        ("cash_account", &capabilities.cash_account),
+        ("instrument", &capabilities.instrument),
+        ("protective_orders", &capabilities.protective_orders),
+        ("quotes", &capabilities.quotes),
+    ]
+    .into_iter()
+    .filter_map(|(name, capability)| (!capability.usable(now)).then_some(name))
+    .collect();
+    if !unverified_entry_capabilities.is_empty() {
+        blockers.push("entry_capabilities_unverified");
+    }
+    if config
+        .trading
+        .limits_authority
+        .as_ref()
+        .is_none_or(|authority| {
+            authority
+                .validate_active(&config.trading.policy, now)
+                .is_err()
+        })
+    {
+        blockers.push("approved_formula_unavailable");
+    }
+    if config.trading.validate(now).is_err() {
+        blockers.push("live_release_expired");
+    }
+    let required_actions: Vec<Value> = blockers.iter().map(|code| {
+        let required = match *code {
+            "runtime_disabled" => "Review the deployment and explicitly enable the runtime.",
+            "approved_model_registry_empty" => "Supply a current, independently approved native model manifest and its exact fitted artifact; TEST ONLY artifacts do not qualify.",
+            "approved_input_service_unconfigured" => "Configure a deployment-owned HTTPS input service with reviewed sources, reviewer identities, account bindings and fresh market/research imports.",
+            "universe_source_disabled" => "Configure and enable an approved constituent provider with instrument mappings, storage rights and current classification evidence.",
+            "owner_allowlist_empty" => "Supply the owner's explicit instrument allowlist in inputs.screening.owner_allowlist.",
+            "approved_skill_hashes_missing" => "Pin the exact reviewed runtime skill hashes in trading.approved_skills.",
+            "entry_capabilities_unverified" => "Supply current verified broker/account/instrument evidence for every unverified_entry_capabilities field, with a nonempty evidence_id and future valid_until. A successful metadata or account read alone does not verify protective orders or executable quotes.",
+            "approved_formula_unavailable" => "Supply an active policy-compatible formula authority with matching prediction authority, proof, parity, independent evaluation and prospective shadow evidence.",
+            "live_release_expired" => "Renew the independently reviewed release evidence for this exact deployment scope.",
+            _ => unreachable!("every configuration blocker has a required action"),
+        };
+        json!({"code":code,"required":required})
+    }).collect();
+    Ok(json!({
+        "status":"configuration_checked","account_id":config.trading.account_id,
+        "mode":config.trading.mode,"entry_authorized":false,
+        "configuration_ready":blockers.is_empty(),"blockers":blockers,
+        "required_actions":required_actions,"approved_models":advisor.model_count(),
+        "unverified_entry_capabilities":unverified_entry_capabilities,
+        "entry_controls_enabled":config.enabled && !config.controls.pause_entries && !config.controls.close_position,
+        "order_submission_policy":if config.trading.mode == Mode::Shadow { "record_only" } else { "broker_execution" }
+    }))
+}
+
 pub fn run(args: &[String]) -> Result<Value> {
     if args == ["analyst-worker"] {
         worker::serve()?;
@@ -192,32 +270,7 @@ pub fn run(args: &[String]) -> Result<Value> {
     }
     if action == "check" {
         require(args.len() == 3, "unsupported autonomous check arguments")?;
-        let advisor = models(&config, path)?;
-        let mut blockers = vec![];
-        if !config.enabled {
-            blockers.push("runtime_disabled");
-        }
-        if advisor.model_count() == 0 {
-            blockers.push("approved_model_registry_empty");
-        }
-        if !config.universe.enabled {
-            blockers.push("universe_source_disabled");
-        }
-        if config.trading.approved_skills.is_empty() {
-            blockers.push("approved_skill_hashes_missing");
-        }
-        if config.trading.limits_authority.as_ref().is_none_or(|a| {
-            a.validate_active(&config.trading.policy, Utc::now())
-                .is_err()
-        }) {
-            blockers.push("approved_formula_unavailable");
-        }
-        if config.trading.validate(Utc::now()).is_err() {
-            blockers.push("live_release_expired");
-        }
-        return Ok(
-            json!({"status":"configuration_checked","account_id":config.trading.account_id,"mode":config.trading.mode,"entry_authorized":false,"blockers":blockers,"approved_models":advisor.model_count()}),
-        );
+        return configuration_check(&config, path);
     }
     require(
         matches!(action, "run" | "recover-order"),

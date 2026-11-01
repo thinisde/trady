@@ -143,6 +143,9 @@ fn recent_search_sends_one_author_rule_and_keeps_replies_without_routine_context
         "from:fixture_actor (Tesla OR \"data center\")"
     );
     assert_eq!(pairs["expansions"], "author_id");
+    assert!(pairs["tweet.fields"].contains("referenced_tweets"));
+    assert!(pairs["tweet.fields"].contains("author_id"));
+    assert!(!pairs.contains_key("post.fields"));
     assert_eq!(pairs["next_token"], "cursor-one");
     assert!(!request.url.as_str().contains("is%3Areply"));
 }
@@ -177,12 +180,8 @@ fn recent_search_blocks_identity_reuse_incoming_reactions_and_unsupported_histor
 }
 
 #[test]
-fn missing_action_metadata_stays_unknown_and_repost_exclusion_requires_evidence() {
-    let mut no_references = post("500", json!([]));
-    no_references
-        .as_object_mut()
-        .unwrap()
-        .remove("referenced_posts");
+fn null_action_metadata_stays_unknown_and_repost_exclusion_requires_evidence() {
+    let no_references = post("500", json!(null));
     let mut source = search_source();
     let mut unknown = client(vec![
         user("42"),
@@ -218,6 +217,29 @@ fn missing_action_metadata_stays_unknown_and_repost_exclusion_requires_evidence(
             "x_repost_exclusion_not_verified"
         );
     }
+}
+
+#[test]
+fn recent_search_accepts_originals_with_omitted_optional_references() {
+    let mut original = post("500", json!([]));
+    original.as_object_mut().unwrap().remove("referenced_posts");
+    let mut source = search_source();
+    source.x_rule.as_mut().unwrap().exclude_reposts = true;
+    let mut client = client(vec![
+        user("42"),
+        response(json!({"data":[original],"meta":{"result_count":1}})),
+    ]);
+    let page = client.fetch(&source, &search_window(), now()).unwrap();
+    let social = page.items[0].social.as_ref().unwrap();
+    assert_eq!(social.action, SocialAction::Original);
+    assert!(!social.missing_context);
+    assert_eq!(social.original_author_id.as_deref(), Some("42"));
+    assert!(
+        client.transport.requests[1]
+            .url
+            .query_pairs()
+            .any(|(key, value)| { key == "query" && value.ends_with(" -is:retweet") })
+    );
 }
 
 #[test]
@@ -352,12 +374,12 @@ fn x_preserves_outgoing_actions_actor_context_and_current_api_fields() {
     let pairs: std::collections::BTreeMap<_, _> =
         c.transport.requests[1].url.query_pairs().collect();
     assert_eq!(
-        pairs["post.fields"],
-        "id,text,created_at,conversation_id,entities,lang"
+        pairs["tweet.fields"],
+        "id,text,author_id,created_at,conversation_id,entities,lang,referenced_tweets,edit_history_tweet_ids"
     );
     assert_eq!(
         pairs["expansions"],
-        "author_id,referenced_posts,edit_history_post_ids"
+        "author_id,referenced_tweets.id,edit_history_tweet_ids"
     );
     assert!(!pairs.contains_key("exclude"));
     assert_eq!(pairs["pagination_token"], "cursor-one");
@@ -610,6 +632,118 @@ fn atom_alternate_links_and_utc_dates_parse() {
     let page = parse_feed(&source(SourceKind::PublisherRss), xml.as_bytes(), 5, now()).unwrap();
     assert_eq!(page.items[0].canonical_url, "https://example.com/release");
     assert_eq!(page.items[0].publisher, "Issuer IR");
+}
+
+#[test]
+fn rss_language_metadata_is_preserved_even_after_items() {
+    let source = source(SourceKind::PublisherRss);
+    for tag in ["en", "en-US", "de"] {
+        let xml = RSS.replace(
+            "</channel>",
+            &format!("<language>{tag}</language></channel>"),
+        );
+        let page = parse_feed(&source, xml.as_bytes(), 5, now()).unwrap();
+        assert_eq!(page.items[0].language, Some(tag.to_ascii_lowercase()));
+    }
+    let page = parse_feed(&source, RSS.as_bytes(), 5, now()).unwrap();
+    assert!(page.items[0].language.is_none());
+    let invalid = RSS.replace("</channel>", "<language>English text</language></channel>");
+    assert!(parse_feed(&source, invalid.as_bytes(), 5, now()).is_err());
+    let english = RSS.replace("</channel>", "<language>en</language></channel>");
+    let german = RSS.replace("</channel>", "<language>de</language></channel>");
+    assert_ne!(
+        parse_feed(&source, english.as_bytes(), 5, now())
+            .unwrap()
+            .items[0]
+            .content_hash,
+        parse_feed(&source, german.as_bytes(), 5, now())
+            .unwrap()
+            .items[0]
+            .content_hash,
+    );
+}
+
+#[test]
+fn gdelt_plaintext_throttling_is_a_provider_backoff() {
+    let mut source = source(SourceKind::Gdelt);
+    source.url = "https://api.gdeltproject.org/api/v2/doc/doc".into();
+    source.allowed_hosts = vec!["api.gdeltproject.org".into()];
+    source.credential_env = None;
+    source.query = Some("\"Apple Inc\"".into());
+    let mut window = window();
+    window.next_token = None;
+    let mut client = client(vec![HttpResponse {
+        status: 200,
+        body: b"Please limit requests to one every 5 seconds or contact the provider.".to_vec(),
+        ..Default::default()
+    }]);
+    let failure = client.fetch(&source, &window, now()).unwrap_err();
+    assert_eq!(failure.status, CollectionStatus::RateLimited);
+    assert_eq!(failure.reason, "gdelt_rate_limited");
+    assert_eq!(failure.retry_at, Some(now() + Duration::seconds(60)));
+}
+
+#[test]
+fn gdelt_missing_articles_back_off_without_claiming_complete_empty_news() {
+    let mut s = source(SourceKind::Gdelt);
+    s.url = "https://api.gdeltproject.org/api/v2/doc/doc".into();
+    s.allowed_hosts = vec!["api.gdeltproject.org".into()];
+    s.credential_env = None;
+    s.query = Some("Microsoft".into());
+    let mut w = window();
+    w.next_token = None;
+    for payload in [
+        json!({}),
+        json!({"articles":null}),
+        json!({"articles":"invalid"}),
+    ] {
+        let failure = client(vec![response(payload)])
+            .fetch(&s, &w, now())
+            .unwrap_err();
+        assert_eq!(failure.status, CollectionStatus::Unavailable);
+        assert_eq!(failure.reason, "gdelt_articles_missing");
+        assert_eq!(failure.retry_at, Some(now() + Duration::seconds(60)));
+    }
+    let page = client(vec![response(json!({"articles":[]}))])
+        .fetch(&s, &w, now())
+        .unwrap();
+    assert!(page.items.is_empty());
+    assert!(page.complete);
+}
+
+#[test]
+fn atom_language_inheritance_overrides_and_resets_are_scoped() {
+    let xml = r#"<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en-GB">
+        <title>Issuer</title>
+        <entry><id>1</id><title>English</title><link href="https://example.com/1"/></entry>
+        <entry xml:lang="de"><id>2</id><title>Deutsch</title><link href="https://example.com/2"/></entry>
+        <entry xml:lang=""><id>3</id><title>Unknown</title><link href="https://example.com/3"/></entry>
+        <entry><id>4</id><title>English again</title><link href="https://example.com/4"/></entry>
+    </feed>"#;
+    let page = parse_feed(&source(SourceKind::PublisherRss), xml.as_bytes(), 5, now()).unwrap();
+    let languages: Vec<_> = page
+        .items
+        .iter()
+        .map(|item| item.language.as_deref())
+        .collect();
+    assert_eq!(languages, [Some("en-gb"), Some("de"), None, Some("en-gb")]);
+}
+
+#[test]
+fn atom_sentiment_language_tracks_the_selected_text_construct() {
+    let xml = r#"<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+        <title>Issuer</title>
+        <entry><id>1</id><title>English</title><summary xml:lang="de">Deutsch</summary><link href="https://example.com/1"/></entry>
+        <entry><id>2</id><title xml:lang="fr">Français</title><link href="https://example.com/2"/></entry>
+        <entry><id>3</id><title>English</title><summary type="xhtml"><div>English <span xml:lang="de">Deutsch</span></div></summary><link href="https://example.com/3"/></entry>
+    </feed>"#;
+    let page = parse_feed(&source(SourceKind::PublisherRss), xml.as_bytes(), 5, now()).unwrap();
+    let languages: Vec<_> = page
+        .items
+        .iter()
+        .map(|item| item.language.as_deref())
+        .collect();
+    assert_eq!(languages, [Some("de"), Some("fr"), None]);
 }
 
 #[test]

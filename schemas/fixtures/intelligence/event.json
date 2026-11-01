@@ -1,0 +1,108 @@
+{
+  "event_id": "earnings:issuer:2026Q3",
+  "issuer_id": "issuer",
+  "event_type": "earnings",
+  "metric": "diluted_eps",
+  "period": "2026Q3",
+  "unit": {
+    "label": "USD/share",
+    "currency": "USD",
+    "adjustment_definition": "GAAP diluted EPS"
+  },
+  "release_at": "2026-10-30T15:10:00Z",
+  "clock_verified_at": "2026-10-29T20:10:00Z",
+  "clock_valid_until": "2026-11-06T20:10:00Z",
+  "frozen_estimate_id": "e1",
+  "expectation_frozen_at": "2026-10-30T14:10:00Z",
+  "drift_baseline_id": null,
+  "expectations": [
+    {
+      "estimate_id": "e1",
+      "metric": "diluted_eps",
+      "period": "2026Q3",
+      "unit": {
+        "label": "USD/share",
+        "currency": "USD",
+        "adjustment_definition": "GAAP diluted EPS"
+      },
+      "value": "1",
+      "missing_reason": null,
+      "provider": "licensed-fixture",
+      "vintage_at": "2026-10-29T20:10:00Z",
+      "available_at": "2026-10-29T20:10:00Z",
+      "analyst_count": 12,
+      "dispersion": "0.2",
+      "dispersion_definition": "SAMPLE_STANDARD_DEVIATION",
+      "revision_of": null,
+      "source_ref": "consensus:fixture:e1"
+    }
+  ],
+  "actuals": [
+    {
+      "observation_id": "a1",
+      "metric": "diluted_eps",
+      "period": "2026Q3",
+      "unit": {
+        "label": "USD/share",
+        "currency": "USD",
+        "adjustment_definition": "GAAP diluted EPS"
+      },
+      "value": "1.2",
+      "missing_reason": null,
+      "reported_at": "2026-10-30T15:10:00Z",
+      "available_at": "2026-10-30T15:10:00Z",
+      "revision_of": null,
+      "source_ref": "sec:release:a1"
+    }
+  ],
+  "normalization": {
+    "scale_floor": "0.01",
+    "allow_floor_for_metric": false,
+    "justification": "relative EPS only above material floor"
+  },
+  "reaction": {
+    "window_id": "next-session-30m",
+    "session_open_at": "2026-10-30T14:10:00Z",
+    "session_close_at": "2026-10-30T19:10:00Z",
+    "session_calendar_reference": "calendar:verified-next-session",
+    "reference": {
+      "value": "100",
+      "currency": "USD",
+      "adjustment_basis": "total-return-v1",
+      "observed_at": "2026-10-30T15:09:00Z",
+      "available_at": "2026-10-30T15:09:00Z",
+      "source_ref": "price:2026-10-30 15:09:00 UTC"
+    },
+    "after": {
+      "value": "105",
+      "currency": "USD",
+      "adjustment_basis": "total-return-v1",
+      "observed_at": "2026-10-30T15:40:00Z",
+      "available_at": "2026-10-30T15:40:00Z",
+      "source_ref": "price:2026-10-30 15:40:00 UTC"
+    },
+    "benchmark_reference": {
+      "value": "100",
+      "currency": "USD",
+      "adjustment_basis": "total-return-v1",
+      "observed_at": "2026-10-30T15:09:00Z",
+      "available_at": "2026-10-30T15:09:00Z",
+      "source_ref": "price:2026-10-30 15:09:00 UTC"
+    },
+    "benchmark_after": {
+      "value": "101",
+      "currency": "USD",
+      "adjustment_basis": "total-return-v1",
+      "observed_at": "2026-10-30T15:40:00Z",
+      "available_at": "2026-10-30T15:40:00Z",
+      "source_ref": "price:2026-10-30 15:40:00 UTC"
+    },
+    "total_return_adjustments_verified": true,
+    "corporate_actions_resolved": true,
+    "fx_resolved": true,
+    "trading_halt": false,
+    "missing_reasons": []
+  },
+  "pricing_proxy": null,
+  "confounders": []
+}

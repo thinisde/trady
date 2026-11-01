@@ -28,7 +28,7 @@ they received no broker credentials. Test containers were removed afterward.
 | `cargo clippy --workspace --all-targets --locked -- -D warnings` | Passed |
 | `python3 -m unittest discover -s lab/tests` | 154 passed |
 | `python3 -m unittest discover -s services/finbert/tests` | 6 passed |
-| `python3 scripts/verify-assets.py` | Passed before bootstrap changes; final documentation validation recorded below |
+| `python3 scripts/verify-assets.py` | Passed after bootstrapping and drift reporting: 11 canonical JSON assets, 52 skills, 176 Markdown files and 1,200 local links |
 | Post-fix isolated OpenCode CLI dialogue regression | Passed |
 | Corrected `deepseek-v4.1-flash` pin | 15 existing harness tests passed again; build, format, assets and whitespace checks passed; fresh default-model Rust chat completed |
 
@@ -252,5 +252,35 @@ all 15 contracts and rechecked all 64 relative links. The updated application
 contract correctly describes the new stable `ModelRequest::session_id`; its scout
 read `harness.rs` after the parent change landed.
 
-That completes 29 package contracts. The runtime worker is still running; its
-report and the final full-tree verification will be added when available.
+The runtime worker completed 24 fresh-context scouts and updated 17 README
+contracts for storage, CLI, lab, migrations, scripts and services. Its return
+payload matched the worker schema and its static verification passed. It
+preserved the corrected `deepseek-v4.1-flash` pin and ran no provider probes or
+broker operations.
+
+All three worker payloads matched the required schema, with **62 completed
+scouts** and no unresolved scout failures. Their 46 contracts, together with the
+root and `crates/README.md` blueprints compiled by the parent, complete **48 README
+contracts** across the eligible source tree. Existing documentation was retained.
+
+The parent explicitly read back all 48 contracts (6,345 lines), verified the
+required Interface, Invariants and Side Effects sections, and checked all 340
+relative link targets. Code fences and verification targets passed inspection,
+and no obsolete model default remained. Final repository asset validation covered
+11 canonical JSON assets, 52 skills, 176 Markdown files and 1,200 local links.
+`git diff --check` passed.
+
+The approved [EGM Drift Report](2026-10-31_DRIFT_REPORT.md) checked all 48 contracts
+and found **11 discrepancies across 9 contracts**, with no detected drift in the
+other 39. Ten discrepancies concern concurrent `intelligence` modules and
+migration 10 that the README coverage does not yet describe. One is an incorrect
+claim that the existing FinBERT integration-test target does not exist.
+
+The 537-test results and provider checks above apply to the code tested at those
+checkpoints. They predate the concurrent intelligence and migration changes;
+those additions were inspected for documentation drift and were not covered by
+the earlier test runs.
+
+The final read-only demo snapshot at `2026-10-31T18:36:14.470188586Z` still showed
+EUR 5,000 available cash, no positions and no pending orders. No orders were
+submitted or cancelled during this verification.

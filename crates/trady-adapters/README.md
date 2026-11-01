@@ -11,8 +11,18 @@ ingestion, approved-artifact native inference and Telegram delivery state.
 
 - [Source contract](./src/README.md): clocks, calendar, broker, quotes and memory
   repositories and production component contracts.
+- [Offline native training](./examples/README.md): research-only Perpetual fitting,
+  bounded tuning on chronological training folds, calibrated binary prediction
+  and separate chronological holdout scoring.
 
 ## Interface
+
+- [Optional intelligence adapters](./src/intelligence/README.md): bounded
+  normalized imports, SEC ownership XML, sequence-checked displayed books,
+  in-memory research replay and optional read-only tools.
+- `[src/api_health.rs:run]`, `PROVIDERS` and `HealthCheck`: explicit offline
+  metadata or bounded online GET diagnostics with sanitized status and timing;
+  [operator guide](../../docs/api-health.md).
 
 - `[src/credentials.rs:CredentialStore]`: private named secrets and environment
   overrides shared by the CLI and provider adapters; [setup](../../docs/credentials.md).
@@ -53,12 +63,20 @@ ingestion, approved-artifact native inference and Telegram delivery state.
 
 ## Invariants
 
+- `[src/api_health.rs:run]` reports no entry authorization or collection-setting
+  changes. `[src/api_health.rs:probe]` makes no transport call offline, leaves X
+  behind the existing cost gate and supports yfinance only as offline imports.
+- `[src/intelligence/book.rs:SequenceBookBuilder]` bounds instrument/venue
+  tracks, displayed depth and history; recovery still yields partial depth.
+  `[src/intelligence/tools.rs:IntelligenceTools::requires_ephemeral_session]`
+  requires in-process conversation storage for enabled intelligence tools.
+
 - `[src/lib.rs:FakeBroker::new]` requires paper snapshots.
   `[src/lib.rs:MemoryExecutionRepository::register_paper_account]` requires
   `paper_` identifiers; `ttl`/`check` enforce 1–300 second leases and exact
-  unexpired fences. `save_reconciliation` requires nonfuture snapshots no older
-  than 60 seconds. New reservations clear recovery; matching immutable replays
-  are checked before current recovery/flatness gates.
+  unexpired fences. `save_reconciliation` requires Paper snapshots for the fenced
+  account, nonfuture and no older than 60 seconds. New reservations clear recovery;
+  matching immutable replays are checked before current recovery/flatness gates.
 - `[src/credentials.rs:CredentialStore::read_file]` requires bounded strict-v1
   UTF-8 regular files with private Unix permission bits. Ownership is unchecked
   and symlinks are followed. `resolve` gives current environment values priority,
@@ -81,6 +99,13 @@ ingestion, approved-artifact native inference and Telegram delivery state.
   remains a deployment responsibility.
 
 ## Side Effects
+
+`[src/api_health.rs:run]` loads the credential store even offline; eligible online
+probes perform GETs through `SafeHttp`. `[src/intelligence/mod.rs:JsonFeatureSource]`
+reads local normalized imports. The displayed-book builder mutates bounded
+memory; `[src/intelligence/mod.rs:MemoryIntelligenceRepository]` has explicit
+purging without a configured collection capacity. Research-tool effects depend
+on the supplied repository and base executor.
 
 `[src/opencode/llm.rs:OpenCodeGoProvider]` performs model HTTP calls;
 `[src/opencode/runtime_tools.rs:SkillBundle::load]` reads approved skill files
@@ -125,6 +150,12 @@ revision. These repositories are not durable.
 POST/DELETE requests, using the live origin only under explicit `Live` configuration.
 `Http::pace` may sleep. HTTP acknowledgments do not establish filled/protected
 positions or live deployment acceptance.
+
+The [offline native training executable](./examples/README.md) performs CPU
+fitting and exclusively writes local fit/tuning/holdout claims, native model JSON,
+candidate metadata and diagnostic reports. Claims are reserved before fitting or
+evaluation; interrupted runs can leave partial artifacts that prevent reuse of
+the same output directory. It does not promote models or call the broker.
 
 ## Verification
 

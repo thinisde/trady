@@ -15,6 +15,9 @@ use trady_storage::{
 };
 
 fn dsn(role: &str) -> String {
+    if let Ok(value) = std::env::var(format!("{}_DSN", role.to_ascii_uppercase())) {
+        return value;
+    }
     format!(
         "host=127.0.0.1 port={} user={role} dbname=trady",
         std::env::var("TRADY_TEST_PORT").unwrap()

@@ -1,6 +1,6 @@
-# Insider transaction intelligence (proposed)
+# Insider transaction intelligence (research implementation)
 
-Status: new research feature design, 2026-10-31; no filings ingestion/alert/score exists under this proposal. The underlying SEC source is **already planned** in [financial data](../free-financial-data.md). The new contribution is transaction interpretation, clustering and evaluation, not another generic SEC connector.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research. The [bounded SEC ownership XML parser](../../../crates/trady-adapters/src/intelligence/ownership.rs) normalizes Forms 3/4/5 and amendments. [Policy](../../../crates/trady-policy/src/intelligence/insider.rs) separates reviewed cash transactions from awards/exercises/withholding, deduplicates exact amendment lineages and evaluates distinct-owner purchase clusters. The [shared service](./implementation-report.md) provides approved normalized ingestion and replay. Scheduled SEC collection, notifications and predictive calibration remain separate work; generic SEC access is described in [financial data](../free-financial-data.md).
 
 ## Objective
 

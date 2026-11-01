@@ -41,6 +41,8 @@ entries; see the [storage guide](../../docs/credentials.md) for alternate paths.
 - [X](./x/README.md): `TRADY_X_BEARER_TOKEN`, `TRADY_X_CONSUMER_KEY`,
   `TRADY_X_CONSUMER_SECRET`.
 - [Alpha Vantage](./alpha-vantage/README.md): `TRADY_ALPHA_VANTAGE_API_KEY`.
+- [Alpaca Basic market data](./financial-data/README.md): `TRADY_ALPACA_API_KEY`,
+  `TRADY_ALPACA_SECRET_KEY`.
 - [PostgreSQL](./postgresql/README.md): `TRADY_ANALYST_DSN`,
   `TRADY_EXECUTOR_DSN`, `TRADY_GATEWAY_DSN`, `TRADY_MIGRATOR_DSN`, and the
   separate lab, verifier, shadow, owner-approval and release DSNs.

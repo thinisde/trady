@@ -11,18 +11,33 @@ changes a firewall, starts a listener, installs a timer or enables trading.
   /etc/trady/runtime/analyst.json` as UID 13001, group `trady-ipc`.
 - `[trady-executor.service:ExecStart]` runs `trady autonomous run --config
   /etc/trady/runtime/executor.json` as UID 13002, with supplemental IPC group.
-- `[trady-gateway.service:ExecStart]` runs the separately configured Telegram gateway as UID
-  13003. Configure the expanded gateway to keep analysis out of this identity.
+  The unit declares `Requires=trady-analyst.service` and lists it in `After`.
+- `[trady-gateway.service:ExecStart]` runs `trady telegram run --config
+  /etc/trady/runtime/telegram.json` as UID 13003. Configure the expanded gateway
+  to keep analysis out of this identity.
 - `[trady-weekly.service:ExecStart]` and `[trady-weekly.timer:OnCalendar]` run the offline lab as UID 13004 on Saturday
   08:00 Europe/Berlin. A timer trigger reviews a week; it cannot approve a release.
+  The command is `trady weekly run --config /etc/trady/lab/run.json`; the timer
+  declares `Persistent=yes` and `AccuracySec=1min`.
 - `[trady-evaluator.service:ExecStart]` runs the concrete sealed evaluator as UID 13005,
-  without any secret, database or provider route. The lab's fixed helper client
+  using `/usr/bin/python3 -B /opt/trady/lab/evaluator_worker.py --lock
+  /etc/trady/evaluator/lock.json --socket /run/trady-evaluator/evaluator.sock
+  --state-directory /var/lib/trady-evaluator/exposures`,
+  with no credential load and only `AF_UNIX` sockets permitted
+  (`[trady-evaluator.service:RestrictAddressFamilies]`). Its native-ABI syscall
+  filter denies outbound `connect` and all `io_uring` syscalls with EPERM
+  (`[trady-evaluator.service:SystemCallFilter]`). The worker additionally installs
+  its own mandatory filter before opening sealed inputs, denying new sockets
+  while preserving listener accept/reply. This blocks PostgreSQL Unix socket
+  connections at every path, including abstract addresses, without relying on
+  filesystem masks. The lab's fixed helper client
   uses `/run/trady-evaluator/evaluator.sock` and expected worker UID 13005.
 - `[sysusers.conf:trady-analyst]` describes distinct identities. `[firewall.nft:trady_runtime]` contains explicit
   per-UID IPv4/IPv6 database/provider allowlists, initially empty.
 - `[prepare.py:main]` exposes `prepare.py --source REVIEWED_CONFIG --destination NEW_DIRECTORY` and produces full
   analyst/executor app configs with `enabled=false` and the private socket path.
-  It refuses overwrite. Validate the resulting complete files through the CLI.
+  The destination directory may already exist; it refuses to overwrite either
+  output file. Validate the resulting complete files through the CLI.
 
 | Identity | Required secret set | Allowed routes |
 | --- | --- | --- |
@@ -30,7 +45,7 @@ changes a firewall, starts a listener, installs a timer or enables trading.
 | executor | `TRADY_EXECUTOR_DSN`, one explicitly scoped broker credential pair, `TRADY_TRADING_INPUTS_TOKEN` when required | approved broker and input-service endpoints, database, analyst socket |
 | gateway | `TRADY_GATEWAY_DSN`, `TRADY_TELEGRAM_BOT_TOKEN` | Telegram endpoint, database |
 | lab | `TRADY_LAB_DSN` | Unix database socket; no internet |
-| evaluator | none | private evaluator socket; no database or internet |
+| evaluator | none | accepted evaluator IPC only; outbound/new sockets and `io_uring` denied; no internet |
 
 Verification, owner approval and release commands use separate credentials outside
 these service secret sets. The lab cannot read a verifier, owner, releaser,
@@ -107,6 +122,19 @@ Verifier attestations for verification, calendar and readiness must explicitly u
   Prepare these files before explicitly deploying the unit; none is bundled as
   production evidence. The evaluator remains independent of candidate code and
   accepts only the exact request frozen by the administrator.
+- The evaluator requires Linux/procfs, `libseccomp.so.2`, no-new-privilege and
+  thread-synchronized seccomp support. Its startup self-test must confirm local
+  outbound connection and new-socket denial before reading the lock/data.
+  Missing support is a startup failure for both PRODUCTION and TEST_ONLY workers.
+  It refuses existing threads, inherited connected descriptors and anonymous
+  resources; ordinary stdio and root-owned read-only regular files are permitted,
+  with connected stdout/stderr limited to the systemd journal. Keep the worker
+  separate from clients: the filter applies irreversibly to its process and
+  descendants. The sealed lock's diagnostics directory must be evaluator-owned
+  with exact mode 0700; unsafe existing directories fail without permission
+  repair. See `isolate_worker` and `diagnostics_directory` in the
+  [evaluator component](../../lab/evaluator/README.md). Refresh all prepared
+  evaluator dependency pins, including the new isolation module, after updates.
 
 ## Side Effects
 
@@ -114,13 +142,18 @@ Explicit installation of `[sysusers.conf:trady-analyst]` and the service artifac
 by an administrator would provision users/units/secrets and
 apply the reviewed firewall. Running the analyst/executor/gateway would access
 their authorized providers and database. Running an enabled executor can place
-orders; this implementation request does not authorize starting it. A timer
-installation is also a separate deployment action. `[prepare.py:main]` writes
+orders and requires the reviewed account, inputs, artifacts and runtime gates
+described above. Timer installation is an explicit deployment action.
+`[prepare.py:main]` writes
 new disabled analyst/executor files sequentially using exclusive creation and
 file fsync. Failure may leave partial output; there is no rollback. Requested
 directory/file modes are 0755/0644, subject to the process umask.
+`[trady-evaluator.service:ExecStartPre]` uses `mkdir -p -m 0700` for exposures;
+existing directory permissions remain unchanged by that command.
 
 ## Verification
+
+Run `cargo test --workspace --locked` from the repository root for workspace verification.
 
 Validate units with `systemd-analyze verify services/runtime/*.service
 services/runtime/*.timer` on the target system; missing installed binaries or
@@ -128,8 +161,8 @@ users are deployment prerequisites. Check firewall syntax with `nft --check -f
 services/runtime/firewall.nft` in an authorized isolated network namespace.
 Do not apply either as part of a code/test check.
 
-Run `cargo test -p trady-adapters --test shadow_recording --test weekly_helpers`,
-`cargo test -p trady-cli --test weekly_cli`, and `python3 -B -m unittest discover
+Run `cargo test --locked -p trady-adapters --test shadow_recording --test weekly_helpers`,
+`cargo test --locked -p trady-cli --test weekly_cli`, and `python3 -B -m unittest discover
 -s lab/tests -v`. The root's disposable PostgreSQL runner executes
 `crates/trady-storage/tests/weekly_durable.rs` for role isolation, durable trial
 budgets, restart/concurrency, fenced checkpoints, consumed holdouts and tampering.

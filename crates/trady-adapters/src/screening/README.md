@@ -64,11 +64,13 @@ a completed pass can separately contain domain blockers or no eligible candidate
   daily quota 1–10,000 and retention 1–8,760 hours.
 - `[mod.rs:HttpUniverseSource::with_bearer]` accepts `None` or a nonempty token
   of at most 8,192 bytes without ASCII control bytes.
-- `[mod.rs:HttpUniverseSource::fetch_universe]` uses the existing
+- `[mod.rs:HttpUniverseSource::new]` selects the existing
   [protected news HTTP transport](../news/http.rs): public pinned DNS, HTTPS,
   no proxies, 15-second HTTP timeout, and a 2 MiB body limit. Redirects are disabled.
   URL credentials, query strings and fragments are forbidden. No credential store
-  or environment secret is read. HTTP 304 cannot replace a full point-in-time feed.
+  or environment secret is read. `with_transport` instead delegates to its injected
+  transport; `fetch_universe` still requests zero redirects and validates the
+  response status, body size and final destination. HTTP 304 cannot replace a full point-in-time feed.
 - `[mod.rs:HttpUniverseSource::fetch_universe]` requires matching configured
   provider/taxonomy, at most 2,048 members, valid completeness, bounds,
   effective snapshot availability and expiry must be valid. Future memberships
@@ -95,8 +97,9 @@ a completed pass can separately contain domain blockers or no eligible candidate
 
 ## Side Effects
 
-`[mod.rs:HttpUniverseSource::fetch_universe]` makes one bounded HTTPS GET per
-eligible attempt. It records the attempt and consumes UTC-day quota before
+`[mod.rs:HttpUniverseSource::fetch_universe]` invokes one transport GET per
+eligible attempt, using bounded HTTPS with the default `SafeHttp` transport.
+It records the attempt and consumes UTC-day quota before
 transport or parsing, so failures also count. Interval, daily quota and 429/503
 backoff are instance-local and do not survive restarts. Integer `Retry-After`
 values in 1–86,400 seconds are accepted; other values use 60 seconds. The application calls the supplied snapshot repository. There
@@ -105,9 +108,11 @@ source approval changes, or persistence implementation in this module.
 
 ## Verification
 
-Run `cargo test -p trady-domain --test screening`,
-`cargo test -p trady-application --test screening`, and
-`cargo test -p trady-adapters screening` from the repository root.
+Run `cargo test --workspace --locked` from the repository root.
+
+Run `cargo test -p trady-domain --test screening --locked`,
+`cargo test -p trady-application --test screening --locked`, and
+`cargo test -p trady-adapters screening --locked` from the repository root.
 [tests.rs](./tests.rs) exercises real adapter parsing through injected HTTP
 responses, provenance, host restrictions, scope/time/completeness rejection,
 response limits and throttling. Domain/application tests cover membership,

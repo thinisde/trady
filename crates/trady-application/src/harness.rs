@@ -471,6 +471,10 @@ pub struct SessionLease {
     pub ttl_seconds: u32,
 }
 pub trait SessionRepository {
+    /// True only when every session record remains in process memory.
+    fn is_ephemeral(&self) -> bool {
+        false
+    }
     fn create(&mut self, session: &Session) -> Result<()>;
     fn load(&mut self, scope: &Scope, id: &str) -> Result<Session>;
     fn list(&mut self, scope: &Scope) -> Result<Vec<Session>>;
@@ -524,6 +528,13 @@ impl ToolOutput {
     }
 }
 pub trait ToolExecutor {
+    fn requires_ephemeral_session(&self) -> bool {
+        false
+    }
+    /// Recheck licensed dependencies immediately before constructing model context.
+    fn validate_context(&mut self, _session: &Session) -> Result<()> {
+        Ok(())
+    }
     fn specs(&self) -> Vec<ToolSpec>;
     fn revision(&self) -> String;
     /// Only reviewed information tools belong here. Enforce the supplied cooperative deadline.
@@ -589,6 +600,10 @@ impl AgentHarness {
     ) -> Result<Value> {
         request.scope.validate()?;
         require(valid_id(request.session_id), "invalid session ID")?;
+        require(
+            !tools.requires_ephemeral_session() || repo.is_ephemeral(),
+            "these research tools require an ephemeral conversation repository",
+        )?;
         let mut lease = repo.acquire(request.scope, request.session_id, &new_id("worker"), 45)?;
         let result = self.locked(repo, provider, tools, &mut lease, &request, on_text);
         let released = repo.release(&lease);
@@ -955,6 +970,16 @@ impl AgentHarness {
                 || run.tool_rounds >= limits.max_tool_rounds
                 || run.tool_calls >= limits.max_tool_calls
                 || remaining <= Duration::from_secs(u64::from(limits.provider_timeout_seconds));
+            if tools.validate_context(&lease.session).is_err() {
+                return self.finish(
+                    repo,
+                    lease,
+                    incomplete(
+                        "Research context expired or was invalidated; start a new conversation.",
+                    ),
+                    RunStatus::Failed,
+                );
+            }
             let messages=match self.context(&mut lease.session,&specs,force_final) {Ok(v)=>v,Err(_)=>return self.finish(repo,lease,incomplete("Context capacity is exhausted; governing rules and current work were retained."),RunStatus::Failed)};
             let reserve = estimate(&messages, &specs)?.saturating_add(limits.max_output_tokens);
             let run = lease

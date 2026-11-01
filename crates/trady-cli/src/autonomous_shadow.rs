@@ -74,6 +74,20 @@ pub(super) fn run(config: RuntimeConfig, config_path: &str, once: bool) -> Resul
         directory.is_absolute(),
         "shadow journal must use an absolute path",
     )?;
+    let preflight = configuration_check(&config, config_path)?;
+    if preflight["configuration_ready"] != true {
+        let now = Utc::now();
+        let audit = json!({
+            "schema_version":1,"phase":"configuration","mode":"shadow",
+            "account_id":config.trading.account_id,"started_at":now,"finished_at":now,
+            "configuration_hash":digest(&config)?,"preflight":preflight,"order_mutations":0
+        });
+        let hash = record(&directory, &audit)?;
+        return Ok(json!({
+            "status":"shadow_blocked","cycles":0,"preflight":preflight,
+            "shadow_record_hash":hash,"order_mutations":0
+        }));
+    }
     let credentials = CredentialStore::load()?;
     let mut broker = Trading212Reader::new(
         config.broker.clone(),
@@ -105,9 +119,8 @@ pub(super) fn run(config: RuntimeConfig, config_path: &str, once: bool) -> Resul
     while !stopped.load(Ordering::Relaxed) {
         let started = Utc::now();
         let result = (|| -> Result<Value> {
-            let original = broker
-                .read_snapshot(&config.broker.account_id)
-                .map_err(|e| Error(e.to_string()))?;
+            let original =
+                crate::broker_read::snapshot(&mut broker, &config.broker.account_id, &stopped)?;
             original.validate()?;
             require(
                 trady_policy::fresh(original.observed_at, Utc::now(), 60),

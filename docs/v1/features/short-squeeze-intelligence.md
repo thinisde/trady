@@ -1,6 +1,6 @@
-# Short-squeeze exposure and crowding intelligence (proposed)
+# Short-squeeze exposure and crowding intelligence (research implementation)
 
-Status: new feature design, 2026-10-31. Documentation only. Trady remains long-only; this service **does not short stocks or recommend trading squeezes**.
+Status: deterministic research implementation, 2026-10-31; enabled by default for research. [Policy](../../../crates/trady-policy/src/intelligence/short_interest.rs) selects publication-aware position vintages, calculates float ratios and frozen-volume days-to-cover, and reports optional licensed borrow context. It rejects daily short-sale volume as a short-interest substitute. Approved normalized inputs use the [shared service](./implementation-report.md); live subscriptions and calibration remain separate gates. Trady remains long-only.
 
 ## New research capability
 

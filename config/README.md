@@ -10,6 +10,38 @@ from provider configuration. `credentials init` creates the ignored private
 
 ## Interface
 
+- [No-submit demo](./autonomous.demo-no-submit.json): record-only shadow runtime
+  with an owner-delegated five-stock allowlist. The
+  [deployment selection](./deployment.demo-selection.json) records the chosen
+  instruments, provider access checks and remaining evidence; it is not loaded
+  by the runtime and grants no release authority. The
+  [skill candidate](./skills.demo.candidate.json) and
+  [approved manifest](./skills.demo.approved.json) pin the reviewed 52-file
+  bundle 2.1.1. Its hashes are installed only in this shadow configuration;
+  [the review scope](../docs/demo-skill-review-2026-11-01.md) grants no model,
+  formula, source or live-deployment authority. See the
+  [training and setup report](../docs/demo-training-setup-2026-11-01.md).
+
+- [Pending shadow deployment](./autonomous.pending.json): disabled native runtime
+  configuration with a separate shadow namespace and paused entries. The
+  [approval handoff](./deployment.pending.json) lists required artifacts and
+  evidence; it is an operator manifest and is not loaded by the runtime.
+  See the [remediation record](../docs/workflow-remediation-2026-10-31.md).
+
+- [Cold-start demo setup](./cold-start.demo.json): provider-owned account
+  discovery, independent OHLCV integrity checks, dynamic broker-intersected
+  universe selection, shadow-only seed model/formula/cost artifacts and the
+  supervised first-order intent gate. It does not contain a fabricated broker
+  account number and it never grants entry authority by itself. See the
+  [cold-start guide](../docs/cold-start.md).
+
+- [intelligence.example.json](./intelligence.example.json): version-1
+  `[../crates/trady-application/src/intelligence.rs:IntelligenceConfig]` with
+  all ten research features enabled and no source registrations. Results require
+  explicit reviewed rights, capabilities, entity mappings, audit-marker permission
+  and retention. Omitting `enabled` selects all ten; an explicit list selects only
+  those features, and `enabled: []` disables every feature. [Operating guide](../docs/v1/features/implementation-report.md).
+
 - [financial-data.json](./financial-data.json): version-1 `FinancialConfig`,
   disabled provider accounts, typed endpoint requests, per-consumer rights and
   local credit limits. `[../crates/trady-application/src/financial.rs:FinancialConfig::validate]`
@@ -49,13 +81,20 @@ from provider configuration. `credentials init` creates the ignored private
 
 - [paper.json](./paper.json): version 1 `FoundationConfig`, policy version 1 and
   unknown provider capabilities.
-- [dev-pg_hba.conf](./dev-pg_hba.conf): authentication fixture mounted only by the
-  [disposable database runner](../scripts/test-postgres.py).
+- [dev-pg_hba.conf](./dev-pg_hba.conf): SCRAM authentication fixture for isolated
+  diagnostic/test servers. The [disposable database runner](../scripts/test-postgres.py)
+  generates role passwords and supplies the corresponding test DSNs.
 - [Trading 212 demo](./trading212.demo.example.json) and
   [live](./trading212.live.example.json): non-secret adapter examples. Replace the
   example broker account number/currency before use; see the [guide](../docs/trading212.md).
 
 ## Invariants
+
+`[autonomous.pending.json:enabled]` is false, its trading mode is `shadow`, and
+`[autonomous.pending.json:controls.pause_entries]` is true. Its empty registries,
+unknown capabilities and reserved example hosts intentionally prevent readiness.
+`[../crates/trady-cli/src/autonomous.rs:run]` reports
+`approved_input_service_unconfigured` for the reserved placeholder input endpoint.
 
 `[x-pilot.example.json:x_budget.enabled]` and every pilot source are false.
 The example supplies no identity IDs, ownership/coverage approvals or content/model

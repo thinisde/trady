@@ -48,10 +48,14 @@ EUR 5,000 cash, no positions, no pending orders and `entry_authorized=false`.
 The [adapter contract](../crates/trady-adapters/src/trading212/README.md) lists the
 actual interfaces. `Trading212Reader` implements the application information port
 and exposes instrument metadata, pending-order lookup and cursor-based order
-history. It validates the actual account number and primary currency when reading
-summary/snapshot data. Direct order/history/metadata reads require that identity
-check and cache it for at most 60 seconds. Every executor mutation repeats the
-summary binding check without using that identity cache.
+history. Provider metadata tickers are preserved as strings until domain conversion;
+unrepresentable metadata rows are excluded with an explicit rejection count, while
+unrepresentable held/order tickers fail closed. Historical rows also retain the
+documented fill price, quantity, wallet impact, FX and tax fields. It validates the
+actual account number and primary currency when reading summary/snapshot data.
+Direct order/history/metadata reads require that identity check and cache it for at
+most 60 seconds. Every executor mutation repeats the summary binding check without
+using that identity cache.
 
 `Trading212Executor` implements
 `trady_application::broker::BrokerExecutionPort`: market, limit, stop and stop-limit
@@ -92,8 +96,11 @@ paper reconciliation restrictions have not been extended to live accounts.
   fills and positions; an unresolved outcome must remain unresolved.
 - History is fetched one bounded page at a time. Continuation paths are validated
   and converted to typed cursors; arbitrary provider URLs are never followed.
-  Repeated fill records deduplicate equal order totals rather than adding totals
-  together. Conflicting observations fail instead of guessing.
+  Repeated fill records deduplicate equal fill observations and order totals rather
+  than adding totals together. Fill quantities, prices, tax names and aggregate
+  totals are validated; conflicting observations fail instead of guessing. The
+  normalized page exposes FX, net value, realized P/L and tax rows when the broker
+  supplies them.
 - Per-endpoint pacing and provider `Retry-After`/exhausted `x-ratelimit-*` headers
   produce a retry delay without sleeping or resending. Trading 212 quotas are per
   account across keys and processes; this client's limiter is local to its instance.

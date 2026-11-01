@@ -10,6 +10,9 @@ struct Entry {
     description: String,
     published: String,
     publisher: String,
+    language: Option<String>,
+    title_language: Option<String>,
+    summary_language: Option<String>,
 }
 
 pub(super) fn fetch<T: HttpTransport>(
@@ -96,9 +99,11 @@ pub(super) fn parse(
         .or_else(|| Url::parse(&source.url).ok())
         .ok_or_else(fail)?;
     let mut bases: Vec<Url> = vec![];
+    let mut languages: Vec<Option<String>> = vec![];
     let mut current: Option<Entry> = None;
     let mut drafts = vec![];
     let mut feed_title = String::new();
+    let mut feed_language = String::new();
     let mut saw_root = false;
     let mut root_closed = false;
     let mut capped = false;
@@ -107,6 +112,8 @@ pub(super) fn parse(
             Event::DocType(_) => return Err(SourceFailure::unavailable("xml_doctype_forbidden")),
             Event::Start(tag) => {
                 let base = effective_base(&tag, bases.last().unwrap_or(&document_base))?;
+                let language =
+                    effective_language(&tag, languages.last().and_then(Option::as_deref))?;
                 let name =
                     String::from_utf8(tag.local_name().as_ref().to_vec()).map_err(|_| fail())?;
                 if stack.is_empty() {
@@ -124,6 +131,7 @@ pub(super) fn parse(
                     }
                     current = Some(Entry {
                         url_base: Some(base.clone()),
+                        language: language.clone(),
                         ..Default::default()
                     });
                 }
@@ -139,8 +147,35 @@ pub(super) fn parse(
                 {
                     entry.url_base = Some(base.clone());
                 }
+                if let Some(entry) = &mut current {
+                    let parent = stack.last().map(String::as_str);
+                    if matches!(parent, Some("item" | "entry")) {
+                        if name == "title" {
+                            entry.title_language = language.clone();
+                        } else if matches!(
+                            name.as_str(),
+                            "description" | "summary" | "content" | "encoded"
+                        ) {
+                            entry.summary_language = language.clone();
+                        }
+                    } else if stack.iter().any(|name| {
+                        matches!(
+                            name.as_str(),
+                            "description" | "summary" | "content" | "encoded"
+                        )
+                    }) {
+                        if entry.summary_language != language {
+                            entry.summary_language = Some(String::new());
+                        }
+                    } else if stack.last().is_some_and(|name| name == "title")
+                        && entry.title_language != language
+                    {
+                        entry.title_language = Some(String::new());
+                    }
+                }
                 stack.push(name);
                 bases.push(base);
+                languages.push(language);
             }
             Event::Empty(tag) => {
                 let base = effective_base(&tag, bases.last().unwrap_or(&document_base))?;
@@ -156,19 +191,27 @@ pub(super) fn parse(
                 &stack,
                 &mut current,
                 &mut feed_title,
+                &mut feed_language,
                 &value.decode().map_err(|_| fail())?,
             )?,
             Event::CData(value) => append(
                 &stack,
                 &mut current,
                 &mut feed_title,
+                &mut feed_language,
                 &value.decode().map_err(|_| fail())?,
             )?,
             Event::GeneralRef(value) => {
                 let entity = std::str::from_utf8(value.as_ref()).map_err(|_| fail())?;
                 let raw = format!("&{entity};");
                 let value = quick_xml::escape::unescape(&raw).map_err(|_| fail())?;
-                append(&stack, &mut current, &mut feed_title, &value)?;
+                append(
+                    &stack,
+                    &mut current,
+                    &mut feed_title,
+                    &mut feed_language,
+                    &value,
+                )?;
             }
             Event::End(tag) => {
                 let name = std::str::from_utf8(tag.local_name().as_ref())
@@ -178,6 +221,7 @@ pub(super) fn parse(
                     return Err(fail());
                 }
                 bases.pop();
+                languages.pop();
                 if matches!(name.as_str(), "item" | "entry") {
                     let entry = current.take().ok_or_else(fail)?;
                     if drafts.len() == limit {
@@ -229,7 +273,11 @@ pub(super) fn parse(
                         },
                         text: None,
                         published_at,
-                        language: None,
+                        language: if entry.description.trim().is_empty() {
+                            entry.title_language.or(entry.language)
+                        } else {
+                            entry.summary_language.or(entry.language)
+                        },
                         status: if google {
                             ContentStatus::MetadataOnly
                         } else {
@@ -262,6 +310,12 @@ pub(super) fn parse(
     let items = drafts
         .into_iter()
         .map(|mut draft| {
+            // RSS channel metadata can appear after its items. Atom xml:lang
+            // is scoped while parsing; an explicit empty value clears inheritance.
+            if draft.language.is_none() && !feed_language.trim().is_empty() {
+                draft.language = Some(language_tag(&feed_language)?);
+            }
+            draft.language = draft.language.filter(|value| !value.is_empty());
             draft.feed_title = Some(feed_title.trim().into());
             if draft.publisher.is_empty() {
                 draft.publisher = feed_title.trim().into();
@@ -281,6 +335,38 @@ pub(super) fn parse(
         complete: !capped,
         gaps,
     })
+}
+
+fn language_tag(value: &str) -> std::result::Result<String, SourceFailure> {
+    let value = value.trim();
+    if value.len() > 63
+        || (!value.is_empty()
+            && !value.split('-').all(|part| {
+                !part.is_empty()
+                    && part.len() <= 8
+                    && part.bytes().all(|b| b.is_ascii_alphanumeric())
+            }))
+    {
+        return Err(SourceFailure::unavailable("rss_language_invalid"));
+    }
+    Ok(value.to_ascii_lowercase())
+}
+
+fn effective_language(
+    tag: &quick_xml::events::BytesStart<'_>,
+    parent: Option<&str>,
+) -> std::result::Result<Option<String>, SourceFailure> {
+    for attribute in tag.attributes() {
+        let attribute =
+            attribute.map_err(|_| SourceFailure::unavailable("rss_attribute_invalid"))?;
+        if attribute.key.as_ref() == b"xml:lang" {
+            let value = attribute
+                .unescape_value()
+                .map_err(|_| SourceFailure::unavailable("rss_attribute_invalid"))?;
+            return language_tag(&value).map(Some);
+        }
+    }
+    Ok(parent.map(String::from))
 }
 
 fn effective_base(
@@ -329,6 +415,7 @@ fn append(
     stack: &[String],
     current: &mut Option<Entry>,
     feed_title: &mut String,
+    feed_language: &mut String,
     value: &str,
 ) -> std::result::Result<(), SourceFailure> {
     let Some(name) = stack.last().map(String::as_str) else {
@@ -343,7 +430,9 @@ fn append(
         .and_then(|i| i.checked_sub(1))
         .and_then(|i| stack.get(i))
         .map(String::as_str);
-    let destination = if let Some(entry) = current {
+    let destination = if name == "language" && parent == Some("channel") && current.is_none() {
+        Some(feed_language)
+    } else if let Some(entry) = current {
         if stack.iter().any(|s| {
             matches!(
                 s.as_str(),

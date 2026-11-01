@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "horizon_months": 12,
+  "candidates": [
+    {
+      "symbol": "V",
+      "company": "Visa",
+      "region": "US",
+      "sector": "Payments",
+      "currency": "USD",
+      "financials": {
+        "period_start": "2025-10-01",
+        "period_end": "2026-09-30",
+        "published_at": "2026-10-27T00:00:00Z",
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1403161/000140316126000126/q42026earningsrelease.htm",
+        "revenue_millions": "45903",
+        "prior_year_revenue_millions": "40000",
+        "operating_income_millions": "28110",
+        "free_cash_flow_millions": "22057"
+      },
+      "quote": {
+        "price": "413.59",
+        "currency": "USD",
+        "observed_at": "2026-10-30T20:00:00Z",
+        "source_url": "https://investor.visa.com/stock-information/quote-chart/default.aspx"
+      },
+      "trailing_eps": {
+        "diluted_eps": "12.32",
+        "currency": "USD",
+        "period_start": "2025-10-01",
+        "period_end": "2026-09-30",
+        "published_at": "2026-10-27T00:00:00Z",
+        "source_url": "https://www.sec.gov/Archives/edgar/data/1403161/000140316126000126/q42026earningsrelease.htm"
+      },
+      "thesis": "Payment-network scale and strong cash generation make Visa a priority for valuation review.",
+      "catalysts": [
+        "Continued growth in payment and cross-border volumes",
+        "Fiscal 2027 operating execution"
+      ],
+      "risks": [
+        "Payment regulation and litigation",
+        "Consumer or cross-border spending slowdown",
+        "Valuation premium and EUR/USD exposure"
+      ]
+    },
+    {
+      "symbol": "SAP",
+      "company": "SAP SE",
+      "region": "EU",
+      "sector": "Enterprise software",
+      "currency": "EUR",
+      "financials": {
+        "period_start": "2026-07-01",
+        "period_end": "2026-09-30",
+        "published_at": "2026-10-21T00:00:00Z",
+        "source_url": "https://www.sap.com/docs/download/investors/2026/sap-2026-q3-statement.pdf",
+        "revenue_millions": "10270",
+        "prior_year_revenue_millions": "9076",
+        "operating_income_millions": "2930",
+        "free_cash_flow_millions": "1718"
+      },
+      "quote": null,
+      "trailing_eps": null,
+      "thesis": "Cloud backlog and cash generation support further research into SAP's recurring enterprise revenue.",
+      "catalysts": [
+        "Conversion of cloud backlog into revenue",
+        "Execution against the approximately EUR 10 billion 2026 free cash flow outlook"
+      ],
+      "risks": [
+        "Premium valuation",
+        "Cloud migration execution and customer spending",
+        "Foreign-exchange effects and cloud infrastructure costs"
+      ]
+    },
+    {
+      "symbol": "MSFT",
+      "company": "Microsoft",
+      "region": "US",
+      "sector": "Enterprise software",
+      "currency": "USD",
+      "financials": {
+        "period_start": "2026-07-01",
+        "period_end": "2026-09-30",
+        "published_at": "2026-10-28T00:00:00Z",
+        "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526436133/msft-20260930.htm",
+        "revenue_millions": "92279",
+        "prior_year_revenue_millions": "77673",
+        "operating_income_millions": "45915",
+        "free_cash_flow_millions": "18633"
+      },
+      "quote": null,
+      "trailing_eps": null,
+      "thesis": "Profitable cloud and enterprise demand support business quality; AI capital intensity makes cash conversion a key review condition.",
+      "catalysts": [
+        "Azure and enterprise subscription demand",
+        "Evidence that AI investment converts into durable cash earnings"
+      ],
+      "risks": [
+        "Rapidly rising AI infrastructure capex and depreciation",
+        "Cloud competition and execution",
+        "Premium valuation and EUR/USD exposure"
+      ]
+    },
+    {
+      "symbol": "SU.PA",
+      "company": "Schneider Electric",
+      "region": "EU",
+      "sector": "Electrical equipment",
+      "currency": "EUR",
+      "financials": {
+        "period_start": "2026-07-01",
+        "period_end": "2026-09-30",
+        "published_at": "2026-10-16T00:00:00Z",
+        "source_url": "https://www.se.com/ww/en/assets/pdf/release-Q3-revenues-2026",
+        "revenue_millions": "11460",
+        "prior_year_revenue_millions": null,
+        "operating_income_millions": null,
+        "free_cash_flow_millions": null
+      },
+      "quote": null,
+      "trailing_eps": null,
+      "thesis": "Electrical distribution, automation and data-center demand offer a different business exposure from software.",
+      "catalysts": [
+        "Delivery of the upgraded 2026 target",
+        "Conversion of data-center demand into cash-generating sales"
+      ],
+      "risks": [
+        "Capital-spending cycle and AI demand concentration",
+        "Input costs and execution",
+        "Q3 revenue release does not establish same-quarter profit or cash flow"
+      ]
+    },
+    {
+      "symbol": "SAN.PA",
+      "company": "Sanofi",
+      "region": "EU",
+      "sector": "Pharmaceuticals",
+      "currency": "EUR",
+      "financials": {
+        "period_start": "2026-07-01",
+        "period_end": "2026-09-30",
+        "published_at": "2026-10-30T06:30:00Z",
+        "source_url": "https://www.sanofi.com/en/media-room/press-releases/2026/2026-10-30-06-30-00-3392028",
+        "revenue_millions": "14444",
+        "prior_year_revenue_millions": null,
+        "operating_income_millions": null,
+        "free_cash_flow_millions": "3269"
+      },
+      "quote": null,
+      "trailing_eps": null,
+      "thesis": "Medicine demand and cash generation provide a research alternative to the AI investment theme.",
+      "catalysts": [
+        "Execution against upgraded 2026 guidance",
+        "Dupixent and new-medicine performance"
+      ],
+      "risks": [
+        "Dependence on Dupixent growth",
+        "Clinical, patent and reimbursement risk",
+        "Vaccine timing and foreign-exchange effects"
+      ]
+    }
+  ]
+}
+

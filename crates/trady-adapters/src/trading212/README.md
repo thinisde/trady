@@ -18,10 +18,14 @@ policy, readiness, fencing or deployment authority. See the
   selected environment from the supplied store, with no shared/other-mode fallback.
   Each lookup rechecks its environment override; the pair is not an atomic
   environment snapshot.
-- `[mod.rs:BrokerInstrument]`, `HistoryQuery`, `HistoryPage`: metadata and bounded
-  history requests/results with normalized order totals and a typed continuation cursor.
+- `[mod.rs:BrokerInstrument]`, `InstrumentCatalog`, `HistoryQuery`, `HistoryPage`,
+  `BrokerFill`, `BrokerFillWalletImpact`, and `BrokerTax`: metadata and bounded
+  history requests/results with normalized order totals, typed continuation cursors,
+  and documented fill economics (type, price, quantity, FX, net value, realized P/L
+  and taxes).
 - `[mod.rs:Trading212Reader]`: `new`, `with_clock`, `config`, `spendable_cash`,
-  `pending_orders`, `pending_order`, `instruments`, `historical_orders`, `read_snapshot`.
+  `discover_account`, `pending_orders`, `pending_order`, `instruments`,
+  `instruments_with_rejections`, `historical_orders`, `read_snapshot`.
   Implements application `BrokerInformationPort` and observation-only `BrokerPort`.
   Capabilities remain unknown; `find_order(intent_id)` explicitly fails.
 - `[mod.rs:Trading212Executor]`: `new`, `information`; implements
@@ -53,9 +57,10 @@ policy, readiness, fencing or deployment authority. See the
   account, a 1–30 second timeout, and `paper_`/`live_` local ID matching environment.
   Deserialization rejects unknown fields. Production origins are fixed HTTPS
   URLs; arbitrary URLs are not configuration fields.
-- `[mod.rs:Credentials::new]` rejects empty/untrimmed/control-containing credentials
-  and colons in the key. `[http.rs:Http::build]` disables redirects, proxies and
-  automatic retries. `[http.rs:Http::request]` performs one send using Basic auth
+- `[mod.rs:Credentials::new]` requires nonempty, trimmed credentials without
+  ASCII control bytes and forbids colons in the key. `[http.rs:Http::build]`
+  disables redirects, proxies and automatic retries. `[http.rs:Http::request]`
+  performs one send using Basic auth
   and caps successful response bodies at 8 MiB. Diagnostics never contain provider
   bodies, credentials or request URLs.
 - `[mod.rs:Trading212Reader::spendable_cash]` checks actual broker account and primary
@@ -78,10 +83,14 @@ policy, readiness, fencing or deployment authority. See the
   `BrokerExecutionPort::submit_order` supplies none. This is a pre-send check,
   not a cancellation deadline for an in-flight request.
 - `[dto.rs:Number]` parses/emits decimal JSON tokens without binary floating point;
-  unsupported precision/range fails. `[dto.rs:PositionDto::normalize]` uses positive
-  total holdings. `[dto.rs:Order::normalize]` requires quantity strategy, recognized
-  order types, consistent ticker fields and valid fill bounds. Unknown/transitional
-  statuses stay `Unknown`; sell quantities normalize to positive magnitudes.
+  unsupported precision/range fails. Provider ticker strings are retained at the
+  wire boundary: metadata rows that cannot become `InstrumentId`s are skipped and
+  counted by `[mod.rs:Trading212Reader::instruments_with_rejections]`, while held
+  positions and orders with such tickers fail closed. `[dto.rs:PositionDto::normalize]`
+  uses positive total holdings. `[dto.rs:Order::normalize]` requires quantity strategy,
+  recognized order types, consistent ticker fields and valid fill bounds.
+  Unknown/transitional statuses stay `Unknown`; sell quantities normalize to positive
+  magnitudes.
 - `[mod.rs:Trading212Reader::read_snapshot]` stamps collection start, rejects clock
   reversal/collection over 60 seconds, and validates the complete domain snapshot.
   Sequential cash/position/pending-order reads are not atomic. History is separate.
@@ -104,7 +113,9 @@ policy, readiness, fencing or deployment authority. See the
 - `[mod.rs:Trading212Reader::pending_order]` accepts canonical positive numeric IDs.
   A 404 means absent from pending orders, without proving nonexecution or cancellation.
   `[mod.rs:Trading212Reader::historical_orders]` rejects conflicting duplicate totals,
-  wrong tickers, excessive page sizes and invalid queries. `[mod.rs:next_cursor]`
+  wrong tickers, excessive page sizes and invalid queries; it also returns normalized
+  fill rows and rejects negative/overlarge fill quantities, unknown tax names and
+  inconsistent aggregate fill totals. `[mod.rs:next_cursor]`
   accepts only the expected relative history path with unique recognized parameters,
   matching filter/limit and a nonnegative cursor different from the current cursor.
   `[dto.rs:History]` requires `nextPagePath`; only explicit `null` ends pagination.

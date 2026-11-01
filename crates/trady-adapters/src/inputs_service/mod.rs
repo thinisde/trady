@@ -106,12 +106,18 @@ impl InputsServiceConfig {
                 && (1024..=262_144).contains(&self.maximum_body_bytes)
                 && (1024..=MAX_IMPORT_BYTES).contains(&self.maximum_response_bytes)
                 && !self.store_directory.as_os_str().is_empty()
-                && !self.sources.is_empty()
                 && self.sources.len() <= 128
-                && !self.reviewers.is_empty()
                 && self.reviewers.len() <= 32
                 && self.accounts.len() <= 16,
             "invalid bounded input service configuration",
+        )?;
+        require(
+            !self.sources.is_empty(),
+            "approved input source registry is empty",
+        )?;
+        require(
+            !self.reviewers.is_empty(),
+            "approved input reviewer registry is empty",
         )?;
         for (id, s) in &self.sources {
             require(

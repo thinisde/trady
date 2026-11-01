@@ -1,5 +1,9 @@
 # Implementation completion and activation evidence
 
+Later implementation fixes and verification are recorded in the
+[audit remediation](../audit-2026-10-31/remediation.md). The counts and source
+pins below retain this earlier implementation checkpoint.
+
 Updated 2026-10-31. This record covers the implementation requested after the
 remaining-work inventory. It preserves the distinction between executable code,
 local software checks and independently approved financial evidence.

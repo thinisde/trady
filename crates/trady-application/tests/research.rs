@@ -202,6 +202,41 @@ fn force_cannot_bypass_provider_retry_or_durable_daily_request_caps() {
 }
 
 #[test]
+fn forced_parser_repair_preserves_window_and_reserved_request_budget() {
+    let cfg = config();
+    let source = &cfg.sources[0];
+    let mut repo = Memory::default();
+    let mut provider = Provider {
+        pages: vec![
+            Err(SourceFailure::unavailable(
+                "x_repost_exclusion_not_verified",
+            )),
+            page(None),
+        ]
+        .into(),
+        ..Default::default()
+    };
+    collect_source(&cfg, source, &mut provider, &mut repo, now(), true).unwrap();
+    assert!(repo.state.retry_at.is_none());
+    // Reproduce the legacy synthetic retry deadline from the original failure.
+    repo.state.retry_at = Some(now() + Duration::seconds(60));
+    let report = collect_source(
+        &cfg,
+        source,
+        &mut provider,
+        &mut repo,
+        now() + Duration::seconds(1),
+        true,
+    )
+    .unwrap();
+    assert_eq!(report.status, CollectionStatus::Complete);
+    assert_eq!(provider.requests.len(), 2);
+    assert_eq!(provider.requests[0].start_at, provider.requests[1].start_at);
+    assert_eq!(provider.requests[0].end_at, provider.requests[1].end_at);
+    assert_eq!(repo.state.requests_today, 8);
+}
+
+#[test]
 fn partial_api_results_retain_cursor_and_unverified_accounts_never_fetch() {
     let mut cfg = config();
     let mut repo = Memory::default();

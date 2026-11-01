@@ -99,11 +99,17 @@ artifacts, comparing existing outputs by parsed JSON equality. New Unix temporar
 files use mode 0600; `[journal.rs:private_directory]` sets newly created final
 directories to 0700 and preserves existing-directory permissions.
 `[journal.rs:EvaluationJournal::evaluate]` creates a short-lived exclusive lock
-with no explicit file mode; it preserves claims on failure.
+with no explicit file mode; it preserves claims on failure. The lock covers claim
+examination and publication and is released before reading a cached report or
+scoring. `[journal.rs:write_immutable]` publishes through an exclusive temporary
+file and hard link; a directory-sync failure can return an error after publication.
+Concurrent publication errors propagate without an automatic equality retry.
 Caller-supplied source truth, retention rights and independent review are resolved
 at the deployment service boundary, rather than inferred from dataset metadata.
 
 ## Verification
+
+Run `cargo test --workspace --locked` from the repository root for workspace verification.
 
 From the repository root, run
 `cargo test -p trady-application model_lab::tests --locked`.

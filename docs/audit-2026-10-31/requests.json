@@ -1,0 +1,66 @@
+{
+  "purpose": "Synthetic audit examples; not live vendor data or entitlements",
+  "trading212_api_excluded": true,
+  "requests": [
+    {
+      "feature": "OPTIONS",
+      "as_of": "2026-10-30T20:00:00Z",
+      "config": "samples/options.config.json",
+      "input": "samples/options.observation.json"
+    },
+    {
+      "feature": "COORDINATION",
+      "as_of": "2026-10-31T14:00:00Z",
+      "config": "samples/coordination.config.json",
+      "input": "samples/coordination.observation.json"
+    },
+    {
+      "feature": "EVENT",
+      "as_of": "2026-10-30T15:40:00Z",
+      "config": "samples/event.config.json",
+      "input": "samples/event.observation.json"
+    },
+    {
+      "feature": "SHORT_INTEREST",
+      "as_of": "2026-10-30T20:00:00Z",
+      "config": "samples/short_interest.config.json",
+      "input": "samples/short_interest.observation.json"
+    },
+    {
+      "feature": "INSIDER",
+      "as_of": "2026-10-31T14:00:00Z",
+      "config": "samples/insider.config.json",
+      "input": "samples/insider.observation.json"
+    },
+    {
+      "feature": "CROSS_ASSET",
+      "as_of": "2026-10-30T20:00:00Z",
+      "config": "samples/cross_asset.config.json",
+      "input": "samples/cross_asset.observation.json"
+    },
+    {
+      "feature": "ATTENTION",
+      "as_of": "2026-10-31T14:00:00Z",
+      "config": "samples/attention.config.json",
+      "input": "samples/attention.observation.json"
+    },
+    {
+      "feature": "ACCOUNTING",
+      "as_of": "2026-10-31T14:00:00Z",
+      "config": "samples/accounting.config.json",
+      "input": "samples/accounting.observation.json"
+    },
+    {
+      "feature": "MICROSTRUCTURE",
+      "as_of": "2026-10-30T20:00:00Z",
+      "config": "samples/microstructure.config.json",
+      "input": "samples/microstructure.observation.json"
+    },
+    {
+      "feature": "TAX",
+      "as_of": "2026-10-31T14:00:00Z",
+      "config": "samples/tax.config.json",
+      "input": "samples/tax.observation.json"
+    }
+  ]
+}

@@ -84,6 +84,10 @@ reference through a separate connection cannot replace the transaction check.
   and after a successful backend return. It returns `DENIED` for unknown tools
   or invalid arguments and masks backend errors as `UNAVAILABLE`. A completed
   backend mutation can precede a `CANCELLED` response; no rollback is provided.
+- `[mod.rs:ResearchTools::execute]` gives registered base tools dispatch priority.
+  Research backend calls receive a `tool_` request key derived from the last
+  run ID (or session ID when no run exists), tool name and argument value, plus
+  the persistent session scope and current UTC time.
 - `[crates/trady-application/src/research_jobs.rs:score_sentiment_job]` obtains
   FinBERT predictions through `FinBertClient` and the existing correlated
   `assess_sentiment` path. Missing/disabled/unavailable providers produce failed
@@ -119,6 +123,8 @@ Nothing here starts containers, downloads weights, sends Telegram messages,
 changes trading mode or mutates broker/execution state.
 
 ## Verification
+
+Run `cargo test --workspace --locked` from the repository root.
 
 Run `cargo test -p trady-application --test research_jobs --locked` and
 `cargo test -p trady-adapters --test research_jobs --locked`. Run

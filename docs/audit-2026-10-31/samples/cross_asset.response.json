@@ -1,0 +1,182 @@
+{
+  "name": "cross_asset",
+  "command": [
+    "target/debug/trady",
+    "intelligence",
+    "assess",
+    "--config",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/cross_asset.config.json",
+    "--input",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/cross_asset.observation.json",
+    "--as-of",
+    "2026-10-30T20:00:00Z"
+  ],
+  "exit": 0,
+  "response": {
+    "assessment_id": "intel_0ad6b700fabc51fe77750341acbe249128fa4af31f59978a76655cfd063e26e9",
+    "calibration": "RESEARCH_ONLY_UNCALIBRATED",
+    "computed_at": "2026-10-31T21:49:12.851255649Z",
+    "decision_at": "2026-10-30T20:00:00Z",
+    "entity_id": "US",
+    "entry_authorized": false,
+    "evidence": [
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-30T19:59:59Z",
+        "complete": true,
+        "content_hash": "e760357eaa840dcea771744bac6dc979a4f3d4ed1727eab79868c8b3125c3aa6",
+        "currency": "USD",
+        "entity_id": "US",
+        "expires_at": "2026-11-06T20:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-29T20:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-30T19:59:58Z",
+        "received_at": "2026-10-30T20:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "synthetic_cross_asset_v1",
+        "unit": "normalized_research",
+        "venue": null
+      }
+    ],
+    "expires_at": "2026-11-06T20:00:00Z",
+    "feature": "CROSS_ASSET",
+    "feature_version": "trady-intelligence-v1",
+    "input_hash": "e760357eaa840dcea771744bac6dc979a4f3d4ed1727eab79868c8b3125c3aa6",
+    "observation_id": "fixture_observation",
+    "reasons": [
+      "uncalibrated_research_no_expected_return_or_order_authority"
+    ],
+    "registry_hash": "316ab593e6a9f9e1b4e4a53952741649689f29232845bcc9807c5052edcab0dd",
+    "result": {
+      "assessment": {
+        "aligned": [
+          {
+            "adjustment_basis": "synthetic_total_return_v1",
+            "age_seconds": 0,
+            "available_at": "2026-10-30T20:00:00Z",
+            "calendar_id": "SYNTHETIC_UTC_24H",
+            "currency": "USD",
+            "currency_pair": null,
+            "entity_id": "synthetic_sector",
+            "kind": "PERIOD_TOTAL_RETURN",
+            "period_end": "2026-10-30T20:00:00Z",
+            "published_at": "2026-10-30T20:00:00Z",
+            "series_id": "synthetic_sector",
+            "source_ref": "synthetic_cross_asset_v1",
+            "unavailable_reason": null,
+            "unit": "FRACTION",
+            "value": "0.025",
+            "venue": "synthetic",
+            "vintage": "synthetic_original"
+          },
+          {
+            "adjustment_basis": "synthetic_total_return_v1",
+            "age_seconds": 0,
+            "available_at": "2026-10-30T20:00:00Z",
+            "calendar_id": "SYNTHETIC_UTC_24H",
+            "currency": "USD",
+            "currency_pair": null,
+            "entity_id": "synthetic_market",
+            "kind": "PERIOD_TOTAL_RETURN",
+            "period_end": "2026-10-30T20:00:00Z",
+            "published_at": "2026-10-30T20:00:00Z",
+            "series_id": "synthetic_market",
+            "source_ref": "synthetic_cross_asset_v1",
+            "unavailable_reason": null,
+            "unit": "FRACTION",
+            "value": "0.020",
+            "venue": "synthetic",
+            "vintage": "synthetic_original"
+          },
+          {
+            "adjustment_basis": "synthetic_total_return_v1",
+            "age_seconds": 0,
+            "available_at": "2026-10-30T20:00:00Z",
+            "calendar_id": "SYNTHETIC_UTC_24H",
+            "currency": "USD",
+            "currency_pair": null,
+            "entity_id": "synthetic_credit",
+            "kind": "YIELD_SPREAD_FRACTION",
+            "period_end": "2026-10-30T20:00:00Z",
+            "published_at": "2026-10-30T20:00:00Z",
+            "series_id": "synthetic_credit",
+            "source_ref": "synthetic_cross_asset_v1",
+            "unavailable_reason": null,
+            "unit": "FRACTION",
+            "value": "0.035",
+            "venue": "synthetic",
+            "vintage": "synthetic_original"
+          }
+        ],
+        "at": "2026-10-30T20:00:00Z",
+        "breadth": null,
+        "effective_horizon_seconds": 86400,
+        "flows": [],
+        "issues": [
+          "historical constituent weights/breadth absent"
+        ],
+        "pairs": [
+          {
+            "asset_series_id": "synthetic_sector",
+            "benchmark_series_id": "synthetic_market",
+            "beta": 1.6692789968652038,
+            "beta_standard_error": 0.20337204513625798,
+            "correlation": 0.9715735248330504,
+            "correlation_change": -0.02445832204400178,
+            "correlation_interval_95": {
+              "lower": 0.7565285082856374,
+              "method": "Fisher z 95%, iid approximation; structural breaks and serial dependence are unmodeled",
+              "upper": 0.9970049347280802
+            },
+            "relative_compounded_return": "0.0033652278082232865137342807",
+            "samples": 6,
+            "short_window_correlation": 0.9471152027890486,
+            "source_refs": [
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1"
+            ],
+            "unavailable_reasons": []
+          }
+        ],
+        "region": "US",
+        "sparse_missing_series": [],
+        "status": "PARTIAL",
+        "stress": [
+          {
+            "change": "0.015",
+            "series_id": "synthetic_credit",
+            "source_refs": [
+              "synthetic_cross_asset_v1",
+              "synthetic_cross_asset_v1"
+            ],
+            "threshold_exceeded": true,
+            "unavailable_reason": null
+          }
+        ]
+      },
+      "feature": "CROSS_ASSET"
+    },
+    "schema_version": 1,
+    "scope": {
+      "account_id": "paper_synthetic",
+      "owner_id": "synthetic_owner"
+    },
+    "status": "PARTIAL"
+  },
+  "error": ""
+}

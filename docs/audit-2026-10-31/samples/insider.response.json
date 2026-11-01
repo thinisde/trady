@@ -1,0 +1,152 @@
+{
+  "name": "insider",
+  "command": [
+    "target/debug/trady",
+    "intelligence",
+    "assess",
+    "--config",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/insider.config.json",
+    "--input",
+    "/thinisde/trady/docs/audit-2026-10-31/samples/insider.observation.json",
+    "--as-of",
+    "2026-10-31T14:00:00Z"
+  ],
+  "exit": 0,
+  "response": {
+    "assessment_id": "intel_20c93b3b383635ba2ad87e2abd31a6f4d52658ec71d334dd4ae9c4b58d973069",
+    "calibration": "RESEARCH_ONLY_UNCALIBRATED",
+    "computed_at": "2026-10-31T21:49:12.841634114Z",
+    "decision_at": "2026-10-31T14:00:00Z",
+    "entity_id": "0000000042",
+    "entry_authorized": false,
+    "evidence": [
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-31T13:59:59Z",
+        "complete": true,
+        "content_hash": "157b91c337578a5cd3bd4fc2e765e7b6f87121e5bc6a91762353379e432a0c11",
+        "currency": "USD",
+        "entity_id": "0000000042",
+        "expires_at": "2026-11-07T14:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-30T14:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-31T13:59:58Z",
+        "received_at": "2026-10-31T14:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "review:footnotes",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-31T13:59:59Z",
+        "complete": true,
+        "content_hash": "157b91c337578a5cd3bd4fc2e765e7b6f87121e5bc6a91762353379e432a0c11",
+        "currency": "USD",
+        "entity_id": "0000000042",
+        "expires_at": "2026-11-07T14:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-30T14:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-31T13:59:58Z",
+        "received_at": "2026-10-31T14:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "sec:fixture",
+        "unit": "normalized_research",
+        "venue": null
+      },
+      {
+        "adjustment_basis": "as_filed_or_explicit_input_basis",
+        "available_at": "2026-10-31T13:59:59Z",
+        "complete": true,
+        "content_hash": "157b91c337578a5cd3bd4fc2e765e7b6f87121e5bc6a91762353379e432a0c11",
+        "currency": "USD",
+        "entity_id": "0000000042",
+        "expires_at": "2026-11-07T14:00:00Z",
+        "gaps": [],
+        "lineage_ids": [
+          "same_underlying_fixture_origin"
+        ],
+        "observed_at": "2026-10-30T14:00:00Z",
+        "provider": "synthetic_only",
+        "published_at": "2026-10-31T13:59:58Z",
+        "received_at": "2026-10-31T14:00:00Z",
+        "rights_revision": "synthetic_rights_v1",
+        "source_id": "synthetic_source",
+        "source_reference": "sec:fixture#line",
+        "unit": "normalized_research",
+        "venue": null
+      }
+    ],
+    "expires_at": "2026-11-07T14:00:00Z",
+    "feature": "INSIDER",
+    "feature_version": "trady-intelligence-v1",
+    "input_hash": "157b91c337578a5cd3bd4fc2e765e7b6f87121e5bc6a91762353379e432a0c11",
+    "observation_id": "fixture_observation",
+    "reasons": [
+      "uncalibrated_research_no_expected_return_or_order_authority"
+    ],
+    "registry_hash": "a9782a0ec5f90351591d28077db50c0d5d1b0f3d357087177cb4823895d71861",
+    "result": {
+      "assessment": {
+        "as_of": "2026-10-31T14:00:00Z",
+        "coverage": "PARTIAL",
+        "distinct_qualifying_buyers": 1,
+        "issuer_cik": "0000000042",
+        "observed_net_value": "200",
+        "observed_purchase_value": "200",
+        "observed_sale_value": "0",
+        "purchase_cluster": false,
+        "reasons": [
+          "observed_public_filings_only_not_personal_wealth_or_independent_news_corroboration",
+          "exempt_insiders_not_covered",
+          "incomplete_coverage_does_not_establish_zero_activity"
+        ],
+        "reporting_currency": "USD",
+        "role_breadth": [
+          "director"
+        ],
+        "rows": [
+          {
+            "as_filed_notional": "200",
+            "available_at": "2026-10-30T21:00:00Z",
+            "economic_id": "synthetic-line",
+            "included_in_totals": true,
+            "kind": "REVIEWED_CASH_PURCHASE",
+            "line": {
+              "accession": "synthetic-accession",
+              "line_id": "synthetic-line"
+            },
+            "notional_currency": "USD",
+            "owner_ids": [
+              "synthetic-owner"
+            ],
+            "plan_annotation": "NO_PLAN_DISCLOSED_AFTER_REVIEW",
+            "quantity_unit": "shares",
+            "reasons": [],
+            "source_ref": "sec:fixture#line",
+            "transaction_date": "2026-10-30"
+          }
+        ],
+        "version": "insider-publication-v1"
+      },
+      "feature": "INSIDER"
+    },
+    "schema_version": 1,
+    "scope": {
+      "account_id": "paper_synthetic",
+      "owner_id": "synthetic_owner"
+    },
+    "status": "PARTIAL"
+  },
+  "error": ""
+}

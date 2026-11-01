@@ -1,0 +1,231 @@
+{
+  "started_at": "2026-11-01T01:04:04.424Z",
+  "config": "config/autonomous.demo-no-submit.json",
+  "config_sha256": "d471409ae4fcc3d576bfdd954e456ecb6688f52b1b5e5899dbcf9e31e6f3eabe",
+  "executable_sha256": "863ad68db7b1d4d53130ace5c4a30f13363a8e1afd72a34de56d6214f1f7714a",
+  "git_head": "8bc58105fc3a451db88bfc4828e98d6726de8dad",
+  "mode": "shadow",
+  "broker_environment": "demo",
+  "order_submission_policy": "record_only",
+  "network_policy": "Only separate t212 snapshot commands use broker credentials; autonomous run has an empty inherited environment and an absent credential-store path.",
+  "before": {
+    "args": [
+      "t212",
+      "snapshot",
+      "--config",
+      "/dev/stdin"
+    ],
+    "started_at": "2026-11-01T01:04:04.974Z",
+    "finished_at": "2026-11-01T01:04:05.321Z",
+    "exit_code": 0,
+    "signal": null,
+    "output": {
+      "entry_authorized": false,
+      "environment": "demo",
+      "provider": "trading212",
+      "snapshot": {
+        "account_id": "paper_t212_verification",
+        "mode": "paper",
+        "observed_at": "2026-11-01T01:04:04.979512795Z",
+        "orders": [],
+        "positions": [],
+        "snapshot_id": "t212_3556072_1793495044_979512795_0",
+        "spendable_cash": {
+          "amount": "5000.00",
+          "currency": "EUR"
+        }
+      }
+    },
+    "error": null
+  },
+  "run": {
+    "args": [
+      "autonomous",
+      "run",
+      "--config",
+      "config/autonomous.demo-no-submit.json",
+      "--once"
+    ],
+    "started_at": "2026-11-01T01:04:05.321Z",
+    "finished_at": "2026-11-01T01:04:05.329Z",
+    "exit_code": 0,
+    "signal": null,
+    "output": {
+      "cycles": 0,
+      "order_mutations": 0,
+      "preflight": {
+        "account_id": "shadow_demo_no_submit_20261101",
+        "approved_models": 0,
+        "blockers": [
+          "approved_model_registry_empty",
+          "approved_input_service_unconfigured",
+          "universe_source_disabled",
+          "owner_allowlist_empty",
+          "approved_skill_hashes_missing",
+          "approved_formula_unavailable"
+        ],
+        "configuration_ready": false,
+        "entry_authorized": false,
+        "entry_controls_enabled": true,
+        "mode": "shadow",
+        "order_submission_policy": "record_only",
+        "required_actions": [
+          {
+            "code": "approved_model_registry_empty",
+            "required": "Supply a current, independently approved native model manifest and its exact fitted artifact; TEST ONLY artifacts do not qualify."
+          },
+          {
+            "code": "approved_input_service_unconfigured",
+            "required": "Configure a deployment-owned HTTPS input service with reviewed sources, reviewer identities, account bindings and fresh market/research imports."
+          },
+          {
+            "code": "universe_source_disabled",
+            "required": "Configure and enable an approved constituent provider with instrument mappings, storage rights and current classification evidence."
+          },
+          {
+            "code": "owner_allowlist_empty",
+            "required": "Supply the owner's explicit instrument allowlist in inputs.screening.owner_allowlist."
+          },
+          {
+            "code": "approved_skill_hashes_missing",
+            "required": "Pin the exact reviewed runtime skill hashes in trading.approved_skills."
+          },
+          {
+            "code": "approved_formula_unavailable",
+            "required": "Supply an active policy-compatible formula authority with matching prediction authority, proof, parity, independent evaluation and prospective shadow evidence."
+          }
+        ],
+        "status": "configuration_checked"
+      },
+      "shadow_record_hash": "72d6104cadcade10df6cbfb28cb541cf4af693ddb8885eda0329847d72c2b54b",
+      "status": "shadow_blocked"
+    },
+    "error": null
+  },
+  "audit": {
+    "path": "/tmp/trady-demo-no-submit-20261101/shadow-journal/cycle_72d6104cadcade10df6cbfb28cb541cf4af693ddb8885eda0329847d72c2b54b.json",
+    "sha256": "72d6104cadcade10df6cbfb28cb541cf4af693ddb8885eda0329847d72c2b54b",
+    "filename_hash_matches_bytes": true,
+    "content": {
+      "account_id": "shadow_demo_no_submit_20261101",
+      "configuration_hash": "923aca8cda87d3bacfd4b6a2a2d80fe9b23d97d51c4c7ee779ab89c3d99414d1",
+      "finished_at": "2026-11-01T01:04:05.327450478Z",
+      "mode": "shadow",
+      "order_mutations": 0,
+      "phase": "configuration",
+      "preflight": {
+        "account_id": "shadow_demo_no_submit_20261101",
+        "approved_models": 0,
+        "blockers": [
+          "approved_model_registry_empty",
+          "approved_input_service_unconfigured",
+          "universe_source_disabled",
+          "owner_allowlist_empty",
+          "approved_skill_hashes_missing",
+          "approved_formula_unavailable"
+        ],
+        "configuration_ready": false,
+        "entry_authorized": false,
+        "entry_controls_enabled": true,
+        "mode": "shadow",
+        "order_submission_policy": "record_only",
+        "required_actions": [
+          {
+            "code": "approved_model_registry_empty",
+            "required": "Supply a current, independently approved native model manifest and its exact fitted artifact; TEST ONLY artifacts do not qualify."
+          },
+          {
+            "code": "approved_input_service_unconfigured",
+            "required": "Configure a deployment-owned HTTPS input service with reviewed sources, reviewer identities, account bindings and fresh market/research imports."
+          },
+          {
+            "code": "universe_source_disabled",
+            "required": "Configure and enable an approved constituent provider with instrument mappings, storage rights and current classification evidence."
+          },
+          {
+            "code": "owner_allowlist_empty",
+            "required": "Supply the owner's explicit instrument allowlist in inputs.screening.owner_allowlist."
+          },
+          {
+            "code": "approved_skill_hashes_missing",
+            "required": "Pin the exact reviewed runtime skill hashes in trading.approved_skills."
+          },
+          {
+            "code": "approved_formula_unavailable",
+            "required": "Supply an active policy-compatible formula authority with matching prediction authority, proof, parity, independent evaluation and prospective shadow evidence."
+          }
+        ],
+        "status": "configuration_checked"
+      },
+      "schema_version": 1,
+      "started_at": "2026-11-01T01:04:05.327450478Z"
+    },
+    "permissions": "600"
+  },
+  "config_unchanged": true,
+  "after": {
+    "args": [
+      "t212",
+      "snapshot",
+      "--config",
+      "/dev/stdin"
+    ],
+    "started_at": "2026-11-01T01:04:21.459Z",
+    "finished_at": "2026-11-01T01:04:21.789Z",
+    "exit_code": 0,
+    "signal": null,
+    "output": {
+      "entry_authorized": false,
+      "environment": "demo",
+      "provider": "trading212",
+      "snapshot": {
+        "account_id": "paper_t212_verification",
+        "mode": "paper",
+        "observed_at": "2026-11-01T01:04:21.465657444Z",
+        "orders": [],
+        "positions": [],
+        "snapshot_id": "t212_3556659_1793495061_465657444_0",
+        "spendable_cash": {
+          "amount": "5000.00",
+          "currency": "EUR"
+        }
+      }
+    },
+    "error": null
+  },
+  "finished_at": "2026-11-01T01:04:21.789Z",
+  "comparison": {
+    "account_state_unchanged": true,
+    "before_observed_at": "2026-11-01T01:04:04.979512795Z",
+    "after_observed_at": "2026-11-01T01:04:21.465657444Z"
+  },
+  "safety": {
+    "entry_order_api_calls": 0,
+    "order_mutations": 0,
+    "basis": [
+      "Runtime configured with trading.mode=shadow and submission policy record_only.",
+      "Autonomous run exited in configuration preflight before credential loading or network-client construction.",
+      "Autonomous run used an empty inherited environment and an absent credential store.",
+      "Separate broker snapshots execute only the reader's GET endpoints: account/summary, positions, orders."
+    ],
+    "network_traffic_captured": false
+  },
+  "verification": [
+    {
+      "command": "cargo build --locked --bin trady",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --locked -p trady-cli --test autonomous_cli incomplete_shadow_deployment_reports_actions_without_credentials_or_network -- --exact",
+      "exit_code": 0,
+      "tests_passed": 1
+    },
+    {
+      "command": "cargo test --locked -p trady-adapters --test shadow_recording",
+      "exit_code": 0,
+      "tests_passed": 1
+    }
+  ],
+  "report_markdown": "docs/live-demo-no-entry-orders-2026-11-01T010404Z.md",
+  "report_json": "docs/live-demo-no-entry-orders-2026-11-01T010404Z.json"
+}

@@ -144,7 +144,7 @@ impl<C: Clock> Trading212Executor<C> {
         let mut available = BTreeMap::new();
         let mut normalized = Vec::new();
         for position in positions {
-            let id = position.instrument.ticker.clone();
+            let id = position.instrument.instrument_id()?;
             let quantity = position.quantity.0;
             let free = position.available.ok_or_else(invalid)?.0;
             if free < rust_decimal::Decimal::ZERO || free > quantity {

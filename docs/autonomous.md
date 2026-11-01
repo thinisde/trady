@@ -55,13 +55,55 @@ records source-bound observations and checked proposals, and consumes at most on
 hypothetical entry per verified session. It invents no fills or performance.
 Release acceptance still needs twenty actual prospective calendar sessions.
 
+Shadow runs first apply the same artifact/configuration checks as `autonomous
+check`. Missing prerequisites return `shadow_blocked`, `cycles=0`, and a private
+immutable configuration audit before credentials or network clients are loaded.
+The diagnostic includes `configuration_ready`, `entry_controls_enabled`,
+`order_submission_policy`, the complete blocker list and `required_actions`.
+An empty owner instrument allowlist is an explicit blocker. These configuration
+checks grant no entry authority.
+
+The check also lists `unverified_entry_capabilities` and reports
+`entry_capabilities_unverified` when cash account, instrument, protective-order or
+quote evidence is unknown, unsupported, missing or expired. These are the same
+unconditional capabilities required by `validate_account_entry`. Fractional-order
+support remains conditional on actual quantity sizing. A successful account or
+metadata read does not establish protective-order or executable-quote support.
+
+Native account snapshots and shadow observations retry only known broker read
+rate limits, with at most three attempts and thirty total seconds of backoff.
+Shutdown interrupts the wait. Other failures and unknown outcomes return directly;
+order submission is outside this read helper.
+
+## Simulated entry
+
+```sh
+cargo run --locked --bin trady -- demo-entry --directory /tmp/trady-simulated-entry
+```
+
+This command calculates a synthetic BUY entry with the native limit calculator,
+then records the request through `ShadowBroker`, whose submit port rejects broker
+submission. It uses bundled fixture account, quote, costs and volatility inputs
+at a fixed simulation clock. It needs no deployment inputs or credentials and
+constructs no network clients. The result explicitly reports `SIMULATION_ONLY`,
+`source.kind=FIXTURE`, `production_approved=false` and `entry_authorized=false`.
+No order acknowledgement or fill is generated; the fixture account is unchanged.
+
+The absolute output directory contains a private `simulation-only` subdirectory
+with immutable observation and proposal records. Identical reruns reuse the
+same local intent and digest. Additional runtime or broker options are rejected.
+This exercise verifies calculation and submission suppression. Real-data shadow
+execution continues to require its reviewed artifacts and service configuration.
+See the [recorded simulation and deployment search](./simulated-entry-2026-11-01.md).
+
 ## Deployment dependencies
 
 The runtime is implemented, but a working financial deployment still needs real
 approved artifacts and services. This repository does not supply a trained trading
 model, approve data rights, manufacture evaluation reports or certify live release.
 
-- Provision base and lab roles, then apply all eight migrations with the migrator role. Connect the runtime using
+- Provision base and lab roles, then apply every bundled application migration
+  with the migrator role. Connect the runtime using
   restricted `TRADY_EXECUTOR_DSN` and `TRADY_ANALYST_DSN` credentials; the runtime
   does not migrate or accept an administrator connection in place of those roles.
 - Install the reviewed [runtime unit templates](../services/runtime/README.md)

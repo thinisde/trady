@@ -1,6 +1,6 @@
-# Tax-aware after-tax trade comparison (proposed)
+# Tax-aware after-tax trade comparison (research implementation)
 
-Status: new feature design, 2026-10-31. Documentation only. Not tax advice, not an automated tax return, and not a substitute for brokerage records or a qualified adviser.
+Status: deterministic owner-only research implementation, 2026-10-31; enabled by default for research. [Policy](../../../crates/trady-policy/src/intelligence/tax.rs) uses explicitly reviewed dated rules, lots, FX, fees and annual context to illustrate no-action, target and permitted replacement scenarios while preserving the safety snapshot. The [ephemeral CLI comparator](./implementation-report.md) stores no raw tax context and exposes no general model tool. Legal rule maintenance and broker-statement reconciliation remain owner responsibilities; the output is illustrative.
 
 ## Purpose and explicit separation
 
@@ -63,7 +63,7 @@ This is primarily a deterministic correctness problem rather than a machine-lear
 - No auto "loss harvesting" sale when position has an active protective exit, a consumed entry slot or insufficient approved replacement path.
 - Proposed tax improvement cannot delay an existing stop/time exit, lower the confidence gate, enable leverage or raise a profit target.
 - Tax-rule version changed -> invalidate only prospective estimates; historical decisions retain old rules/assumptions.
-- Initial implementation should be an **off-by-default reporting comparator**, without any order-triggering influence until separately reviewed.
+- The owner reporting comparator is **enabled by default for research**. It requires explicit reviewed inputs and rules and has no order-triggering influence.
 
 ## References
 

@@ -101,6 +101,38 @@ fn correlates_exact_sent_text_and_source_provenance() {
 }
 
 #[test]
+fn english_regional_metadata_is_accepted_without_relaxing_freshness() {
+    for language in ["en-US", "en-gb", "EN"] {
+        let mut source = item();
+        source.language = Some(language.into());
+        let provider = Provider {
+            calls: Cell::new(0),
+            fault: "",
+        };
+        assert!(assess_sentiment(&provider, &[source.clone()], source.fetched_at).is_ok());
+        source.published_at = Some(source.fetched_at - Duration::hours(25));
+        assert!(assess_sentiment(&provider, &[source.clone()], source.fetched_at).is_err());
+        assert_eq!(provider.calls.get(), 1);
+    }
+    for language in [
+        None,
+        Some("en-"),
+        Some("en-US-"),
+        Some("english"),
+        Some("de"),
+    ] {
+        let mut source = item();
+        source.language = language.map(String::from);
+        let provider = Provider {
+            calls: Cell::new(0),
+            fault: "",
+        };
+        assert!(assess_sentiment(&provider, &[source.clone()], source.fetched_at).is_err());
+        assert_eq!(provider.calls.get(), 0);
+    }
+}
+
+#[test]
 fn denied_expired_missing_non_english_and_copied_sources_never_reach_provider() {
     let source = item();
     let mut cases = vec![];

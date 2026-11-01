@@ -11,7 +11,8 @@ THEOREMS = {
     **{f"TradyProof.CheckedDecimal.{name}": "TradyProof/CheckedDecimal.lean" for name in
        ["representable", "floor_checked", "division_by_zero_rejects", "ties_to_even", "ties_from_odd"]},
     **{f"TradyProof.Formula.{name}": "TradyProof/Formula.lean" for name in
-       ["total_calculation", "accepted_checks", "accepted_stop_before_target", "accepted_target_holding_caps"]},
+       ["total_calculation", "accepted_checks", "accepted_account_input", "invalid_account_input_cannot_accept",
+        "accepted_stop_before_target", "accepted_target_holding_caps"]},
     **{f"TradyProof.Formula.{name}": "TradyProof/Witness.lean" for name in
        ["witness_accepted", "model_non_vacuous", "fx_witness_accepted", "fx_model_non_vacuous"]},
     **{f"TradyProof.Holding.{name}": "TradyProof/Holding.lean" for name in
@@ -19,7 +20,7 @@ THEOREMS = {
     **{f"TradyProof.Revision.{name}": "TradyProof/Revision.lean" for name in
        ["accepted_revision_bound", "mismatched_source_rejects"]},
 }
-SAFETY_FILES = ["TradyProof/Safety.lean", "TradyProof/CheckedDecimal.lean", "TradyProof/Formula.lean", "TradyProof/Holding.lean", "TradyProof/Revision.lean"]
+SAFETY_FILES = ["TradyProof/Safety.lean", "TradyProof/CheckedDecimal.lean", "TradyProof/Formula.lean", "TradyProof/Parsing.lean", "TradyProof/Holding.lean", "TradyProof/Revision.lean"]
 POLICY_FIELDS = ["version", "entry_cash_fraction", "confidence_entry_min", "max_target_fraction", "exceptional_targets_enabled",
                  "max_initial_loss_fraction", "min_reward_to_risk", "max_holding_sessions", "leverage", "add_to_position", "rotation_enabled"]
 PARAMETER_FIELDS = ["version", "family", "entry_allowance_fraction", "stop_atr_multiple", "target_net_fraction", "max_holding_sessions",

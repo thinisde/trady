@@ -1,0 +1,48 @@
+{
+  "instrument_id": "synthetic_equity_42",
+  "venue": "XNAS",
+  "currency": "USD",
+  "tick_size": "0.01",
+  "size_increment": "1",
+  "max_age_milliseconds": 100,
+  "max_clock_skew_milliseconds": 20,
+  "depth_limit": 10,
+  "capacity_band_ticks": 5,
+  "routing": "UNKNOWN",
+  "book": {
+    "instrument_id": "synthetic_equity_42",
+    "venue": "XNAS",
+    "sequence": 95002,
+    "epoch": "synthetic_session_1",
+    "book_version": "synthetic_depth_v1",
+    "feed_kind": "SEQUENCED_BOOK",
+    "state": "VALID_PARTIAL_DEPTH",
+    "exchange_time": "2026-10-30T19:59:59.985Z",
+    "received_at": "2026-10-30T20:00:00Z",
+    "available_at": "2026-10-30T20:00:00Z",
+    "source_ref": "synthetic_microstructure_v1",
+    "bids": [
+      {
+        "price": "100",
+        "size_shares": "800"
+      },
+      {
+        "price": "99.98",
+        "size_shares": "200"
+      }
+    ],
+    "asks": [
+      {
+        "price": "100.01",
+        "size_shares": "450"
+      },
+      {
+        "price": "100.03",
+        "size_shares": "550"
+      }
+    ]
+  },
+  "history": [],
+  "auction": null,
+  "markout": null
+}

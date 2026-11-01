@@ -14,6 +14,9 @@ market reads use the separate [market adapter](./market.rs).
 
 - `[mod.rs:TradingInputsConfig]`: `config_version`, `base_url`, `allowed_hosts`
   and `screening`; `validate(&TradingConfig)` checks their deployment binding.
+  `[mod.rs:TradingInputsConfig::uses_placeholder_endpoint]` identifies parsed
+  hosts `invalid` or ending in `.invalid`, after trimming trailing dots. It
+  returns false for an unparseable URL and does not replace `validate`.
 - `[mod.rs:ResearchDraft]`: proposal/instrument/currency identity, validity and
   deadline, entry range, confidence/formula evidence, entry/exit costs, instrument
   rules, dossier, feature schema/values and the Perpetual review reason. Its
@@ -35,10 +38,11 @@ market reads use the separate [market adapter](./market.rs).
   `HttpTransport` and refresh interval. The `repository: R` field is public.
   `R` implements the application-owned `TradingResearchStore`.
   `with_clock(self, impl Clock + 'static)` replaces the default `SystemClock`.
-- `[mod.rs:TradingInputs for AutomaticInputs]`: `session`, `quote`,
-  `current_exit_costs` and `candidate` implement the application port. Screening,
-  limit calculation, assessment persistence and final-scenario review belong to
-  their application contracts.
+- `[mod.rs:AutomaticInputs]` implements `TradingInputs::session`,
+  `TradingInputs::quote`, `TradingInputs::current_exit_costs` and
+  `TradingInputs::candidate` for the application port. Screening, limit
+  calculation, assessment persistence and final-scenario review belong to their
+  application contracts.
 - `[market.rs:MarketInputs<T = SafeHttp>]`: `new`, `with_ports`, `with_clock`,
   `session`, `quote`, `current_exit_costs`. It exposes market reads without a
   model, universe, research repository or candidate method. The shared private

@@ -25,6 +25,9 @@ fn scoped(entry: &Entry, scope: &Scope) -> Result<()> {
     )
 }
 impl SessionRepository for MemorySessionRepository {
+    fn is_ephemeral(&self) -> bool {
+        true
+    }
     fn create(&mut self, session: &Session) -> Result<()> {
         session.scope.validate()?;
         session.limits.validate()?;

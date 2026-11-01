@@ -1,0 +1,444 @@
+{
+  "scope": {
+    "discovered_subdirectories": 100,
+    "source_directory_contracts": 51,
+    "root": "/thinisde/trady",
+    "target_filename": "README.md"
+  },
+  "workers": [
+    {
+      "name": "adapters",
+      "directories": 15,
+      "source_files": 40,
+      "scouts": 18,
+      "changed_readmes": 2
+    },
+    {
+      "name": "domain_policy",
+      "directories": 10,
+      "source_files": 38,
+      "scouts": 13,
+      "changed_readmes": 0
+    },
+    {
+      "name": "application_cli_storage",
+      "directories": 14,
+      "source_files": 53,
+      "scouts": 25,
+      "changed_readmes": 5
+    },
+    {
+      "name": "auxiliary",
+      "directories": 10,
+      "source_and_support_files": 61,
+      "scouts": 13,
+      "changed_readmes": 8
+    }
+  ],
+  "fresh_context_scouts_completed": 69,
+  "changed_readmes": [
+    "README.md",
+    "crates/README.md",
+    "migrations/README.md",
+    "scripts/README.md",
+    "crates/trady-application/README.md",
+    "crates/trady-storage/README.md",
+    "lab/evaluator/README.md",
+    "lab/lean/README.md",
+    "lab/proofs/README.md",
+    "services/finbert/README.md",
+    "services/runtime/README.md",
+    "crates/trady-application/src/README.md",
+    "crates/trady-cli/src/README.md",
+    "crates/trady-storage/src/README.md",
+    "lab/proofs/TradyProof/README.md",
+    "crates/trady-adapters/src/news/README.md",
+    "crates/trady-adapters/src/weekly_lab/README.md"
+  ],
+  "checks": {
+    "contracts_read": 51,
+    "contract_lines_read": 7079,
+    "local_links_checked": 398,
+    "source_citations_checked": 1567,
+    "inline_cargo_commands_checked": 107,
+    "missing_sections_or_fences": [],
+    "broken_links": [],
+    "missing_child_links": [],
+    "unresolved_citations": [],
+    "invalid_commands": [],
+    "contract_set_sha256": "3cbd6dc4f4c0b3fdef7de7249afc2243cda895672a49aea4572ea49fe9568230"
+  },
+  "source_test_manifest_credential_changes": [],
+  "directories": [
+    {
+      "path": ".",
+      "summary": "Repository root blueprint and audit navigation."
+    },
+    {
+      "path": "crates",
+      "summary": "Six-package Rust workspace and propagated component boundaries."
+    },
+    {
+      "path": "crates/trady-adapters/src/autonomous",
+      "summary": "Automatic analyst inputs and separate market reads over an approved input service, with screening, limits and native advice.",
+      "interface_count": 8,
+      "invariant_count": 13,
+      "side_effect_count": 5
+    },
+    {
+      "path": "crates/trady-adapters/src/financial",
+      "summary": "Fixed-route financial provider reads and explicit offline canonical daily-bar imports.",
+      "interface_count": 7,
+      "invariant_count": 17,
+      "side_effect_count": 3
+    },
+    {
+      "path": "crates/trady-adapters/src/finbert",
+      "summary": "Explicitly enabled bounded HTTP sentiment inference against a configured pinned FinBERT revision.",
+      "interface_count": 4,
+      "invariant_count": 7,
+      "side_effect_count": 3
+    },
+    {
+      "path": "crates/trady-adapters/src/inputs_service",
+      "summary": "Reviewed immutable imports, explicit calendars and bounded authenticated loopback market/research/prediction HTTP reads.",
+      "interface_count": 13,
+      "invariant_count": 37,
+      "side_effect_count": 8
+    },
+    {
+      "path": "crates/trady-adapters/src/intelligence",
+      "summary": "Normalized feature imports, memory research storage, SEC ownership parsing, sequence-checked books and optional tools.",
+      "interface_count": 12,
+      "invariant_count": 30,
+      "side_effect_count": 9
+    },
+    {
+      "path": "crates/trady-adapters/src/news",
+      "summary": "Reviewed news/X collection, offline RSS/Atom normalization, protected HTTP and durable X-cost metering.",
+      "interface_count": 15,
+      "invariant_count": 31,
+      "side_effect_count": 6
+    },
+    {
+      "path": "crates/trady-adapters/src/opencode",
+      "summary": "OpenCode Go model transport, approved skill loading and session retrieval tools.",
+      "interface_count": 8,
+      "invariant_count": 15,
+      "side_effect_count": 5
+    },
+    {
+      "path": "crates/trady-adapters/src/perpetual",
+      "summary": "Immutable approved-artifact native advisory inference over pinned Perpetual classifiers.",
+      "interface_count": 5,
+      "invariant_count": 12,
+      "side_effect_count": 3
+    },
+    {
+      "path": "crates/trady-adapters/src/research_jobs",
+      "summary": "Scoped information tools and registered-source collection/lookups composed over supplied repositories.",
+      "interface_count": 7,
+      "invariant_count": 10,
+      "side_effect_count": 4
+    },
+    {
+      "path": "crates/trady-adapters/src/screening",
+      "summary": "Approved point-in-time SP500 constituent/classification ingestion with provenance and instance-local quotas.",
+      "interface_count": 7,
+      "invariant_count": 10,
+      "side_effect_count": 4
+    },
+    {
+      "path": "crates/trady-adapters/src/telegram",
+      "summary": "Fixed-origin Bot API transport and bot-bound locked durable command offsets and delivery state.",
+      "interface_count": 9,
+      "invariant_count": 14,
+      "side_effect_count": 5
+    },
+    {
+      "path": "crates/trady-adapters/src/trading212",
+      "summary": "Typed synchronous broker information, guarded order mutation and paced execution observations.",
+      "interface_count": 9,
+      "invariant_count": 20,
+      "side_effect_count": 6
+    },
+    {
+      "path": "crates/trady-adapters/src/weekly_lab",
+      "summary": "Pinned local helper execution and proof/parity/evaluation protocol for offline weekly optimization.",
+      "interface_count": 8,
+      "invariant_count": 13,
+      "side_effect_count": 5
+    },
+    {
+      "path": "crates/trady-adapters/src",
+      "summary": "Public adapter modules, fixture clocks/calendar/broker/quotes, credentials, diagnostics and in-memory execution/session repositories.",
+      "interface_count": 20,
+      "invariant_count": 15,
+      "side_effect_count": 18
+    },
+    {
+      "path": "crates/trady-adapters",
+      "summary": "Rust adapter crate grouping local fixtures, configured integrations, verified inputs, research tools and offline helpers.",
+      "interface_count": 6,
+      "invariant_count": 5,
+      "side_effect_count": 16
+    },
+    {
+      "path": "crates/trady-domain",
+      "summary": "Provider-neutral execution, financial, research, scenario/model, screening, prediction and sentiment/intelligence records, with explicit validators and an in-memory content-redaction operation.",
+      "interface_count": 9,
+      "invariant_count": 6,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-domain/src",
+      "summary": "Shared execution vocabulary and explicit validators, plus financial observations, research/redaction, advisory model/scenario records, bounded universe screening and typed prediction payloads.",
+      "interface_count": 22,
+      "invariant_count": 37,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-domain/src/intelligence",
+      "summary": "Typed input/output records for ten optional research services, source-evidence/scope/envelope validation, and recorded assessment metadata.",
+      "interface_count": 17,
+      "invariant_count": 14,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-domain/src/sentiment",
+      "summary": "Provider-neutral sentiment records with version/model/revision and batch/text-limit constants; semantic checks belong to callers.",
+      "interface_count": 10,
+      "invariant_count": 1,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-policy",
+      "summary": "Checked financial arithmetic and deterministic scoring, sizing, economics, holding, formula, prediction, sentiment and optional descriptive research policy.",
+      "interface_count": 9,
+      "invariant_count": 6,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-policy/src",
+      "summary": "Shared checked arithmetic, policy/scoring/risk and entry sizing, fee/FX economics, holding-plan transitions and session performance accounting.",
+      "interface_count": 9,
+      "invariant_count": 14,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-policy/src/intelligence",
+      "summary": "Ten deterministic descriptive research calculators over typed supplied facts and explicit assessment time, without execution authority or I/O.",
+      "interface_count": 20,
+      "invariant_count": 62,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-policy/src/limits",
+      "summary": "Pure versioned ATR/evidence-based limit calculation and checked decimal proof bridge; returned authority tags are data.",
+      "interface_count": 5,
+      "invariant_count": 11,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-policy/src/prediction",
+      "summary": "Typed prediction fusion, net-account-return utility and cash selection, matured original forecast scoring and chronological split validation.",
+      "interface_count": 7,
+      "invariant_count": 13,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-policy/src/sentiment",
+      "summary": "Validated sentiment overlay that only reduces an existing score, controls target increases and vetoes adverse-sentiment entries.",
+      "interface_count": 4,
+      "invariant_count": 6,
+      "side_effect_count": 1
+    },
+    {
+      "path": "crates/trady-application/src/autonomous",
+      "summary": "Fenced autonomous reconciliation, entry readiness, durable order attempts, protection, liquidation and reviewed holding updates.",
+      "interface_count": 12,
+      "invariant_count": 22,
+      "side_effect_count": 6
+    },
+    {
+      "path": "crates/trady-application/src/model_lab",
+      "summary": "Point-in-time four-outcome fitting, calibration, independent evaluation, immutable local holdout journals and approved inference.",
+      "interface_count": 5,
+      "invariant_count": 10,
+      "side_effect_count": 4
+    },
+    {
+      "path": "crates/trady-application/src/optimization",
+      "summary": "Approved reproducible formula calculations and bounded resumable weekly experimentation through store/lab ports.",
+      "interface_count": 5,
+      "invariant_count": 15,
+      "side_effect_count": 2
+    },
+    {
+      "path": "crates/trady-application/src/sentiment",
+      "summary": "Rights-aware text projection and exact provider-prediction correlation without local persistence or entry authority.",
+      "interface_count": 4,
+      "invariant_count": 12,
+      "side_effect_count": 2
+    },
+    {
+      "path": "crates/trady-application/src/telegram",
+      "summary": "Owner authorization, monitoring text, pure gateway command parsing and owner-control context bindings.",
+      "interface_count": 7,
+      "invariant_count": 11,
+      "side_effect_count": 2
+    },
+    {
+      "path": "crates/trady-cli/src/finbert",
+      "summary": "Exact-order bounded sentiment status and explicit enabled-provider scoring commands.",
+      "interface_count": 4,
+      "invariant_count": 6,
+      "side_effect_count": 3
+    },
+    {
+      "path": "crates/trady-cli/src/opencode",
+      "summary": "Trusted local owner chat, reviewed skill manifests and scoped durable or required ephemeral model sessions.",
+      "interface_count": 5,
+      "invariant_count": 8,
+      "side_effect_count": 6
+    },
+    {
+      "path": "crates/trady-cli/src/telegram",
+      "summary": "Telegram discovery/check/monitoring plus separately credentialed expanded gateway and research/dialogue workers.",
+      "interface_count": 5,
+      "invariant_count": 13,
+      "side_effect_count": 4
+    },
+    {
+      "path": "crates/trady-application/src",
+      "summary": "Typed application use cases, strict JSON contracts, provider/repository ports and re-exported child workflow boundaries.",
+      "interface_count": 34,
+      "invariant_count": 48,
+      "side_effect_count": 20
+    },
+    {
+      "path": "crates/trady-cli/src",
+      "summary": "Private process dispatch and command wiring for services, research, credentials, model lab, weekly/release work and autonomous execution.",
+      "interface_count": 17,
+      "invariant_count": 25,
+      "side_effect_count": 19
+    },
+    {
+      "path": "crates/trady-storage/src",
+      "summary": "PostgreSQL transport, migrations, restricted-role checks and persistence for application execution/research/session/weekly ports.",
+      "interface_count": 23,
+      "invariant_count": 38,
+      "side_effect_count": 19
+    },
+    {
+      "path": "crates/trady-application",
+      "summary": "Application ports and validation for reconciliation, scoped research/intelligence, model sessions, offline model artifacts, autonomous execution and weekly experiments.",
+      "interface_count": 9,
+      "invariant_count": 5,
+      "side_effect_count": 5
+    },
+    {
+      "path": "crates/trady-cli",
+      "summary": "The trady binary composes local commands, PostgreSQL roles, research/provider adapters, monitoring, model workflows and gated autonomous runtimes.",
+      "interface_count": 6,
+      "invariant_count": 6,
+      "side_effect_count": 6
+    },
+    {
+      "path": "crates/trady-storage",
+      "summary": "Synchronous PostgreSQL adapters for fenced execution, scoped research/model sessions, financial/X budgets and weekly/release ledgers.",
+      "interface_count": 4,
+      "invariant_count": 4,
+      "side_effect_count": 4
+    },
+    {
+      "path": "lab",
+      "summary": "Reconciliation helper and launchers for offline development, proof/parity and sealed evaluation.",
+      "interface_count": 5,
+      "invariant_count": 6,
+      "side_effect_count": 4
+    },
+    {
+      "path": "lab/evaluator",
+      "summary": "Frozen-data acceptance evaluator with exact financial arithmetic and private Unix-socket worker.",
+      "interface_count": 7,
+      "invariant_count": 13,
+      "side_effect_count": 5
+    },
+    {
+      "path": "lab/lean",
+      "summary": "Pinned QuantConnect replay driver and Rust formula wire adapter.",
+      "interface_count": 5,
+      "invariant_count": 7,
+      "side_effect_count": 3
+    },
+    {
+      "path": "lab/proofs",
+      "summary": "Pinned Lean project, 24-theorem kernel audit, revision binding and finite executable parity.",
+      "interface_count": 9,
+      "invariant_count": 13,
+      "side_effect_count": 7
+    },
+    {
+      "path": "lab/proofs/TradyProof",
+      "summary": "Pure checked-decimal formula, holding and revision reference definitions and safety proofs.",
+      "interface_count": 8,
+      "invariant_count": 13,
+      "side_effect_count": 3
+    },
+    {
+      "path": "services",
+      "summary": "Blueprint for optional FinBERT inference and separately deployed runtime units.",
+      "interface_count": 4,
+      "invariant_count": 5,
+      "side_effect_count": 3
+    },
+    {
+      "path": "services/finbert",
+      "summary": "Optional CPU English sentiment HTTP service and explicit container/model-cache configuration.",
+      "interface_count": 6,
+      "invariant_count": 9,
+      "side_effect_count": 4
+    },
+    {
+      "path": "services/runtime",
+      "summary": "Disabled runtime configuration preparation, systemd identities/units/timer and nftables policies.",
+      "interface_count": 7,
+      "invariant_count": 8,
+      "side_effect_count": 4
+    },
+    {
+      "path": "scripts",
+      "summary": "Read-only asset checks, disposable PostgreSQL scenario runner and opt-in credential rotation.",
+      "interface_count": 5,
+      "invariant_count": 7,
+      "side_effect_count": 5
+    },
+    {
+      "path": "migrations",
+      "summary": "Administrator role provisioning and ten transactional schema migrations defining 62 SQL tables and separated runtime grants.",
+      "interface_count": 24,
+      "invariant_count": 22,
+      "side_effect_count": 11
+    }
+  ],
+  "corrected_drift": {
+    "README.md": "Added the current audit entry point and the discovered Python lab verification command.",
+    "crates/README.md": "Rolled up the optional intelligence boundaries and application-local model-lab persistence.",
+    "crates/trady-adapters/src/news/README.md": "Added provider-enforced publication/discovery clocks, continuation and raw-row saturation rules, and provenance-only publisher URL behavior.",
+    "crates/trady-adapters/src/weekly_lab/README.md": "Distinguished the supplied input binding from the recorded request-byte hash and documented required helper component-map entries.",
+    "crates/trady-application/README.md": "Qualified the external-storage boundary to acknowledge local model-lab journal and holdout artifacts.",
+    "crates/trady-application/src/README.md": "Qualified local model-lab persistence and separated force/cadence bypass from the narrow legacy parser retry exception.",
+    "crates/trady-cli/src/README.md": "Corrected the child reply timer boundary: process launch, I/O setup and enqueue precede the monotonic wait timer.",
+    "crates/trady-storage/README.md": "Corrected assessment invalidation timing and retention clamping to the observation deadline.",
+    "crates/trady-storage/src/README.md": "Corrected changed-content invalidation codes, assessment invalidation timing and retention clamping.",
+    "lab/evaluator/README.md": "Corrected missing-payoff behavior and qualified the owner/mode checks on existing diagnostic directories.",
+    "lab/lean/README.md": "Corrected executable hashing to construction time rather than each request.",
+    "lab/proofs/README.md": "Qualified Lean account/reference validation, private dispatch and caller-supplied revision bindings.",
+    "lab/proofs/TradyProof/README.md": "Qualified account-reference validation: account identity, mode, side and the complete status allowlist are outside these checks.",
+    "migrations/README.md": "Corrected role/function grants, nullable validation boundaries, financial constraints, confirmation/readiness checks and explicit intelligence erasure behavior.",
+    "scripts/README.md": "Added the credential-file default and documented container-loopback authentication without saved DSN endpoint correspondence.",
+    "services/finbert/README.md": "Corrected Content-Length rejection behavior: missing, zero, negative and oversized lengths return HTTP 413.",
+    "services/runtime/README.md": "Qualified evaluator isolation: permitting AF_UNIX alone does not deny PostgreSQL Unix sockets."
+  }
+}
