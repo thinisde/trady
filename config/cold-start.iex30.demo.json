@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "account": {
+    "account_id": "paper_iex30_demo",
+    "base_currency": "EUR",
+    "environment": "demo",
+    "owner_id": "iex30_owner"
+  },
+  "broker": {
+    "timeout_seconds": 10,
+    "broker_account_id": 52211463
+  },
+  "market_data": {
+    "history_path": "var/research-training/iex30/history/history.json",
+    "provider": "Alpaca Basic IEX",
+    "source_permissions": "research-only-iex30-owner-review-required",
+    "expected_symbols": [
+      "META_US_EQ",
+      "MU_US_EQ",
+      "NVDA_US_EQ",
+      "AMD_US_EQ",
+      "SNDK_US_EQ",
+      "GOOGL_US_EQ",
+      "BKNG_US_EQ",
+      "AMZN_US_EQ",
+      "AAPL_US_EQ",
+      "MSFT_US_EQ",
+      "INTC_US_EQ",
+      "SHOP_US_EQ",
+      "STX_US_EQ",
+      "AVGO_US_EQ",
+      "TSM_US_EQ",
+      "CSCO_US_EQ",
+      "LRCX_US_EQ",
+      "VLO_US_EQ",
+      "TSLA_US_EQ",
+      "ORCL_US_EQ",
+      "BAC_US_EQ",
+      "WDC_US_EQ",
+      "JPM_US_EQ",
+      "GOOG_US_EQ",
+      "LITE_US_EQ",
+      "GEV_US_EQ",
+      "AZO_US_EQ",
+      "DELL_US_EQ",
+      "WBD_US_EQ",
+      "CRM_US_EQ"
+    ]
+  },
+  "universe": {
+    "source_id": "alpaca_iex30",
+    "source_url": "https://data.alpaca.markets/iex30",
+    "index_id": "IEX30",
+    "required_currency": "USD",
+    "candidate_limit": 5,
+    "preferred_symbols": [
+      "META",
+      "MU",
+      "NVDA",
+      "AMD",
+      "SNDK",
+      "GOOGL",
+      "BKNG",
+      "AMZN",
+      "AAPL",
+      "MSFT",
+      "INTC",
+      "SHOP",
+      "STX",
+      "AVGO",
+      "TSM",
+      "CSCO",
+      "LRCX",
+      "VLO",
+      "TSLA",
+      "ORCL",
+      "BAC",
+      "WDC",
+      "JPM",
+      "GOOG",
+      "LITE",
+      "GEV",
+      "AZO",
+      "DELL",
+      "WBD",
+      "CRM"
+    ],
+    "excluded_symbols": [],
+    "selection_mode": "LLM_NEWS_X_RESEARCH_WITH_BROKER_INTERSECTION",
+    "rights_reference": "broker-metadata-read-and-current-research-rights-required"
+  },
+  "risk": {
+    "entry_cash_fraction": "0.02",
+    "max_order_cash_fraction": "0.02",
+    "max_initial_loss_fraction": "0.01",
+    "max_order_value": {
+      "amount": "50.00",
+      "currency": "EUR"
+    },
+    "max_daily_orders": 1,
+    "require_protection": true
+  },
+  "artifacts": {
+    "directory": "var/cold-start"
+  },
+  "inputs": {
+    "config_version": 1,
+    "base_url": "http://127.0.0.1:8787/v1/",
+    "allowed_hosts": [
+      "127.0.0.1"
+    ],
+    "screening": {
+      "owner_id": "iex30_owner",
+      "run_id": "cold_start_iex30",
+      "owner_allowlist": [],
+      "policy": {
+        "max_membership_age_seconds": 86400,
+        "max_broker_age_seconds": 600,
+        "max_quote_age_seconds": 10,
+        "max_priority_age_seconds": 3600,
+        "max_timing_age_seconds": 60,
+        "minimum_seconds_to_close": 1800,
+        "max_spread_bps": "20",
+        "max_round_trip_cost_bps": "50",
+        "minimum_daily_notional": "1000000",
+        "max_order_participation_bps": "10",
+        "candidate_limit": 5,
+        "peer_limit": 2
+      }
+    }
+  },
+  "research_artifacts": {
+    "dataset_report": "var/research-training/iex30/dataset/dataset-report.json",
+    "candidate_model": "var/research-training/iex30/model/candidate.json",
+    "native_model": "var/research-training/iex30/model/native-model.json",
+    "evaluation_report": "var/research-training/iex30/model/holdout-report.json"
+  },
+  "review": {
+    "enabled": true,
+    "config_path": "config/opencode/llm.json"
+  }
+}

@@ -924,10 +924,19 @@ impl AutonomousTrader {
         }
         // Stop any remaining entry before a liquidation can race with further buys.
         if let Some(index) = active_entry {
+            // Cancellation is only a request. Reconcile the entry's terminal
+            // state before placing protection so a late fill cannot remain
+            // uncovered or create a second protection quantity.
             cancel(journal, broker, &self.fence, state, index)?;
-            if exiting {
-                return Ok(report(state, "cancel_entry_before_exit", None));
-            }
+            return Ok(report(
+                state,
+                if exiting {
+                    "cancel_entry_before_exit"
+                } else {
+                    "cancel_entry_before_protection"
+                },
+                None,
+            ));
         }
         if exiting {
             // Preserve native protection until software liquidation has an

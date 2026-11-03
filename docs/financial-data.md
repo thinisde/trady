@@ -20,7 +20,7 @@ access and rights reviews.
 | Financial Modeling Prep | One explicitly configured income-statement metric and reported currency |
 | CoinGecko | Coin-ID-specific market context; no crypto trading authority |
 | Tiingo / Massive | Alternative unadjusted daily history; no automatic vendor failover |
-| yfinance | Canonical JSON daily-bar imports only; no runtime Yahoo client or dependency |
+| yfinance | Canonical JSON daily-bar imports remain offline; the separate runtime adapter provides explicitly mapped Euronext live quote snapshots through `yfinance-rs` |
 
 All requests use fixed HTTPS routes and exact destination hosts. The existing
 transport pins public DNS, rejects compressed/oversized responses, and limits
@@ -178,6 +178,37 @@ cargo run --locked --bin trady -- financial import /path/to/bars.json --source y
 
 Imports retain their actual import time and carry an unverified-coverage flag.
 They cannot supply production replay history or automatic live fallback.
+
+For a read-only Euronext quote, use the runtime adapter with an explicit
+instrument-to-Yahoo mapping. The checked-in example maps `AIR_PA_EQ` to
+`AIR.PA`:
+
+```sh
+cargo run --locked --bin trady -- yfinance quote \
+  --config config/yfinance.euronext.example.json \
+  --instrument AIR_PA_EQ
+```
+
+The command returns Yahoo's last price even when the venue is closed or Yahoo
+does not expose a two-sided book. `fresh` and `tradable` are then false in that
+case. Runtime `QuotePort` reads remain stricter: they require a current EUR bid
+and ask and never turn a last price into an executable quote.
+
+To use the same provider inside an autonomous deployment, add the
+`yfinance_market_data` object to that deployment's JSON. Its mappings must be a
+subset of `inputs.screening.owner_allowlist`, and the configured trading account
+must also be EUR-denominated:
+
+```json
+"yfinance_market_data": {
+  "config_version": 1,
+  "enabled": true,
+  "base_currency": "EUR",
+  "timeout_seconds": 15,
+  "quote_max_age_seconds": 10,
+  "symbols": {"AIR_PA_EQ": "AIR.PA"}
+}
+```
 
 ## Verification
 

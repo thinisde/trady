@@ -80,7 +80,8 @@ pub(super) fn run(config: RuntimeConfig, config_path: &str, once: bool) -> Resul
         let audit = json!({
             "schema_version":1,"phase":"configuration","mode":"shadow",
             "account_id":config.trading.account_id,"started_at":now,"finished_at":now,
-            "configuration_hash":digest(&config)?,"preflight":preflight,"order_mutations":0
+            "configuration_hash":digest(&config)?,"authority_integrity":preflight["authority_integrity"],
+            "preflight":preflight,"order_mutations":0
         });
         let hash = record(&directory, &audit)?;
         return Ok(json!({
@@ -234,7 +235,10 @@ pub(super) fn run(config: RuntimeConfig, config_path: &str, once: bool) -> Resul
             let intent_hash = recording.record_proposal(&request)?;
             Ok(
                 json!({"status":"shadow_intent_recorded","source_snapshot_hash":source_hash,"session_id":session.session_id,
-                "quote":quote,"candidate":candidate,"request":request,"intent_hash":intent_hash,"order_mutations":0}),
+                "quote":{"instrument_id":quote.instrument_id,"observed_at":quote.observed_at,"received_at":quote.received_at,
+                    "bid":quote.bid,"ask":quote.ask,"tradable":quote.tradable},
+                "candidate":candidate,"request":request,"intent_hash":intent_hash,
+                "authority_integrity":preflight["authority_integrity"],"order_mutations":0}),
             )
         })();
         let value = match result {
@@ -242,7 +246,8 @@ pub(super) fn run(config: RuntimeConfig, config_path: &str, once: bool) -> Resul
             Err(error) => json!({"status":"blocked","reason":error.to_string()}),
         };
         let cycle = json!({"schema_version":1,"account_id":config.trading.account_id,"mode":"shadow","started_at":started,
-            "finished_at":Utc::now(),"configuration_hash":digest(&config)?,"result":value,"order_mutations":0});
+            "finished_at":Utc::now(),"configuration_hash":digest(&config)?,
+            "authority_integrity":preflight["authority_integrity"],"result":value,"order_mutations":0});
         let hash = record(&directory, &cycle)?;
         super::super::output(json!({"shadow_cycle_hash":hash,"cycle":cycle}))?;
         cycles = cycles

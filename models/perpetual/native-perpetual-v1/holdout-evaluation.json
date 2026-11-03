@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "report_id": "native_perpetual_holdout_20261103",
+  "kind": "native_perpetual_frozen_holdout_evaluation",
+  "model_revision_id": "native_perpetual_walk_forward_v1_20261103",
+  "artifact_sha256": "cbff93e1a653565662f85cea0e472d1d6e8c62a69adebd1b8e41ba4b22bc1480",
+  "holdout_sha256": "8d09d651583c8959d2c31f91ba77a6789a088efe4063b2a71f29fb5e916e8f39",
+  "holdout_report_sha256": "5097cc03b5e043d6db4db950fbb914ad3ec12a0964e6125ffb5b3b81a8840e14",
+  "candidate_sha256": "3c842ed1e94a6362933d115080a08bcd885e69833d6eadd36b19975680b12523",
+  "first_date": "2024-03-04",
+  "last_date": "2026-10-23",
+  "model_refitted": false,
+  "checks": {
+    "frozen_artifact_hash": "PASS",
+    "holdout_after_calibration": "PASS",
+    "holdout_not_used_for_fit_or_tuning": "PASS",
+    "independent_evaluator_identity": "PASS_NATIVE_RUNTIME_AND_PYTHON_AUDIT",
+    "label_and_probability_finiteness": "PASS"
+  },
+  "metrics": {
+    "brier": 0.24963799716909024,
+    "log_loss": 0.6924246790387302,
+    "mean_probability": 0.5057552566007143,
+    "positives": 1679,
+    "samples": 3158
+  },
+  "baseline": {
+    "brier": 0.2494979600742994,
+    "log_loss": 0.6921429950783696,
+    "mean_probability": 0.5092899323058904,
+    "positives": 1679,
+    "samples": 3158
+  },
+  "predictive_result": "NO_ADVANTAGE_OVER_PREVALENCE_BASELINE",
+  "integrity_result": "PASS_ADVISORY_ONLY",
+  "limitations": [
+    "The local holdout claim is not an independent production-evaluator identity.",
+    "No measured net payoff, fill, FX or fee evidence is contained in this retrospective holdout."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "approval_id": "owner_native_perpetual_approval_20261103",
+  "owner_id": "iex30_owner",
+  "approved_at": "2026-11-03T15:30:00Z",
+  "valid_until": "2026-12-31T23:59:59Z",
+  "model_revision_id": "native_perpetual_walk_forward_v1_20261103",
+  "artifact_sha256": "cbff93e1a653565662f85cea0e472d1d6e8c62a69adebd1b8e41ba4b22bc1480",
+  "decision": "APPROVE_BOUNDED_ADVISORY_SHADOW",
+  "source": "user_instruction_2026-11-03",
+  "entry_authorized": false,
+  "conditions": [
+    "Demo runtime stays disabled.",
+    "Entries stay paused.",
+    "Prospective shadow and paper gates must be completed before any release consideration."
+  ]
+}

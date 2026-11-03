@@ -3,6 +3,7 @@
 use super::{CostsPacket, SessionPacket, TradingInputsConfig};
 use crate::alpaca::{AlpacaDataConfig, AlpacaMarketData, IexQuoteCache};
 use crate::news::{HttpRequest, HttpTransport, MAX_BODY_BYTES, SafeHttp};
+use crate::yfinance::{YfinanceDataConfig, YfinanceMarketData};
 use chrono::{DateTime, Duration, Utc};
 use reqwest::Url;
 use serde::de::DeserializeOwned;
@@ -19,6 +20,7 @@ pub struct MarketInputs<T = SafeHttp> {
     clock: Box<dyn Clock>,
     alpaca: Option<AlpacaMarketData>,
     iex_stream: Option<IexQuoteCache>,
+    yfinance: Option<YfinanceMarketData>,
 }
 impl MarketInputs {
     pub fn new(
@@ -42,6 +44,7 @@ impl<T: HttpTransport> MarketInputs<T> {
             clock: Box::new(crate::SystemClock),
             alpaca: None,
             iex_stream: None,
+            yfinance: None,
         })
     }
     pub fn with_clock(mut self, clock: impl Clock + 'static) -> Self {
@@ -70,10 +73,23 @@ impl<T: HttpTransport> MarketInputs<T> {
     pub fn set_iex_stream_cache(&mut self, cache: IexQuoteCache) {
         self.iex_stream = Some(cache);
     }
+    /// Route mapped Euronext quote reads through Yahoo Finance.
+    pub fn with_yfinance(mut self, config: Option<YfinanceDataConfig>) -> Result<Self> {
+        self.yfinance = match config.filter(|value| value.enabled) {
+            Some(config) => Some(YfinanceMarketData::new(config)?),
+            None => None,
+        };
+        Ok(self)
+    }
     pub fn session(&mut self, account: &AccountId) -> Result<Option<MarketSession>> {
         self.service.session(account, self.clock.as_ref())
     }
     pub fn quote(&mut self, instrument: &InstrumentId) -> Result<Quote> {
+        if let Some(yfinance) = &self.yfinance
+            && yfinance.supports(instrument)
+        {
+            return yfinance.latest_quote(instrument, self.clock.now());
+        }
         if let Some(alpaca) = &self.alpaca {
             if let Some(stream) = &self.iex_stream
                 && let Ok(quote) = stream.latest(

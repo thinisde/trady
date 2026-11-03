@@ -18,6 +18,8 @@ reqwest.workspace = true
 sha2.workspace = true
 quick-xml.workspace = true
 tungstenite.workspace = true
+yfinance-rs.workspace = true
+tokio.workspace = true
 perpetual = "=3.0.0-rc.2"
 
 [lints]

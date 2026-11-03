@@ -1,10 +1,11 @@
 # Perpetual as an advisory LLM tool
 
-Status: integration specification and runtime skill, updated 2026-10-31. The
+Status: integration specification and runtime skill, updated 2026-11-03. The
 library inspection below records an earlier reviewed source revision; current
-workspace manifests/source identify implementation dependencies. No trained or
-calibrated financial model, forecast accuracy or live approval is established
-here. The [fusion contract](./prediction-fusion.md) supersedes the older
+workspace manifests/source identify implementation dependencies. The demo
+configuration now binds one bounded native advisory model with an exact artifact
+hash and evidence bundle; it does not establish forecast accuracy, profitability
+or live approval. The [fusion contract](./prediction-fusion.md) supersedes the older
 LLM-selected numerical limits while preserving Perpetual's advisory boundary.
 
 ## Verified library and Rust boundary

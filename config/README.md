@@ -25,6 +25,11 @@ from provider configuration. `credentials init` creates the ignored private
   intent gate. It does not contain a fabricated broker account number and it
   never grants entry authority by itself. See the [cold-start guide](../docs/cold-start.md).
 
+- [Bound IEX30 demo cold start](./cold-start.iex30.demo.json): the local
+  cold-start profile bound to the discovered Trading 212 demo account
+  `52211463` (EUR). It records account and metadata evidence only; it does not
+  authorize an order or promote the research formula.
+
 - [x-pilot.example.json](./x-pilot.example.json): retained disabled compatibility
   fixture for the X parser tests. It is outside the IEX30 deployment; use
   [research.json](./research.json) for the focused registry.
@@ -37,6 +42,10 @@ from provider configuration. `credentials init` creates the ignored private
   [authority](./formulas/long-donchian-atr-v1.authority.json): pre-registered
   model-free research baseline bound to the IEX30 demo policy. The runtime keeps
   entries paused until prospective shadow and execution-cost evidence is complete.
+  The content-addressed [integrity manifest](./formulas/long-donchian-atr-v1.integrity.json)
+  binds the authority, formula specification, IEX30 universe, runtime copy and
+  registered Donchian implementation. `scripts/verify-long-donchian-integrity.py`
+  is the independent CI verifier; a mismatch is a blocking error.
 
 - [Credential setup READMEs](./credentials/README.md): how to obtain every API
   key/token, database connection string and locally generated secret.
@@ -50,23 +59,36 @@ from provider configuration. `credentials init` creates the ignored private
   IEX quote and bounded daily-history configuration for IEX30. The stream starts
   up to 1,800 seconds before the verified session open and stops after holding
   closure.
+- [Yahoo Finance Euronext market data](./yfinance.euronext.example.json):
+  read-only `yfinance-rs` quote configuration with explicit EUR instrument
+  mappings. The adapter is separate from the offline financial-history import
+  source and never grants entry authority.
 - [research.json](./research.json): the focused IEX30 X registry consumed by
   `[../crates/trady-application/src/research.rs:ResearchConfig]`. All seven
   sources remain disabled until stable identities, ownership/coverage rights and
   the total $1.90 budget evidence are present. See the [IEX30 guide](../docs/iex30.md).
 
 - [IEX30 Trading 212 demo account](./trading212.iex30.demo.example.json): the
-  account block used by the focused runtime; replace its placeholder broker
-  account number before enabling autonomous execution.
+  provider-shape example. The focused runtime is bound to the discovered demo
+  account in `autonomous.iex30.demo.json`; the checked-in runtime remains
+  disabled and entry-paused until the independent release gates pass.
 
 The remaining JSON examples and service directories are compatibility fixtures
 for shared offline tests; they are outside the focused runtime.
 
 ## Invariants
 
-The focused runtime keeps entries paused and disabled until the model, input,
-formula, capability and broker evidence gates are satisfied. Its placeholder
+The focused runtime is currently enabled only in record-only `SHADOW` mode. The
+checked-in native Perpetual artifact is approved only for bounded
+advisory/shadow use; the formula authority remains entry-paused and its
+prospective-shadow and paper gates remain open. Broker protection and quote
+limitations remain explicit unsupported capability evidence. Its placeholder
 input endpoint intentionally reports `approved_input_service_unconfigured`.
+Account discovery is bound to the real demo account. The dated capability
+observation in [`../docs/evidence/trading212-demo-capability-2026-11-03.json`](../docs/evidence/trading212-demo-capability-2026-11-03.json)
+verifies cash and exact stock instruments, including a filled USD-listed AAPL
+round trip with broker FX conversion, while explicitly recording that atomic
+attached protection and executable broker quotes are unsupported.
 
 The compatibility X pilot fixture remains disabled and is not loaded by the
 IEX30 runtime. The focused registry supplies the only default X sources and

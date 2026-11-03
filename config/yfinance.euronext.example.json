@@ -1,0 +1,13 @@
+{
+  "config_version": 1,
+  "enabled": true,
+  "base_currency": "EUR",
+  "timeout_seconds": 15,
+  "quote_max_age_seconds": 10,
+  "symbols": {
+    "AIR_PA_EQ": "AIR.PA",
+    "ASML_AS_EQ": "ASML.AS",
+    "ABI_BR_EQ": "ABI.BR",
+    "EDP_LS_EQ": "EDP.LS"
+  }
+}

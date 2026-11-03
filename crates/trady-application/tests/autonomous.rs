@@ -1363,25 +1363,31 @@ fn partial_entry_and_late_fill_each_receive_only_the_uncovered_protection() {
     h.entry();
     h.broker
         .set_order("1", d("3"), OrderStatus::PartiallyFilled);
-    assert_eq!(h.cycle().action, "protection_submitted");
+    let report = h.cycle();
+    assert_eq!(report.action, "cancel_entry_before_protection");
+    assert_eq!(report.state, PositionState::OpenUnprotected);
+    assert!(h.state().orders[0].cancellation_requested);
     assert_eq!(h.broker.cancelled(), vec!["1"]);
-    assert_eq!(h.broker.submitted()[1].quantity, d("3"));
-    assert!(matches!(
-        h.broker.submitted()[1].kind,
-        OrderKind::Stop { .. }
-    ));
+    assert_eq!(h.broker.submitted().len(), 1);
     h.broker
         .set_order("1", d("4"), OrderStatus::PartiallyFilled);
-    assert_eq!(h.cycle().action, "protection_submitted");
-    assert_eq!(h.broker.submitted()[2].quantity, d("1"));
+    assert_eq!(h.cycle().action, "cancel_entry_before_protection");
+    assert_eq!(h.broker.submitted().len(), 1);
     assert_eq!(
         h.broker.cancelled(),
         vec!["1"],
         "cancel acknowledgment cannot cause repeated sends"
     );
+    h.broker.set_order("1", d("4"), OrderStatus::Cancelled);
+    assert_eq!(h.cycle().action, "protection_submitted");
+    assert_eq!(h.broker.submitted()[1].quantity, d("4"));
+    assert!(matches!(
+        h.broker.submitted()[1].kind,
+        OrderKind::Stop { .. }
+    ));
     assert_eq!(h.cycle().state, PositionState::OpenProtected);
     let before = h.broker.submitted().len();
-    assert_eq!(h.close().action, "cancel_entry_before_exit");
+    assert_eq!(h.close().action, "cancel_protection_before_exit");
     assert_eq!(
         h.broker.submitted().len(),
         before,

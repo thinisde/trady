@@ -61,7 +61,6 @@ fn incomplete_shadow_deployment_reports_actions_without_credentials_or_network()
         "universe_source_disabled",
         "owner_allowlist_empty",
         "approved_skill_hashes_missing",
-        "entry_capabilities_unverified",
         "approved_formula_unavailable",
     ] {
         assert!(blockers.contains(&json!(code)));
@@ -99,6 +98,12 @@ fn configuration_check_reports_unknown_unsupported_and_expired_entry_capabilitie
         "../../../config/autonomous.demo-no-submit.json"
     ))
     .unwrap();
+    // Exercise broker-entry capability validation in a mutating paper stage;
+    // record-only SHADOW deployments intentionally do not require broker
+    // protection or quote capabilities.
+    config["execution_stage"] = json!("AUTONOMOUS_DEMO");
+    config["trading"]["mode"] = json!("paper");
+    config["trading"]["account_id"] = config["broker"]["account_id"].clone();
     let future = chrono::Utc::now() + chrono::Duration::hours(1);
     let verified =
         json!({"support":"VERIFIED","evidence_id":"fixture-evidence","valid_until":future});
@@ -116,6 +121,7 @@ fn configuration_check_reports_unknown_unsupported_and_expired_entry_capabilitie
         verified,
     ] {
         let usable = invalid["evidence_id"] == "fixture-evidence";
+        let unsupported = invalid["support"] == "UNSUPPORTED";
         config["trading"]["capabilities"]["protective_orders"] = invalid;
         fs::write(&path, config.to_string()).unwrap();
         let output = Command::new(env!("CARGO_BIN_EXE_trady"))
@@ -132,6 +138,14 @@ fn configuration_check_reports_unknown_unsupported_and_expired_entry_capabilitie
                 json!([])
             } else {
                 json!(["protective_orders"])
+            }
+        );
+        assert_eq!(
+            result["unsupported_entry_capabilities"],
+            if unsupported {
+                json!(["protective_orders"])
+            } else {
+                json!([])
             }
         );
         assert_eq!(

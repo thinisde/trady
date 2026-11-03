@@ -223,6 +223,7 @@ pub(super) fn serve() -> Result<()> {
     )?)?;
     let analyst_alpaca_config = boot.config.alpaca_market_data.clone();
     let analyst_alpaca_credentials = alpaca_credentials(&analyst_alpaca_config)?;
+    let analyst_yfinance_config = boot.config.yfinance_market_data.clone();
     let mut inputs = AutomaticInputs::new(
         boot.config.inputs,
         boot.config.trading.clone(),
@@ -231,7 +232,8 @@ pub(super) fn serve() -> Result<()> {
         repository,
         boot.token,
     )?
-    .with_alpaca(analyst_alpaca_config, analyst_alpaca_credentials)?;
+    .with_alpaca(analyst_alpaca_config, analyst_alpaca_credentials)?
+    .with_yfinance(analyst_yfinance_config)?;
     let (jobs, requests) = mpsc::sync_channel(1);
     thread::Builder::new()
         .name("analyst-requests".into())
@@ -435,7 +437,8 @@ impl IsolatedInputs {
             .with_alpaca(
                 config.alpaca_market_data.clone(),
                 alpaca_credentials(&config.alpaca_market_data)?,
-            )?;
+            )?
+            .with_yfinance(config.yfinance_market_data.clone())?;
         Ok(Self {
             market,
             boot: Boot {

@@ -4,6 +4,9 @@
 mod weekly;
 pub use weekly::*;
 
+pub mod integrity;
+pub use integrity::*;
+
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

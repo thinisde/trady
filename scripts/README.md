@@ -5,6 +5,37 @@
 Repeatable asset and database checks for the offline milestone, plus an explicit
 operational PostgreSQL credential-rotation utility.
 
+## Long Donchian/ATR v1 validation
+
+- `verify-long-donchian-integrity.py` checks the canonical authority, formula,
+  IEX30 universe, runtime copy and implementation hashes. It fails closed and
+  reports `live_enabled=false` for the registered research state.
+- `create-long-donchian-baseline.py` captures Phase 0 toolchain, commit, input
+  and test provenance without overwriting an existing manifest.
+- `replay-long-donchian-ledger.py` independently replays the frozen bars into
+  hash-chained trade and chronological portfolio ledgers. Missing opens and
+  unresolved holding bars remain explicit exceptions. Position quantity is the
+  minimum of the registered initial-risk and cash-allocation bounds, so the
+  replay cannot create synthetic leverage while checking the cash-only gate.
+- `verify-long-donchian-ledger.py` recomputes both hash chains and checks trade,
+  cost, position-lifecycle and equity arithmetic before a replay can satisfy a
+  release gate.
+- `validate-long-donchian-risk.py` evaluates per-position risk, aggregate open
+  risk, exposure, simultaneous positions, drawdown, loss streak, data quality
+  and no-leverage/no-pyramiding gates.
+- `verify-long-donchian-shadow.py` validates private immutable shadow cycle,
+  observation, proposal and session records, including authority/runtime
+  provenance and the zero-mutation boundary.
+- `verify-long-donchian-paper.py` validates the paper order lifecycle, broker
+  acknowledgements, fills, protection, measured costs, reconciliation and
+  restart recovery required by the paper gate.
+- `validate-long-donchian-parity.py` compares the Rust bridge with the Python
+  reference and runs the registered warmup, channel, opening-gap, stop-first
+  and fifth-session boundary fixtures.
+- `build-long-donchian-release-evidence.py` records every release gate and keeps
+  the strategy in `research` with entries paused until shadow, paper, risk and
+  reconciliation evidence pass.
+
 ## Interface
 
 - [verify-assets.py](./verify-assets.py): `verify_schemas`, `verify_catalog` and

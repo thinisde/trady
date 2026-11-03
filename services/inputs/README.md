@@ -22,8 +22,11 @@ The CLI modules are [inputs_service.rs](../../crates/trady-cli/src/inputs_servic
 and [model_lab.rs](../../crates/trady-cli/src/model_lab.rs), each exposing `HELP`
 and `run(args: &[String]) -> Result<serde_json::Value>` for the composition root.
 
-The server binds loopback. An approved TLS reverse proxy exposes the public HTTPS
-origin, strips any base-path prefix and preserves the authorization header.
+The server binds loopback. A private single-operator deployment may use the
+explicit `http://127.0.0.1:8787/` loopback mode; it is restricted to that
+address and retains bearer authentication. Deployments that expose the service
+through a proxy must use an approved HTTPS origin, strip any base-path prefix
+and preserve the authorization header.
 Both service and client credentials must contain the same private bearer value:
 `TRADY_INPUTS_SERVICE_TOKEN` for the server and `TRADY_TRADING_INPUTS_TOKEN` for the
 existing client. The server uses the central credential loader. Secrets never

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "report_id": "native_perpetual_prospective_shadow_20261103",
+  "kind": "native_perpetual_prospective_shadow_evidence",
+  "model_revision_id": "native_perpetual_walk_forward_v1_20261103",
+  "artifact_sha256": "cbff93e1a653565662f85cea0e472d1d6e8c62a69adebd1b8e41ba4b22bc1480",
+  "started_at": "2026-11-03T15:30:00Z",
+  "input_snapshot": {
+    "root": "var/formula/long_donchian_atr_v1/history",
+    "sha256": "c6fb8cf843365bbe3dc32ef751e03b72613e507d1f73586565385c7ab90fc472",
+    "files": 60,
+    "latest_observation_date": "2026-11-02"
+  },
+  "universe_instruments": 30,
+  "supported_model_instruments": [
+    "JNJ_US_EQ",
+    "JPM_US_EQ",
+    "MSFT_US_EQ",
+    "PG_US_EQ",
+    "XOM_US_EQ"
+  ],
+  "current_runtime_overlap": [
+    "JPM_US_EQ",
+    "MSFT_US_EQ"
+  ],
+  "pending_observations": 2,
+  "matured_outcomes": 0,
+  "prospective": true,
+  "outcome_maturity_sessions": 5,
+  "closed_loop_broker_evidence": false,
+  "release_gate": "IN_PROGRESS_ADVISORY_ONLY",
+  "checks": {
+    "artifact_and_manifest_bound_before_observation": "PASS",
+    "snapshot_hash_bound": "PASS",
+    "future_labels_used_at_start": "PASS_NONE",
+    "matured_performance_gate": "PENDING"
+  },
+  "limitations": [
+    "This starts prospective observation at the current snapshot; it does not backfill outcomes or claim a passed shadow period.",
+    "Demo runtime remains disabled and entries remain paused while shadow and paper gates are pending."
+  ],
+  "journal_path": "models/perpetual/native-perpetual-v1/prospective-shadow-journal.jsonl",
+  "journal_sha256": "6b5d0382d7c5d8de99d63ea3fe5f391e8883336b418dbd2944309f128b95980f",
+  "journal_records": 2,
+  "forecast_status": "PENDING_SCENARIO_BINDING",
+  "runtime_shadow_cycle": {
+    "status": "blocked",
+    "cycles": 1,
+    "order_mutations": 0,
+    "reason": "trading input provider unavailable",
+    "shadow_cycle_hash": "e83ca46c69dbf1ac18c922e50598788f0e984caae98c3bd04eaf261f2e9397dd",
+    "configuration_ready": true,
+    "entry_authorized": false
+  }
+}

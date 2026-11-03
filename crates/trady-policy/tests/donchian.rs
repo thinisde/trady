@@ -2,8 +2,9 @@ use chrono::{Duration, TimeZone, Utc};
 use rust_decimal::Decimal;
 use trady_policy::Policy;
 use trady_policy::limits::{
-    DonchianAtrSpec, DonchianBar, DonchianModelFusion, DonchianSignal, evaluate_signal, trade_plan,
-    wilder_atr,
+    DonchianAtrSpec, DonchianBar, DonchianEntryDecision, DonchianEntryRejection,
+    DonchianExitReason, DonchianModelFusion, DonchianSignal, evaluate_signal, resolve_entry,
+    resolve_exit, trade_plan, wilder_atr,
 };
 
 fn d(value: &str) -> Decimal {
@@ -82,6 +83,78 @@ fn invalid_warmup_or_unsorted_bars_fail_closed() {
     let mut bad = bars();
     bad[10].observed_at = bad[9].observed_at;
     assert!(evaluate_signal(&bad, &spec).is_err());
+}
+
+#[test]
+fn opening_gap_boundary_is_inclusive_and_missing_open_is_not_a_fill() {
+    let spec = DonchianAtrSpec::recommended();
+    let mut input = bars();
+    input[34].close = d("200");
+    input[34].high = d("201");
+    input[34].open = d("199");
+    input[34].low = d("198");
+    let signal = evaluate_signal(&input, &spec).unwrap().unwrap();
+
+    let accepted = resolve_entry(&signal, Some(signal.entry_ceiling)).unwrap();
+    assert!(matches!(accepted, DonchianEntryDecision::Accepted { .. }));
+
+    let rejected = resolve_entry(&signal, Some(signal.entry_ceiling + Decimal::new(1, 2))).unwrap();
+    assert!(matches!(
+        rejected,
+        DonchianEntryDecision::Rejected {
+            reason: DonchianEntryRejection::OpeningGapAboveAllowance,
+            ..
+        }
+    ));
+
+    let missing = resolve_entry(&signal, None).unwrap();
+    assert!(matches!(
+        missing,
+        DonchianEntryDecision::Rejected {
+            reason: DonchianEntryRejection::MissingNextRegularSessionOpen,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn exit_resolution_is_gap_safe_stop_first_and_expires_on_session_five() {
+    let spec = DonchianAtrSpec::recommended();
+    let plan = trade_plan(d("100"), d("2"), &spec).unwrap();
+
+    let gap = DonchianBar {
+        observed_at: Utc.with_ymd_and_hms(2026, 2, 1, 21, 0, 0).unwrap(),
+        open: d("95"),
+        high: d("99"),
+        low: d("94"),
+        close: d("96"),
+    };
+    let gap_exit = resolve_exit(&plan, &gap, 1, &spec).unwrap().unwrap();
+    assert_eq!(gap_exit.reason, DonchianExitReason::GapThroughStop);
+    assert_eq!(gap_exit.executable_price, d("95"));
+
+    let same_bar = DonchianBar {
+        observed_at: Utc.with_ymd_and_hms(2026, 2, 2, 21, 0, 0).unwrap(),
+        open: d("100"),
+        high: d("105"),
+        low: d("96"),
+        close: d("102"),
+    };
+    let same_bar_exit = resolve_exit(&plan, &same_bar, 2, &spec).unwrap().unwrap();
+    assert_eq!(same_bar_exit.reason, DonchianExitReason::StopSameBarFirst);
+    assert_eq!(same_bar_exit.executable_price, plan.stop);
+
+    let open = DonchianBar {
+        observed_at: Utc.with_ymd_and_hms(2026, 2, 3, 21, 0, 0).unwrap(),
+        open: d("100"),
+        high: d("101"),
+        low: d("99"),
+        close: d("100.5"),
+    };
+    assert!(resolve_exit(&plan, &open, 4, &spec).unwrap().is_none());
+    let expiry = resolve_exit(&plan, &open, 5, &spec).unwrap().unwrap();
+    assert_eq!(expiry.reason, DonchianExitReason::FifthHoldingSessionClose);
+    assert_eq!(expiry.executable_price, open.close);
 }
 
 #[allow(dead_code)]

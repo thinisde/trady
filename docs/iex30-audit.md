@@ -47,9 +47,9 @@ European deployment artifacts and generated design/review files.
 | Long-lived Alpaca WebSocket client | Implemented with authenticated IEX subscription, quote cache, timeout, bounded reconnect and lifecycle shutdown. |
 | Executor watchdog loop | Implemented for active holdings; each bucket persists stream/quote health through the fenced journal. |
 | Alpaca credentials | Required in the private credential store before an enabled runtime can start. |
-| Trading 212 demo identity | The example account ID and broker account number are placeholders. |
+| Trading 212 demo identity | Bound to demo account 52211463 (EUR) and verified against the provider summary on 2026-11-03; the example profile is no longer a placeholder. |
 | Input service and universe authority | Placeholder endpoint, owner identity and source rights intentionally block readiness. |
-| Model, formula and capability evidence | The focused config has empty model/skill/authority registries and unknown broker capabilities, so autonomous check remains blocked. |
+| Model, formula and capability evidence | The demo account now has dated cash/instrument observations plus explicit unsupported native-attachment and executable-quote results in [the capability evidence artifact](./evidence/trading212-demo-capability-2026-11-03.json). The model/formula gates remain empty and autonomous check remains blocked. |
 | X identity and rights | Stable numeric user IDs, ownership/coverage approvals and source rights are intentionally blank; no X request is made while the registry is disabled. |
 | Live execution | Not enabled by this request. The selected path is Trading 212 demo execution only. |
 

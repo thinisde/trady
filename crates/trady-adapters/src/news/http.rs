@@ -96,10 +96,13 @@ pub fn validate_destination(
     let host = url
         .host_str()
         .ok_or_else(|| SourceFailure::unavailable("url_host_missing"))?;
-    if url.scheme() != "https"
+    let local_loopback = matches!(host, "127.0.0.1" | "[::1]" | "::1")
+        && url.scheme() == "http"
+        && allowed_hosts.iter().any(|h| h == host);
+    if (!local_loopback && url.scheme() != "https")
         || !url.username().is_empty()
         || url.password().is_some()
-        || url.port_or_known_default() != Some(443)
+        || (!local_loopback && url.port_or_known_default() != Some(443))
         || !allowed_hosts.iter().any(|h| h == host)
         || host == "localhost"
         || host.ends_with(".local")
@@ -172,7 +175,17 @@ impl SafeHttp {
             let host = url
                 .host_str()
                 .ok_or_else(|| SourceFailure::unavailable("url_host_missing"))?;
-            let addresses = resolve(host)?;
+            let local_loopback =
+                matches!(host, "127.0.0.1" | "[::1]" | "::1") && url.scheme() == "http";
+            let addresses = if local_loopback {
+                vec![
+                    host.parse::<IpAddr>()
+                        .map(|ip| SocketAddr::new(ip, url.port_or_known_default().unwrap_or(80)))
+                        .map_err(|_| SourceFailure::unavailable("invalid_loopback_destination"))?,
+                ]
+            } else {
+                resolve(host)?
+            };
             // GDELT's TLS handshake can exceed the default connection bound.
             // Keep both deadlines finite and retain the single-request policy.
             let (timeout_seconds, connect_seconds) = if host == "api.gdeltproject.org" {
@@ -182,7 +195,7 @@ impl SafeHttp {
             };
             let client = Client::builder()
                 .no_proxy()
-                .https_only(true)
+                .https_only(!local_loopback)
                 .redirect(Policy::none())
                 .retry(reqwest::retry::never())
                 .no_gzip()

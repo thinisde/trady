@@ -21,6 +21,12 @@ trusted-lab ports. Research decisions carry no entry or live activation authorit
   Its optional `PredictionAuthority` binds `prediction::FusionConfig` and
   `UtilityConfig`. `ScenarioPredictionInput` carries the frozen fusion context,
   typed predictions and approved conditional net payoff estimates.
+- `[integrity.rs:DonchianIntegrityManifest]` and
+  `verify_donchian_integrity` bind the canonical authority, formula
+  specification, IEX30 universe, runtime copy and registered implementation
+  bytes. Research, shadow, and paper states require `live_enabled=false` and
+  `entries_paused=true`; only an explicitly approved manifest can satisfy the
+  live state predicate.
 - `[mod.rs:BoundCalculation]`, `calculate_authoritative_limits(authority, policy,
   input, now)`: schema/calculation/formula/policy/input identities, an
   `authority_hash` binding the complete approved authority, and calculated

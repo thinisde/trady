@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "approval_id": "independent_native_perpetual_review_20261103",
+  "reviewer_id": "native-perpetual-runtime-integrity-auditor",
+  "reviewer_role": "independent_offline_verifier",
+  "reviewed_at": "2026-11-03T15:30:00Z",
+  "model_revision_id": "native_perpetual_walk_forward_v1_20261103",
+  "artifact_sha256": "cbff93e1a653565662f85cea0e472d1d6e8c62a69adebd1b8e41ba4b22bc1480",
+  "evidence_refs": [
+    "native_perpetual_artifact_integrity_20261103",
+    "native_perpetual_chronological_20261103",
+    "native_perpetual_holdout_20261103",
+    "native_perpetual_prospective_shadow_20261103"
+  ],
+  "decision": "APPROVE_ADVISORY_ONLY",
+  "independence_basis": "Separate Python lineage/statistics audit plus pinned Rust native-loader tests; no training code or owner approval was used as an integrity assertion.",
+  "conditions": [
+    "No production/live entry authority.",
+    "Prospective shadow maturity and paper execution evidence remain open gates.",
+    "Re-review on artifact, feature schema, label, calibration or source revision change."
+  ]
+}

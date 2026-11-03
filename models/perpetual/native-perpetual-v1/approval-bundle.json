@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "model_manifest": "model-manifest.json",
+  "artifact_integrity": "artifact-integrity.json",
+  "dataset_approval": "dataset-approval.json",
+  "chronological_evaluation": "chronological-evaluation.json",
+  "holdout_evaluation": "holdout-evaluation.json",
+  "prospective_shadow": "prospective-shadow-evidence.json",
+  "independent_approval": "independent-approval.json",
+  "owner_approval": "owner-approval.json",
+  "approval_scope": "ADVISORY_SHADOW_ONLY",
+  "prospective_shadow_journal": "prospective-shadow-journal.jsonl"
+}

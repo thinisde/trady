@@ -38,6 +38,28 @@ approval.
 The focused provider path is recorded in [iex30.md](./iex30.md): Alpaca IEX
 market data and Trading 212 demo execution. Account and capability evidence
 remain deployment inputs.
+
+The 2026-11-03 demo capability observation is recorded in
+[the Trading 212 evidence artifact](./evidence/trading212-demo-capability-2026-11-03.json).
+It verifies the EUR account and exact stock instruments, records successful
+native-stop and USD-listed AAPL round-trip tests with broker FX conversion, and
+marks atomic attached protection and broker executable quotes unsupported. It is
+observation evidence only; the independent reviewed capability import remains a
+separate release gate.
+
+For the discovered IEX30 demo account, use the bound profile. Its input service
+endpoint is the private loopback listener at `127.0.0.1:8787`:
+
+```text
+cargo run --locked --bin trady -- account cold-start \
+  --config config/cold-start.iex30.demo.json
+```
+
+This performs provider-owned account discovery, captures the current EUR cash
+and positions, refreshes the Trading 212 instrument catalog, and writes a
+private immutable cold-start bundle. The result remains `entry_authorized=false`;
+unknown quote, protection, order, fee, FX and fill capabilities must not be
+filled in from metadata or a model review.
 The broker catalog refresh used by `capability-evidence` is rate-limited per
 account; an HTTP 429 is retained as unavailable evidence and is never worked
 around by replaying a mutation.

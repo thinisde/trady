@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "kind": "trading212_capability_observation",
+  "provider": "trading212_public_api_v0",
+  "environment": "demo",
+  "local_account_id": "paper_iex30_demo",
+  "broker_account_id": 52211463,
+  "base_currency": "EUR",
+  "observed_at": "2026-11-03T15:33:10Z",
+  "last_mutation_at": "2026-11-03T16:14:33Z",
+  "last_reconciled_at": "2026-11-03T16:15:47Z",
+  "valid_until": "2026-11-10T16:14:33Z",
+  "derived_evidence": {
+    "cost_policy": "docs/evidence/trading212-cost-policy-2026-11-03.json",
+    "quote_compatibility": "docs/evidence/trading212-quote-compatibility-2026-11-03.json"
+  },
+  "source": {
+    "openapi_url": "https://docs.trading212.com/_bundle/api.json?download",
+    "openapi_sha256": "a272f70a713fa9f2f906e9b4be12136c9d5d63d7f9f48562e939aa35c4fc041d",
+    "account_summary_endpoint": "GET /api/v0/equity/account/summary",
+    "instrument_endpoint": "GET /api/v0/equity/metadata/instruments",
+    "order_endpoints": [
+      "POST /api/v0/equity/orders/market",
+      "POST /api/v0/equity/orders/stop_limit",
+      "DELETE /api/v0/equity/orders/{id}",
+      "GET /api/v0/equity/history/orders"
+    ]
+  },
+  "instrument": {
+    "ticker": "NOA3d_EQ",
+    "name": "Nokia",
+    "isin": "FI0009000681",
+    "currency": "EUR",
+    "type": "STOCK",
+    "metadata_observation": "The demo metadata endpoint returned this exact stock row for the account."
+  },
+  "runtime_test_instrument": {
+    "ticker": "AAPL_US_EQ",
+    "name": "Apple",
+    "isin": "US0378331005",
+    "currency": "USD",
+    "type": "STOCK",
+    "metadata_observation": "The demo metadata endpoint returned this IEX30 stock row; the market-order probe below was accepted and filled on the EUR-primary account with broker FX conversion."
+  },
+  "capabilities": {
+    "cash_account": {
+      "support": "VERIFIED",
+      "evidence_id": "t212_demo_cash_20261103",
+      "method": "account_summary_read",
+      "detail": "Account 52211463 returned primary currency EUR and availableToTrade 5000.00; the final post-probe account was flat with 4999.99 available after the reversible spread observation."
+    },
+    "instrument": {
+      "support": "VERIFIED",
+      "evidence_id": "t212_demo_instrument_aapl_us_20261103",
+      "method": "instrument_metadata_and_market_order_read",
+      "detail": "AAPL_US_EQ / US0378331005 was returned as an accessible USD STOCK instrument and a one-share market order filled on the EUR-primary account with broker-reported FX conversion."
+    },
+    "fractional_orders": {
+      "support": "UNSUPPORTED",
+      "evidence_id": "t212_demo_min_quantity_noa3d_20261103",
+      "method": "demo_market_order_probe",
+      "detail": "A quantity 0.01 market and limit probe was rejected with /api-errors/min-quantity-exceeded for NOA3d_EQ. The tested account/instrument profile therefore cannot claim fractional support."
+    },
+    "market_orders": {
+      "support": "VERIFIED",
+      "evidence_id": "t212_demo_market_round_trip_noa3d_20261103",
+      "method": "demo_market_order_round_trip",
+      "detail": "BUY order 57500060549 filled for 1 share at EUR 7.65; SELL order 57500060557 filled for 1 share at EUR 7.642. The position and pending-order endpoints were flat after cleanup."
+    },
+    "native_stop_limit_orders": {
+      "support": "VERIFIED",
+      "evidence_id": "t212_demo_stop_limit_57500060555",
+      "method": "demo_stop_limit_order_and_cancel",
+      "detail": "A sell STOP_LIMIT for -1 share at stop/limit EUR 0.01 was accepted as order 57500060555 and cancelled before it could trigger."
+    },
+    "protective_orders": {
+      "support": "UNSUPPORTED",
+      "evidence_id": "t212_demo_attached_protection_20261103",
+      "method": "capability_scope_review",
+      "detail": "Trading 212 exposes standalone STOP and STOP_LIMIT orders, but the public API does not expose an atomic bracket/OCO or attached-protection request. The application requires attached, position-bound protection, so native stop acceptance is not promoted to entry protection."
+    },
+    "quotes": {
+      "support": "UNSUPPORTED",
+      "evidence_id": "t212_public_api_no_executable_quotes_20261103",
+      "method": "openapi_path_inventory",
+      "detail": "The official v0 OpenAPI path inventory has account, position, metadata, order and history families but no quote/bid/ask endpoint. Position valuation and fill prices are not executable bid/ask quotes; a separate approved feed remains required."
+    },
+    "cross_currency_market_orders": {
+      "support": "VERIFIED",
+      "evidence_id": "t212_demo_aapl_fx_market_round_trip_20261103",
+      "method": "demo_aapl_market_order_round_trip",
+      "detail": "AAPL_US_EQ BUY order 57500062513 and SELL order 57500062553 both filled; wallet impact reported EUR values and FX rates 1.11903552 and 1.1193226."
+    }
+  },
+  "test_orders": [
+    {
+      "id": "57500060549",
+      "type": "MARKET",
+      "side": "BUY",
+      "quantity": "1",
+      "status": "FILLED",
+      "fill_price": "7.65",
+      "fill_at": "2026-11-03T15:33:48Z"
+    },
+    {
+      "id": "57500060555",
+      "type": "STOP_LIMIT",
+      "side": "SELL",
+      "quantity": "-1",
+      "stop_price": "0.01",
+      "limit_price": "0.01",
+      "status": "CANCELLED",
+      "cancelled_at": "2026-11-03T15:33:58Z"
+    },
+    {
+      "id": "57500060557",
+      "type": "MARKET",
+      "side": "SELL",
+      "quantity": "-1",
+      "status": "FILLED",
+      "fill_price": "7.642",
+      "fill_at": "2026-11-03T15:34:02Z"
+    },
+    {
+      "id": "57500062513",
+      "type": "MARKET",
+      "side": "BUY",
+      "ticker": "AAPL_US_EQ",
+      "quantity": "1",
+      "status": "FILLED",
+      "fill_price": "330.44",
+      "fill_at": "2026-11-03T16:13:51Z",
+      "wallet_currency": "EUR",
+      "fx_rate": "1.11903552",
+      "currency_conversion_fee": "-0.44"
+    },
+    {
+      "id": "57500062553",
+      "type": "MARKET",
+      "side": "SELL",
+      "ticker": "AAPL_US_EQ",
+      "quantity": "-1",
+      "status": "FILLED",
+      "fill_price": "330.48",
+      "fill_at": "2026-11-03T16:14:33Z",
+      "wallet_currency": "EUR",
+      "fx_rate": "1.1193226",
+      "currency_conversion_fee": "-0.44"
+    }
+  ],
+  "final_state": {
+    "positions": [],
+    "pending_orders": [],
+    "cash_available": "4999.07",
+    "currency": "EUR",
+    "order_mutations": 5,
+    "cleanup_complete": true
+  },
+  "review": {
+    "status": "PENDING_INDEPENDENT_REVIEW",
+    "independent": false,
+    "note": "This artifact records provider observations and does not by itself authorize entry or replace the reviewed capability-evidence import."
+  }
+}

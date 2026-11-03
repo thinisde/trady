@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "report_id": "native_perpetual_artifact_integrity_20261103",
+  "model_revision_id": "native_perpetual_walk_forward_v1_20261103",
+  "artifact_path": "models/perpetual/native-perpetual-v1/native-model.json",
+  "artifact_sha256": "cbff93e1a653565662f85cea0e472d1d6e8c62a69adebd1b8e41ba4b22bc1480",
+  "artifact_bytes": 82741,
+  "artifact_json_utf8": true,
+  "runtime_version": "3.0.0-rc.2",
+  "runtime_source_revision": "6cddc9e55a7b132f7f252fca7617d95e4c4538f8",
+  "model_format": "perpetual-json-3.0.0-rc.2-binary-platt-v1",
+  "objective": "LogLoss",
+  "tree_count": 8,
+  "metadata": {
+    "trady.feature_names": "[\"return_1\",\"return_5\",\"return_20\",\"volatility_20\",\"range_20\",\"volume_ratio_20\",\"distance_sma_20\"]",
+    "trady.feature_schema_version": "daily_replay_features_v1",
+    "trady.label_version": "gross_barrier_1pct_5bars_v1",
+    "trady.research_only": "true"
+  },
+  "checks": {
+    "sha256_matches_manifest": true,
+    "pinned_runtime_source_format": true,
+    "ordered_feature_metadata": true,
+    "label_metadata": true,
+    "native_json_roundtrip": true,
+    "bounded_tree_graph": true
+  }
+}

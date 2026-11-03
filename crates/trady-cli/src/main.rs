@@ -16,6 +16,7 @@ mod stock_report;
 mod telegram;
 mod watchdog;
 mod weekly;
+mod yfinance;
 
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -52,6 +53,7 @@ fn print_help() {
     print!("{}", entry_demo::HELP);
     print!("{}", account::HELP);
     print!("{}", watchdog::HELP);
+    print!("{}", yfinance::HELP);
 }
 
 fn main() -> std::process::ExitCode {
@@ -118,6 +120,7 @@ fn run() -> Result<()> {
         "demo" if args.len() == 1 => demo_memory(),
         "demo-entry" => output(entry_demo::run(&args[1..])?),
         "watchdog" => output(watchdog::run(&args[1..])?),
+        "yfinance" => output(yfinance::run(&args[1..])?),
         "demo-postgres" if args.len() == 1 => demo_postgres(),
         "validate-json" if args.len() == 3 => {
             let contract = match args[1].as_str() {

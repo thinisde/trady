@@ -14,6 +14,7 @@ pub mod research_jobs;
 pub mod screening;
 pub mod telegram;
 pub mod trading212;
+pub mod yfinance;
 
 pub mod opencode;
 pub mod sessions;

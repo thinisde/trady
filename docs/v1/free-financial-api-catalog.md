@@ -34,7 +34,7 @@ terms before activation and after changes; store the reviewed source and date.
 | Financial Modeling Prep | Free plan advertises 250 calls/day; pricing also lists free bandwidth constraints [P1] [P2] | 200/day and 400 MB per trailing 30 days, subject to lower account limits | Optional normalized statements; endpoint/ticker/history entitlements vary |
 | GDELT DOC | Public DOC interface; article-list maximum 250 documented [G1] | 1 request/10 seconds globally and 200/day | News discovery, not a licensed full-article archive or guaranteed alert service |
 | CoinGecko Demo | Pricing currently lists 100 calls/minute, 10,000/month and attribution [C1] | 5/minute and 3,000/month | Optional crypto context, not executable stock prices |
-| yfinance | Unofficial Python library; research/education purpose and Yahoo data-use restrictions [Y1] | Manual bounded offline imports only | No production SLA, approved live fallback or Rust runtime dependency |
+| yfinance | Unofficial Yahoo data access; research/education purpose and Yahoo data-use restrictions [Y1] | Manual bounded offline imports plus an explicitly mapped read-only Euronext quote adapter through `yfinance-rs` | No production SLA, automatic fallback, or execution authority |
 | Tiingo Starter | Pricing lists 50/hour, 1,000/day, 500 unique symbols/month and 1 GB/month [I1] | 40/hour, 800/day, 450 unique symbols/month and 800 MB/month | Alternative EOD history; symbol cap may preclude full-universe coverage |
 | Massive Stocks Basic | 5 calls/minute, two years of history and EOD availability [M1] | 4/minute and 1,000/day as an owner cap | Alternative history/corporate-action context; not a real-time free quote feed |
 
@@ -282,18 +282,19 @@ provide executable prices or authorize cryptocurrency orders. Review retention,
 model processing and attribution separately; do not infer commercial rights from
 a free Demo key.
 
-## yfinance: explicitly offline and unofficial
+## yfinance: unofficial and explicitly bounded
 
-The maintainers describe yfinance as an unofficial Python tool for research and
-education; Yahoo data-use terms still apply [Y1]. This is not a native Rust REST
-integration with a guaranteed free service contract.
+The maintainers describe yfinance as an unofficial Yahoo data client for
+research and education; Yahoo data-use terms still apply [Y1]. It does not
+provide a guaranteed free service contract.
 
-Allow only a separate optional importer producing a reviewed, provenance-rich
-artifact for the offline laboratory. Pin the importer revision and explicitly set
-adjustment/session behavior rather than relying on changing library defaults.
-Keep raw and adjusted semantics distinct and record the import time, source,
-missingness and limitations. No live execution fallback, anti-bot bypass, proxy
-rotation or runtime dependency is introduced.
+Allow the financial-history path only through a separate optional importer
+producing a reviewed, provenance-rich artifact for the offline laboratory. The
+runtime has a separate opt-in `yfinance-rs` client for explicitly mapped
+Euronext quote snapshots. Pin adjustment/session behavior for imports, keep raw
+and adjusted semantics distinct and record the import time, source, missingness
+and limitations. The quote client is read-only, has no automatic fallback or
+anti-bot bypass, and rejects execution use unless fresh bid/ask data are present.
 
 Do not use current constituents and current company metadata to claim a complete
 point-in-time backtest. An offline import can help prototype feature code; it does

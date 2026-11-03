@@ -32,13 +32,15 @@ cargo run --locked --bin trady -- autonomous review-holding --config /path/to/an
 cargo run --locked --bin trady -- autonomous recover-order --config /path/to/reviewed-config.json --intent INTENT --broker-order BROKER_ID
 ```
 
-[autonomous.iex30.demo.json](../config/autonomous.iex30.demo.json) is deliberately
-disabled. It contains unknown capabilities, no approved skill hashes, no formula
-authority, no model artifacts and a placeholder input-service destination. `check`
-reads configuration and configured model files without credentials or network
-requests; it reports configuration blockers and always reports
-`entry_authorized: false`. It does not test provider availability, broker
-permissions or live acceptance.
+[autonomous.iex30.demo.json](../config/autonomous.iex30.demo.json) is an enabled,
+record-only `SHADOW` deployment. It contains a bounded `APPROVED` native
+Perpetual advisory manifest and immutable artifact under
+`models/perpetual/native-perpetual-v1/`; the accompanying evidence bundle keeps
+the approval scope to advisory/shadow use. Broker protection and quote
+limitations are reported as unsupported capability evidence, while shadow mode
+does not require those mutation capabilities because it never submits orders.
+The formula authority remains entry-paused and `check` always reports
+`entry_authorized: false`.
 
 `run` requires explicit `enabled: true`. `--once` executes one reconciliation and
 decision cycle, which may submit an order under an enabled approved configuration.

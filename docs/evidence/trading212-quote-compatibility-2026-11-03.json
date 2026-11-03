@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "trading212_quote_compatibility_assessment",
+  "environment": "demo",
+  "local_account_id": "paper_iex30_demo",
+  "broker_account_id": 52211463,
+  "instrument": {
+    "ticker": "AAPL_US_EQ",
+    "isin": "US0378331005",
+    "instrument_currency": "USD"
+  },
+  "market_source": {
+    "provider": "Alpaca Basic",
+    "feed": "IEX",
+    "quote_observed_at": "2026-11-03T17:57:06.130907409Z",
+    "quote_received_at": "2026-11-03T17:57:07.982521489Z",
+    "bid_usd": "331.48",
+    "ask_usd": "331.90",
+    "bid_size": "40",
+    "ask_size": "40",
+    "tradable": true
+  },
+  "broker_execution_observation": {
+    "buy_order_id": "57500062513",
+    "sell_order_id": "57500062553",
+    "buy_trading_method": "OTC",
+    "sell_trading_method": "OTC",
+    "buy_fill_at": "2026-11-03T16:13:51Z",
+    "sell_fill_at": "2026-11-03T16:14:33Z"
+  },
+  "assessment": {
+    "status": "UNSUPPORTED",
+    "reason": "Trading 212 exposes no synchronized executable bid/ask endpoint. The available Alpaca IEX quote is a different venue scope from the observed Trading 212 OTC fills, and no reviewed cross-venue divergence test or execution mapping exists.",
+    "entry_authorized": false,
+    "required_next_evidence": [
+      "venue/instrument crosswalk",
+      "synchronized quote-to-fill comparison sample",
+      "maximum accepted divergence",
+      "source owner and rights review",
+      "freshness and expiry policy"
+    ]
+  },
+  "review": {
+    "status": "OBSERVED_PENDING_INDEPENDENT_REVIEW",
+    "independent": false
+  }
+}

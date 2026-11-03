@@ -141,6 +141,181 @@ pub struct DonchianSignal {
     pub target_distance: Decimal,
 }
 
+/// The source used for a deterministic entry price.  Keeping this explicit in
+/// the decision record prevents a replay from silently substituting a quote,
+/// midpoint, or a later bar for the next regular-session open.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DonchianExecutionPriceSource {
+    NextRegularSessionOpen,
+    HoldingBarOpen,
+    HoldingBarStop,
+    HoldingBarTarget,
+    HoldingBarClose,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DonchianEntryRejection {
+    MissingNextRegularSessionOpen,
+    OpeningGapAboveAllowance,
+}
+
+/// The result of applying the registered opening-gap rule to a signal.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(
+    tag = "decision",
+    rename_all = "SCREAMING_SNAKE_CASE",
+    deny_unknown_fields
+)]
+pub enum DonchianEntryDecision {
+    Accepted {
+        executable_price: Decimal,
+        gap_threshold: Decimal,
+        source: DonchianExecutionPriceSource,
+    },
+    Rejected {
+        observed_open: Option<Decimal>,
+        gap_threshold: Decimal,
+        reason: DonchianEntryRejection,
+    },
+}
+
+/// Apply the inclusive `signal_close + 0.10 ATR` opening-gap boundary.
+///
+/// A lower opening price is still executable at that opening price.  A missing
+/// next open is represented as a rejection with an explicit reason so replay
+/// and shadow ledgers cannot turn unavailable data into a zero return.
+pub fn resolve_entry(
+    signal: &DonchianSignal,
+    next_open: Option<Decimal>,
+) -> Result<DonchianEntryDecision> {
+    require(
+        signal.signal_close > Decimal::ZERO
+            && signal.atr > Decimal::ZERO
+            && signal.entry_ceiling >= signal.signal_close,
+        "Donchian signal has invalid entry bounds",
+    )?;
+    let gap_threshold = signal.entry_ceiling;
+    let Some(open) = next_open else {
+        return Ok(DonchianEntryDecision::Rejected {
+            observed_open: None,
+            gap_threshold,
+            reason: DonchianEntryRejection::MissingNextRegularSessionOpen,
+        });
+    };
+    require(
+        open > Decimal::ZERO,
+        "next regular-session open must be positive",
+    )?;
+    if open > gap_threshold {
+        return Ok(DonchianEntryDecision::Rejected {
+            observed_open: Some(open),
+            gap_threshold,
+            reason: DonchianEntryRejection::OpeningGapAboveAllowance,
+        });
+    }
+    Ok(DonchianEntryDecision::Accepted {
+        executable_price: open,
+        gap_threshold,
+        source: DonchianExecutionPriceSource::NextRegularSessionOpen,
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DonchianExitReason {
+    GapThroughStop,
+    StopSameBarFirst,
+    Stop,
+    Target,
+    FifthHoldingSessionClose,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DonchianExitDecision {
+    pub holding_session: u8,
+    pub executable_price: Decimal,
+    pub reason: DonchianExitReason,
+    pub price_source: DonchianExecutionPriceSource,
+}
+
+/// Resolve one completed holding bar under the registered stop/target rules.
+///
+/// The opening gap is checked first.  When both stop and target are touched in
+/// the same bar, the stop wins.  A position with no trigger is closed at the
+/// close of holding session five, never after it.
+pub fn resolve_exit(
+    plan: &DonchianTradePlan,
+    bar: &DonchianBar,
+    holding_session: u8,
+    spec: &DonchianAtrSpec,
+) -> Result<Option<DonchianExitDecision>> {
+    require(
+        (1..=spec.max_holding_sessions).contains(&holding_session),
+        "Donchian holding session is outside the registered horizon",
+    )?;
+    validate_bars(std::slice::from_ref(bar))?;
+    require(
+        plan.entry > Decimal::ZERO
+            && plan.stop > Decimal::ZERO
+            && plan.stop < plan.entry
+            && plan.target > plan.entry,
+        "Donchian trade plan has invalid exit ordering",
+    )?;
+    if bar.open <= plan.stop {
+        return Ok(Some(DonchianExitDecision {
+            holding_session,
+            executable_price: bar.open,
+            reason: DonchianExitReason::GapThroughStop,
+            price_source: DonchianExecutionPriceSource::HoldingBarOpen,
+        }));
+    }
+    if bar.low <= plan.stop && bar.high >= plan.target {
+        return Ok(Some(DonchianExitDecision {
+            holding_session,
+            executable_price: plan.stop,
+            reason: DonchianExitReason::StopSameBarFirst,
+            price_source: DonchianExecutionPriceSource::HoldingBarStop,
+        }));
+    }
+    if bar.low <= plan.stop {
+        return Ok(Some(DonchianExitDecision {
+            holding_session,
+            executable_price: plan.stop,
+            reason: DonchianExitReason::Stop,
+            price_source: DonchianExecutionPriceSource::HoldingBarStop,
+        }));
+    }
+    if bar.high >= plan.target {
+        let executable_price = if bar.open >= plan.target {
+            bar.open
+        } else {
+            plan.target
+        };
+        return Ok(Some(DonchianExitDecision {
+            holding_session,
+            executable_price,
+            reason: DonchianExitReason::Target,
+            price_source: if bar.open >= plan.target {
+                DonchianExecutionPriceSource::HoldingBarOpen
+            } else {
+                DonchianExecutionPriceSource::HoldingBarTarget
+            },
+        }));
+    }
+    if holding_session == spec.max_holding_sessions {
+        return Ok(Some(DonchianExitDecision {
+            holding_session,
+            executable_price: bar.close,
+            reason: DonchianExitReason::FifthHoldingSessionClose,
+            price_source: DonchianExecutionPriceSource::HoldingBarClose,
+        }));
+    }
+    Ok(None)
+}
+
 fn checked(value: Option<Decimal>, message: &'static str) -> Result<Decimal> {
     value.ok_or_else(|| Error(message.into()))
 }

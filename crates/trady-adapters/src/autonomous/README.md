@@ -42,9 +42,10 @@ market reads use the separate [market adapter](./market.rs).
   `TradingInputs::quote`, `TradingInputs::current_exit_costs` and
   `TradingInputs::candidate` for the application port. Screening, limit
   calculation, assessment persistence and final-scenario review belong to their
-  application contracts.
+  application contracts. `with_alpaca` and `with_yfinance` explicitly select
+  read-only provider quote planes for mapped instruments.
 - `[market.rs:MarketInputs<T = SafeHttp>]`: `new`, `with_ports`, `with_clock`,
-  `session`, `quote`, `current_exit_costs`. It exposes market reads without a
+  `with_alpaca`, `with_yfinance`, `session`, `quote`, `current_exit_costs`. It exposes market reads without a
   model, universe, research repository or candidate method. The shared private
   `InputService<T>` owns HTTP destination, parsing, credential and backoff guards.
 
@@ -69,6 +70,8 @@ market reads use the separate [market adapter](./market.rs).
 - `[market.rs:InputService::session]` checks the returned account;
   `[market.rs:InputService::quote]` checks the returned instrument. These methods
   do not independently validate session or quote freshness.
+  Mapped yfinance instruments use the `yfinance-rs` client instead of the input
+  service and require a fresh EUR two-sided quote before returning `Quote`.
   `[market.rs:InputService::costs]` additionally requires an
   observation within 60 seconds and unexpired costs, using the later of the
   supplied time and the clock read after fetching.

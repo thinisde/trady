@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "report_id": "native_perpetual_chronological_20261103",
+  "kind": "native_perpetual_chronological_evaluation",
+  "model_revision_id": "native_perpetual_walk_forward_v1_20261103",
+  "dataset_id": "daily_replay_approved_20261101",
+  "dataset_revision": "fit_sha256_24ef41e211d0ba2b65cc446dda633f08255ec420fde2f3fc0ed30b389146383e",
+  "artifact_sha256": "cbff93e1a653565662f85cea0e472d1d6e8c62a69adebd1b8e41ba4b22bc1480",
+  "fit_sha256": "24ef41e211d0ba2b65cc446dda633f08255ec420fde2f3fc0ed30b389146383e",
+  "tuning_report_sha256": "cae60facb22167b41ab967792067c0c259bf9ee279ded4cf941ea40d2789ef60",
+  "walk_forward_folds": [
+    2019,
+    2020,
+    2021
+  ],
+  "windows": {
+    "train": [
+      "2016-01-01T00:00:00Z",
+      "2021-12-01T00:00:00Z"
+    ],
+    "calibration": [
+      "2022-02-01T00:00:00Z",
+      "2023-12-01T00:00:00Z"
+    ],
+    "validation": [
+      "2019-01-02T00:00:00Z",
+      "2021-11-30T23:59:59Z"
+    ]
+  },
+  "purge_seconds": 604800,
+  "checks": {
+    "ordered_features_and_finite_values": "PASS",
+    "unique_instrument_decisions": "PASS",
+    "feature_before_decision_and_label_after_decision": "PASS",
+    "chronological_walk_forward_partitions": "PASS",
+    "label_horizon_purge": "PASS",
+    "calibration_not_used_for_selection": "PASS",
+    "holdout_not_accessed_during_tuning": "PASS"
+  },
+  "metrics": {
+    "mean_brier": 0.25035656163172454,
+    "mean_log_loss": 0.6939110660509799,
+    "baseline_brier": 0.25034583791466963,
+    "baseline_log_loss": 0.6938391705295976
+  },
+  "predictive_result": "NO_ADVANTAGE_OVER_PREVALENCE_BASELINE",
+  "integrity_result": "PASS_ADVISORY_ONLY",
+  "limitations": [
+    "The source dataset is a retrospective split-adjusted daily-bar replay; historical availability is not independently attested.",
+    "This evaluation is chronological and independent of the frozen holdout, but does not establish profitability or production readiness."
+  ]
+}

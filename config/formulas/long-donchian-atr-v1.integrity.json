@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "formula_id": "long_donchian_atr_v1",
+  "authority_id": "long_donchian_atr_v1",
+  "authority_sha256": "20932dad0f20df9c2dc08bfe0732949e0686899ea1215e8a49afbf932bf4eac7",
+  "spec_sha256": "cdb3b3e0deb13d64a3605df65731a7abcf521e30c151386357ed6baa3b200003",
+  "universe_sha256": "72ef08d9250499fefa448bfffa8bd38eab276a68d5ec69996f38a483c20b2658",
+  "runtime_sha256": "2f836922248b51e50c22a84b454bade8604179d48810cc65d22d8b9b7753a983",
+  "implementation_sha256": "4d497e92a527db1bc4635ef2911bcefaae9235a2b3f2fc989f113759a8fa53e2",
+  "status": "shadow",
+  "live_enabled": false,
+  "entries_paused": true,
+  "evidence": {
+    "proof": "proof_long_donchian_atr_v1_20261103",
+    "parity": "parity_long_donchian_atr_v1_20261103",
+    "evaluation": "evaluation_long_donchian_atr_v1_20261103",
+    "shadow": "shadow_long_donchian_atr_v1_20261103",
+    "owner": "owner_approval_long_donchian_atr_v1_20261103"
+  }
+}

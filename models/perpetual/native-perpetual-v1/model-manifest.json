@@ -1,0 +1,117 @@
+{
+  "model_revision_id": "native_perpetual_walk_forward_v1_20261103",
+  "approval": "APPROVED",
+  "artifact_sha256": "cbff93e1a653565662f85cea0e472d1d6e8c62a69adebd1b8e41ba4b22bc1480",
+  "runtime_version": "3.0.0-rc.2",
+  "runtime_source_revision": "6cddc9e55a7b132f7f252fca7617d95e4c4538f8",
+  "model_format": "perpetual-json-3.0.0-rc.2-binary-platt-v1",
+  "feature_schema": {
+    "version": "daily_replay_features_v1",
+    "features": [
+      {
+        "name": "return_1",
+        "minimum": -0.25,
+        "maximum": 0.25,
+        "reference_mean": 0.0008308656261593082,
+        "reference_stddev": 0.013582115335548628,
+        "max_age_seconds": 172800
+      },
+      {
+        "name": "return_5",
+        "minimum": -0.35,
+        "maximum": 0.35,
+        "reference_mean": 0.0038715733391019415,
+        "reference_stddev": 0.028112645566276205,
+        "max_age_seconds": 172800
+      },
+      {
+        "name": "return_20",
+        "minimum": -0.55,
+        "maximum": 0.55,
+        "reference_mean": 0.014902451319711582,
+        "reference_stddev": 0.05514758222623939,
+        "max_age_seconds": 172800
+      },
+      {
+        "name": "volatility_20",
+        "minimum": 0.0,
+        "maximum": 0.15,
+        "reference_mean": 0.01200113237012359,
+        "reference_stddev": 0.007094511202906535,
+        "max_age_seconds": 172800
+      },
+      {
+        "name": "range_20",
+        "minimum": 0.0,
+        "maximum": 0.15,
+        "reference_mean": 0.01608879518073959,
+        "reference_stddev": 0.007359163769410206,
+        "max_age_seconds": 172800
+      },
+      {
+        "name": "volume_ratio_20",
+        "minimum": 0.0,
+        "maximum": 8.0,
+        "reference_mean": 0.9989402427481219,
+        "reference_stddev": 0.37813426821722707,
+        "max_age_seconds": 172800
+      },
+      {
+        "name": "distance_sma_20",
+        "minimum": -0.5,
+        "maximum": 0.5,
+        "reference_mean": 0.0066550678928381166,
+        "reference_stddev": 0.03035761337369546,
+        "max_age_seconds": 172800
+      }
+    ]
+  },
+  "label_version": "gross_barrier_1pct_5bars_v1",
+  "target_definition": "Executable net target reached before stop or deadline; stop wins ambiguous observations",
+  "training": {
+    "dataset_id": "daily_replay_approved_20261101",
+    "dataset_revision": "fit_sha256_24ef41e211d0ba2b65cc446dda633f08255ec420fde2f3fc0ed30b389146383e",
+    "training_data_cutoff_at": "2021-11-30T23:59:59Z",
+    "calibration_start_at": "2022-02-01T00:00:00Z",
+    "calibration_end_at": "2023-11-30T23:59:59Z",
+    "validation_start_at": "2024-02-01T00:00:00Z",
+    "validation_end_at": "2026-10-23T23:59:59Z",
+    "purge_seconds": 604800,
+    "learning_budget": 0.25,
+    "random_seed": 42
+  },
+  "validation_report_id": "native_perpetual_validation_20261103",
+  "calibration": {
+    "revision_id": "platt_native_perpetual_v1_20261103",
+    "slope": 0.06529176471584316,
+    "intercept": 0.017352708449262122,
+    "samples": 2021,
+    "minimum_samples": 1000,
+    "brier_score": 0.24983842673505183,
+    "maximum_brier_score": 0.26
+  },
+  "support": {
+    "instruments": [
+      "JNJ_US_EQ",
+      "JPM_US_EQ",
+      "MSFT_US_EQ",
+      "PG_US_EQ",
+      "XOM_US_EQ"
+    ],
+    "minimum_horizon_seconds": 432000,
+    "maximum_horizon_seconds": 432000,
+    "minimum_target_fraction": "0.01",
+    "maximum_target_fraction": "0.01",
+    "minimum_stop_fraction": "0.01",
+    "maximum_stop_fraction": "0.01",
+    "maximum_cost_fraction": "0.002",
+    "supports_positions": false
+  },
+  "approved_at": "2026-11-03T15:30:00Z",
+  "valid_until": "2026-12-31T23:59:59Z",
+  "max_assessment_age_seconds": 300,
+  "quote_drift_tolerance_fraction": "0.001",
+  "fx_drift_tolerance_fraction": "0.0005",
+  "drift_warning_z": 3.0,
+  "drift_rejection_z": 5.0
+}

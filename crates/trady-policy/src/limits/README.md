@@ -14,6 +14,9 @@ do not certify readiness or grant permission to place orders.
   supplied evidence flags and account/quote/cost/rule snapshots.
 - `[donchian.rs:DonchianAtrSpec]`, `evaluate_signal`, `trade_plan`: the frozen
   long-only 20-bar/Wilder-ATR research baseline used by the IEX30 authority.
+  `resolve_entry` records the inclusive next-open gap decision, including a
+  missing-open rejection. `resolve_exit` applies gap-through-stop, stop-first
+  same-bar ordering and the fifth-session close as explicit lifecycle events.
 - `[mod.rs:CalculatedLimits]`, `calculate_limits`: checked quantity, entry/stop/
   target prices, modeled account risk and correlated source snapshot identifiers.
 - `[proof_bridge.rs:Request]`, `Operation`, `Reply`, `evaluate`: offline execution
@@ -47,7 +50,9 @@ fields; deserialization does not invoke their numeric or temporal validators.
 seed, 0.10 ATR entry allowance, 1.50 ATR stop, 1.50R target, 35-bar warm-up,
 five-session hold and disabled model fusion. Its signal evaluator excludes the
 current bar from the channel and rejects unordered, duplicated or insufficient
-bars.
+bars. Entry and exit decisions retain their executable-price source and reason,
+so a gap, missing open or unresolved holding bar cannot be represented as a
+silent zero-return event.
 
 `[mod.rs:calculate_limits]` checks fresh account/quote/FX and unexpired inputs,
 matching causal completed-bar evidence and supplied sentiment/score constraints.

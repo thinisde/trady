@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 use std::{
     fs,
     io::Read,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -26,10 +26,15 @@ use trady_adapters::{
     perpetual::{ApprovedArtifact, MAX_ARTIFACT_BYTES, NativePerpetualAdvisor},
     screening::ApprovedUniverseConfig,
     trading212::{AutonomousTrading212, Credentials, Trading212Config},
+    yfinance::YfinanceDataConfig,
 };
 use trady_application::{
     autonomous::*,
     contracts::parse_json_bounded,
+    optimization::{
+        DonchianIntegrityManifest, DonchianIntegrityReport, DonchianReleaseState,
+        verify_donchian_integrity,
+    },
     watchdog::{IexWatchdogObservation, WatchdogStatus},
 };
 use trady_domain::{perpetual::ModelManifest, *};
@@ -59,6 +64,9 @@ struct RuntimeConfig {
     /// Alpaca Basic is the authoritative IEX quote plane for the fixed 30.
     #[serde(default)]
     alpaca_market_data: Option<AlpacaDataConfig>,
+    /// Explicit Yahoo Finance symbol mappings for Euronext quotes.
+    #[serde(default)]
+    yfinance_market_data: Option<YfinanceDataConfig>,
     inputs: TradingInputsConfig,
     universe: ApprovedUniverseConfig,
     models: Vec<ModelFile>,
@@ -133,6 +141,21 @@ impl RuntimeConfig {
                 )?;
             }
         }
+        if let Some(yfinance) = &self.yfinance_market_data {
+            yfinance.validate()?;
+            if yfinance.enabled {
+                require(
+                    self.trading.base_currency == yfinance.base_currency,
+                    "yfinance market data currency must match the trading account",
+                )?;
+                require(
+                    yfinance.symbols.keys().all(|instrument| {
+                        self.inputs.screening.owner_allowlist.contains(instrument)
+                    }),
+                    "yfinance mappings must remain inside the owner instrument allowlist",
+                )?;
+            }
+        }
         self.watchdog.validate()?;
         self.inputs.validate(&self.trading)?;
         self.universe.validate()?;
@@ -204,6 +227,90 @@ fn load(path: &str) -> Result<RuntimeConfig> {
     config.validate()?;
     Ok(config)
 }
+
+fn deployment_root(path: &str) -> Result<PathBuf> {
+    let config_path = fs::canonicalize(path)
+        .map_err(|_| Error("cannot resolve autonomous deployment path".into()))?;
+    let directory = config_path
+        .parent()
+        .ok_or_else(|| Error("autonomous deployment has no parent directory".into()))?;
+    Ok(
+        if directory.file_name().and_then(|name| name.to_str()) == Some("config") {
+            directory
+                .parent()
+                .ok_or_else(|| Error("autonomous deployment has no repository root".into()))?
+                .to_path_buf()
+        } else {
+            directory.to_path_buf()
+        },
+    )
+}
+
+fn read_required(path: &Path, message: &'static str) -> Result<Vec<u8>> {
+    fs::read(path).map_err(|_| Error(message.into()))
+}
+
+/// Resolve and verify the deployment-owned Donchian integrity manifest.  A
+/// non-Donchian legacy authority is intentionally outside this check; the
+/// focused IEX30 authority always carries the deterministic strategy binding.
+fn donchian_integrity(
+    config: &RuntimeConfig,
+    config_path: &str,
+) -> Result<Option<DonchianIntegrityReport>> {
+    if config
+        .trading
+        .limits_authority
+        .as_ref()
+        .and_then(|authority| authority.strategy.as_ref())
+        .is_none()
+    {
+        return Ok(None);
+    }
+    let root = deployment_root(config_path)?;
+    let config_bytes = read_required(
+        Path::new(config_path),
+        "autonomous deployment configuration is unreadable",
+    )?;
+    let authority_bytes = read_required(
+        &root.join("config/formulas/long-donchian-atr-v1.authority.json"),
+        "canonical Donchian authority is missing",
+    )?;
+    let spec_bytes = read_required(
+        &root.join("config/formulas/long-donchian-atr-v1.json"),
+        "canonical Donchian specification is missing",
+    )?;
+    let universe_bytes = read_required(
+        &root.join("config/iex30.universe.json"),
+        "canonical IEX30 universe is missing",
+    )?;
+    let implementation_bytes = read_required(
+        &root.join("crates/trady-policy/src/limits/donchian.rs"),
+        "registered Donchian implementation is missing",
+    )?;
+    let manifest_bytes = read_required(
+        &root.join("config/formulas/long-donchian-atr-v1.integrity.json"),
+        "Donchian integrity manifest is missing",
+    )?;
+    let manifest: DonchianIntegrityManifest = serde_json::from_slice(&manifest_bytes)
+        .map_err(|_| Error("Donchian integrity manifest is unreadable".into()))?;
+    let authority = config
+        .trading
+        .limits_authority
+        .as_ref()
+        .ok_or_else(|| Error("Donchian runtime authority is missing".into()))?;
+    verify_donchian_integrity(
+        &manifest,
+        &authority_bytes,
+        &spec_bytes,
+        &universe_bytes,
+        &config_bytes,
+        &implementation_bytes,
+        authority,
+        &config.trading.policy,
+    )
+    .map(Some)
+}
+
 fn models(config: &RuntimeConfig, config_path: &str) -> Result<NativePerpetualAdvisor> {
     let root = Path::new(config_path).parent().unwrap_or(Path::new("."));
     let mut artifacts = vec![];
@@ -229,6 +336,15 @@ fn configuration_check(config: &RuntimeConfig, path: &str) -> Result<Value> {
     let advisor = models(config, path)?;
     let now = Utc::now();
     let mut blockers = vec![];
+    let mut integrity_error = None;
+    let integrity = match donchian_integrity(config, path) {
+        Ok(report) => report,
+        Err(error) => {
+            integrity_error = Some(error.to_string());
+            blockers.push("authority_integrity_failed");
+            None
+        }
+    };
     if !config.enabled {
         blockers.push("runtime_disabled");
     }
@@ -247,19 +363,35 @@ fn configuration_check(config: &RuntimeConfig, path: &str) -> Result<Value> {
     if config.trading.approved_skills.is_empty() {
         blockers.push("approved_skill_hashes_missing");
     }
-    // Match the unconditional entry requirements in validate_account_entry.
-    // Fractional support is checked separately when sizing requests fractions.
+    // Broker capabilities are unconditional for broker-mutating stages. A
+    // record-only SHADOW run must be able to collect prospective evidence even
+    // while the broker's protection/quote limitations keep paper/live entries
+    // blocked. Fractional support is checked separately when sizing requests
+    // fractions.
     let capabilities = &config.trading.capabilities;
-    let unverified_entry_capabilities: Vec<_> = [
+    let entry_capability_pairs = [
         ("cash_account", &capabilities.cash_account),
         ("instrument", &capabilities.instrument),
         ("protective_orders", &capabilities.protective_orders),
         ("quotes", &capabilities.quotes),
-    ]
-    .into_iter()
-    .filter_map(|(name, capability)| (!capability.usable(now)).then_some(name))
-    .collect();
-    if !unverified_entry_capabilities.is_empty() {
+    ];
+    let broker_entry_requirements =
+        config.trading.mode == Mode::Live || config.execution_stage.permits_broker_mutation();
+    let unverified_entry_capabilities: Vec<_> = if broker_entry_requirements {
+        entry_capability_pairs
+            .iter()
+            .filter_map(|(name, capability)| (!capability.usable(now)).then_some(*name))
+            .collect()
+    } else {
+        vec![]
+    };
+    let unsupported_entry_capabilities: Vec<_> = entry_capability_pairs
+        .iter()
+        .filter_map(|(name, capability)| {
+            (capability.support == Support::Unsupported).then_some(*name)
+        })
+        .collect();
+    if broker_entry_requirements && !unverified_entry_capabilities.is_empty() {
         blockers.push("entry_capabilities_unverified");
     }
     if config
@@ -291,6 +423,18 @@ fn configuration_check(config: &RuntimeConfig, path: &str) -> Result<Value> {
     {
         blockers.push("iex_watchdog_disabled");
     }
+    let integrity_entries_paused = integrity
+        .as_ref()
+        .is_some_and(|report| report.entries_paused);
+    if config.controls.pause_entries {
+        blockers.push("entries_paused");
+    }
+    if config.controls.close_position {
+        blockers.push("close_position_latched");
+    }
+    if broker_entry_requirements && integrity_entries_paused {
+        blockers.push("authority_entries_paused");
+    }
     let required_actions: Vec<Value> = blockers.iter().map(|code| {
         let required = match *code {
             "runtime_disabled" => "Review the deployment and explicitly enable the runtime.",
@@ -299,11 +443,15 @@ fn configuration_check(config: &RuntimeConfig, path: &str) -> Result<Value> {
             "universe_source_disabled" => "Configure and enable an approved constituent provider with instrument mappings, storage rights and current classification evidence.",
             "owner_allowlist_empty" => "Supply the owner's explicit instrument allowlist in inputs.screening.owner_allowlist.",
             "approved_skill_hashes_missing" => "Pin the exact reviewed runtime skill hashes in trading.approved_skills.",
-            "entry_capabilities_unverified" => "Supply current verified broker/account/instrument evidence for every unverified_entry_capabilities field, with a nonempty evidence_id and future valid_until. A successful metadata or account read alone does not verify protective orders or executable quotes.",
+            "entry_capabilities_unverified" => "Supply current verified broker/account/instrument evidence for every unverified_entry_capabilities field, with a nonempty evidence_id and future valid_until; explicitly UNSUPPORTED fields require a compatible broker capability profile. A successful metadata or account read alone does not verify protective orders or executable quotes.",
             "approved_formula_unavailable" => "Supply an active policy-compatible formula authority with matching prediction authority, proof, parity, independent evaluation and prospective shadow evidence.",
             "live_release_expired" => "Renew the independently reviewed release evidence for this exact deployment scope.",
             "execution_stage_not_mutating" => "Select SUPERVISED_DEMO for one approved test order or AUTONOMOUS_DEMO after the acceptance gate; SHADOW cannot submit broker mutations.",
             "iex_watchdog_disabled" => "Enable the IEX30 watchdog and keep its exact 30-symbol schedule active before enabling unattended entries.",
+            "authority_integrity_failed" => "Restore the canonical Donchian authority, specification, IEX30 universe, runtime configuration and implementation hashes; live execution remains blocked until the integrity manifest verifies.",
+            "entries_paused" => "Resume entries only after the independent release gates and current capability evidence are complete.",
+            "close_position_latched" => "Resolve the owner close-position latch through flat reconciliation before enabling entries.",
+            "authority_entries_paused" => "Complete the prospective shadow, paper-fill, risk and attributable release gates before unpausing this authority.",
             _ => unreachable!("every configuration blocker has a required action"),
         };
         json!({"code":code,"required":required})
@@ -315,9 +463,12 @@ fn configuration_check(config: &RuntimeConfig, path: &str) -> Result<Value> {
         "configuration_ready":blockers.is_empty(),"blockers":blockers,
         "required_actions":required_actions,"approved_models":advisor.model_count(),
         "unverified_entry_capabilities":unverified_entry_capabilities,
-        "entry_controls_enabled":config.enabled && !config.controls.pause_entries && !config.controls.close_position,
+        "unsupported_entry_capabilities":unsupported_entry_capabilities,
+        "entry_controls_enabled":config.enabled && !config.controls.pause_entries && !config.controls.close_position && (!broker_entry_requirements || !integrity_entries_paused),
+        "authority_integrity":integrity,
+        "authority_integrity_error":integrity_error,
         "order_submission_policy":if config.trading.mode == Mode::Shadow { "record_only" } else { "broker_execution" }
-        ,"market_data":{"provider":if config.alpaca_market_data.as_ref().is_some_and(|data| data.enabled) {"alpaca"} else {"input_service"},"feed":if config.alpaca_market_data.as_ref().is_some_and(|data| data.enabled) {"iex"} else {"configured"},"universe":"IEX30"}
+        ,"market_data":{"provider":if config.yfinance_market_data.as_ref().is_some_and(|data| data.enabled) {"yfinance-rs"} else if config.alpaca_market_data.as_ref().is_some_and(|data| data.enabled) {"alpaca"} else {"input_service"},"feed":if config.yfinance_market_data.as_ref().is_some_and(|data| data.enabled) {"yahoo_quote"} else if config.alpaca_market_data.as_ref().is_some_and(|data| data.enabled) {"iex"} else {"configured"},"universe":if config.yfinance_market_data.as_ref().is_some_and(|data| data.enabled) {"configured_euronext"} else {"IEX30"}}
         ,"watchdog":{"enabled":config.watchdog.enabled,"runtime_wired":true,"lifecycle":"holding_scoped","interval_seconds":config.watchdog.interval_seconds,"symbols":config.watchdog.symbols.len()}
     }))
 }
@@ -348,6 +499,24 @@ pub fn run(args: &[String]) -> Result<Value> {
     if action == "check" {
         require(args.len() == 3, "unsupported autonomous check arguments")?;
         return configuration_check(&config, path);
+    }
+    if config.trading.mode == Mode::Live
+        && config
+            .trading
+            .limits_authority
+            .as_ref()
+            .and_then(|authority| authority.strategy.as_ref())
+            .is_some()
+    {
+        let integrity = donchian_integrity(&config, path)?.ok_or_else(|| {
+            Error("live execution requires a deterministic authority integrity manifest".into())
+        })?;
+        require(
+            integrity.status == DonchianReleaseState::Approved
+                && integrity.live_enabled
+                && !integrity.entries_paused,
+            "live execution is blocked until the Donchian release gates approve this exact deployment",
+        )?;
     }
     require(
         matches!(action, "run" | "recover-order"),

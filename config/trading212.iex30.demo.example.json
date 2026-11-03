@@ -2,7 +2,7 @@
   "config_version": 1,
   "environment": "demo",
   "account_id": "paper_iex30_demo",
-  "broker_account_id": 1,
-  "base_currency": "USD",
+  "broker_account_id": 52211463,
+  "base_currency": "EUR",
   "timeout_seconds": 10
 }

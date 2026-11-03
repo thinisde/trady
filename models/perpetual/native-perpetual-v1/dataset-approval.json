@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "dataset_id": "daily_replay_approved_20261101",
+  "dataset_revision": "fit_sha256_24ef41e211d0ba2b65cc446dda633f08255ec420fde2f3fc0ed30b389146383e",
+  "approval_scope": "ADVISORY_SHADOW_ONLY",
+  "source_fit_sha256": "24ef41e211d0ba2b65cc446dda633f08255ec420fde2f3fc0ed30b389146383e",
+  "source_history_sha256": "945929886e85242a0fbf354693405718d8c963a9bd89bb37dcd57096b12c127d",
+  "feature_schema_version": "daily_replay_features_v1",
+  "feature_names": [
+    "return_1",
+    "return_5",
+    "return_20",
+    "volatility_20",
+    "range_20",
+    "volume_ratio_20",
+    "distance_sma_20"
+  ],
+  "label_version": "gross_barrier_1pct_5bars_v1",
+  "partitions": {
+    "train": {
+      "rows": 6943,
+      "first_feature_start": "2016-01-04",
+      "last_label_end": "2021-11-30",
+      "instruments": [
+        "JNJ_US_EQ",
+        "JPM_US_EQ",
+        "MSFT_US_EQ",
+        "PG_US_EQ",
+        "XOM_US_EQ"
+      ]
+    },
+    "calibration": {
+      "rows": 2021,
+      "first_feature_start": "2022-02-01",
+      "last_label_end": "2023-11-30",
+      "instruments": [
+        "JNJ_US_EQ",
+        "JPM_US_EQ",
+        "MSFT_US_EQ",
+        "PG_US_EQ",
+        "XOM_US_EQ"
+      ]
+    }
+  },
+  "point_in_time_checks": {
+    "features_available_before_decision": "PASS",
+    "labels_after_decision": "PASS",
+    "ordered_unique_decisions": "PASS",
+    "purged_partition_boundaries": "PASS",
+    "finite_feature_values": "PASS"
+  },
+  "owner_scope_decision": "APPROVE_FOR_BOUNDED_ADVISORY_SHADOW",
+  "limitations": [
+    "Retrospectively downloaded split-adjusted daily bars; original historical availability is unverified.",
+    "Current five-stock selection introduces selection/survivorship bias; results do not generalize to an historical S&P 500 universe.",
+    "Hypothetical next-open entry and gross 1% target/1% stop over five bars; no actual fills, FX, fees or net payoff labels.",
+    "Same-bar target/stop conflicts are excluded, which can bias the retained sample.",
+    "Chronological holdout is an offline diagnostic, not independent production evaluation or prospective shadow evidence."
+  ],
+  "source_dataset_report_sha256": "3d0c12d2d7a1f462b046281cbc57f06bae3f8ea156b44dbd9ac4b118fc749b5d",
+  "source_holdout_sha256": "8d09d651583c8959d2c31f91ba77a6789a088efe4063b2a71f29fb5e916e8f39",
+  "source_candidate_sha256": "3c842ed1e94a6362933d115080a08bcd885e69833d6eadd36b19975680b12523",
+  "source_tuning_report_sha256": "cae60facb22167b41ab967792067c0c259bf9ee279ded4cf941ea40d2789ef60",
+  "training_cutoff_at": "2021-11-30T23:59:59Z",
+  "calibration_window": [
+    "2022-02-01T00:00:00Z",
+    "2023-11-30T23:59:59Z"
+  ],
+  "validation_window": [
+    "2024-02-01T00:00:00Z",
+    "2026-10-23T23:59:59Z"
+  ]
+}

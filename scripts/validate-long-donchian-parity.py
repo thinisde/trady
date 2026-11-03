@@ -8,6 +8,7 @@ import importlib.util
 import json
 import pathlib
 import subprocess
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 
 PARITY_TOLERANCE = Decimal("1e-25")
@@ -33,6 +34,102 @@ def values_equal(left, right) -> bool:
         except InvalidOperation:
             return left == right
     return left == right
+
+
+def rust_bridge(request: dict) -> dict:
+    rust = subprocess.run(
+        ["cargo", "run", "--quiet", "--locked", "-p", "trady-policy", "--example", "donchian_bridge"],
+        input=json.dumps(request), text=True, capture_output=True, check=False,
+    )
+    if rust.returncode:
+        raise RuntimeError(rust.stderr.strip())
+    return json.loads(rust.stdout)
+
+
+def synthetic_bars(count: int = 35, *, close: str | None = None, high: str | None = None) -> list[dict]:
+    start = datetime(2026, 1, 1, 21, tzinfo=timezone.utc)
+    bars = []
+    for index in range(count):
+        value = Decimal(100 + index)
+        bars.append({
+            "observed_at": (start + timedelta(days=index)).isoformat().replace("+00:00", "Z"),
+            "open": str(value),
+            "high": str(value + 1),
+            "low": str(value - 1),
+            "close": str(value),
+        })
+    if count >= 35 and close is not None:
+        bars[-1]["close"] = close
+        bars[-1]["open"] = str(Decimal(close) - 1)
+        bars[-1]["low"] = str(Decimal(close) - 2)
+        bars[-1]["high"] = high or str(Decimal(close) + 1)
+    return bars
+
+
+def boundary_cases() -> list[dict]:
+    cases = []
+    under_warm = rust_bridge({"bars": synthetic_bars(34), "entry": "100"})
+    cases.append({"name": "34_valid_bars_no_signal", "rust": under_warm, "passed": under_warm["signal"] is None})
+
+    eligible = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200"})
+    cases.append({"name": "35_valid_bars_signal_evaluated", "rust": eligible, "passed": eligible["signal"] is not None})
+
+    excluded_high = rust_bridge({"bars": synthetic_bars(35, close="200", high="500"), "entry": "200"})
+    cases.append({
+        "name": "current_high_excluded_from_channel",
+        "rust": excluded_high,
+        "passed": excluded_high["signal"] is not None and Decimal(excluded_high["signal"]["breakout_level"]) < Decimal("500"),
+    })
+
+    equality_bars = synthetic_bars(35)
+    prior_high = max(Decimal(row["high"]) for row in equality_bars[-21:-1])
+    equality_bars[-1]["close"] = str(prior_high)
+    equality_bars[-1]["open"] = str(prior_high - 1)
+    equality_bars[-1]["low"] = str(prior_high - 2)
+    equality_bars[-1]["high"] = str(prior_high + 1)
+    equal = rust_bridge({"bars": equality_bars, "entry": str(prior_high)})
+    cases.append({"name": "close_equal_channel_no_signal", "rust": equal, "passed": equal["signal"] is None})
+
+    signal = eligible["signal"]
+    threshold = Decimal(signal["entry_ceiling"])
+    for name, opening, expected in [
+        ("entry_gap_exact_boundary_accepted", threshold, "ACCEPTED"),
+        ("entry_gap_above_boundary_rejected", threshold + Decimal("0.01"), "REJECTED"),
+        ("entry_gap_below_signal_close_accepted", Decimal("199"), "ACCEPTED"),
+    ]:
+        value = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200", "next_open": str(opening)})
+        cases.append({"name": name, "rust": value, "passed": value["entry_decision"]["decision"] == expected})
+    missing = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200", "evaluate_entry": True})
+    cases.append({
+        "name": "missing_next_open_rejected",
+        "rust": missing,
+        "passed": missing["entry_decision"]["reason"] == "MISSING_NEXT_REGULAR_SESSION_OPEN",
+    })
+
+    plan = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200"})["plan"]
+    stop = Decimal(plan["stop"])
+    target = Decimal(plan["target"])
+    same_bar = {
+        "observed_at": "2026-02-01T21:00:00Z", "open": "200", "high": str(target + 1),
+        "low": str(stop - 1), "close": "201",
+    }
+    exit_value = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200", "exit_bars": [same_bar]})
+    cases.append({"name": "stop_wins_same_bar", "rust": exit_value, "passed": exit_value["exit"]["reason"] == "STOP_SAME_BAR_FIRST"})
+
+    gap_bar = {
+        "observed_at": "2026-02-01T21:00:00Z", "open": str(stop - 1), "high": str(stop),
+        "low": str(stop - 2), "close": str(stop - 1),
+    }
+    gap_exit = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200", "exit_bars": [gap_bar]})
+    cases.append({"name": "open_below_stop_is_gap_stop", "rust": gap_exit, "passed": gap_exit["exit"]["reason"] == "GAP_THROUGH_STOP"})
+
+    fifth_bars = [
+        {"observed_at": f"2026-02-0{index}T21:00:00Z", "open": "200", "high": "201", "low": "199", "close": "200.5"}
+        for index in range(1, 6)
+    ]
+    expiry = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200", "exit_bars": fifth_bars})
+    cases.append({"name": "fifth_holding_session_closes", "rust": expiry, "passed": expiry["exit"]["reason"] == "FIFTH_HOLDING_SESSION_CLOSE"})
+    return cases
 
 
 def main() -> int:
@@ -64,13 +161,7 @@ def main() -> int:
             ],
             "entry": str(bars[selected]["close"]),
         }
-        rust = subprocess.run(
-            ["cargo", "run", "--quiet", "--locked", "-p", "trady-policy", "--example", "donchian_bridge"],
-            input=json.dumps(request), text=True, capture_output=True, check=False,
-        )
-        if rust.returncode:
-            raise RuntimeError(rust.stderr.strip())
-        rust_value = json.loads(rust.stdout)
+        rust_value = rust_bridge(request)
         # The Python reference uses the same registered constants as the Rust spec.
         atr = atrs[selected]
         prior_high = max(evaluator.dec(row["high"]) for row in bars[selected - 20:selected])
@@ -101,17 +192,20 @@ def main() -> int:
             "plan": rust_value["plan"],
         }
         cases.append({"symbol": symbol, "python": python_value, "rust": rust_normalized, "equal": values_equal(python_value, rust_normalized)})
-    passed = bool(cases) and all(case["equal"] for case in cases)
+    boundaries = boundary_cases()
+    passed = bool(cases) and all(case["equal"] for case in cases) and all(case["passed"] for case in boundaries)
     report = {
         "schema_version": 1,
         "formula_id": "long_donchian_atr_v1",
-        "scope": "SIGNAL_AND_UNROUNDED_TRADE_PLAN",
+        "scope": "SIGNAL_PLAN_ENTRY_GAP_AND_EXIT_BOUNDARIES",
         "cases": cases,
         "case_count": len(cases),
+        "boundary_cases": boundaries,
+        "boundary_case_count": len(boundaries),
         "passed": passed,
         "numeric_tolerance": str(PARITY_TOLERANCE),
         "status": "PARITY_PASS" if passed else "PARITY_FAIL",
-        "limitations": ["This report covers the signal and unrounded plan; broker costs, tick rounding and order lifecycle remain separate checks."],
+        "limitations": ["This report covers deterministic signal, unrounded plan, opening-gap and daily-bar exit rules; broker costs, tick rounding and live order lifecycle remain separate checks."],
     }
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"status": report["status"], "case_count": len(cases)}))

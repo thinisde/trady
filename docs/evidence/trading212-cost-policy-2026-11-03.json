@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "kind": "trading212_execution_cost_evidence",
+  "provider": "trading212_public_api_v0",
+  "environment": "demo",
+  "local_account_id": "paper_iex30_demo",
+  "broker_account_id": 52211463,
+  "account_currency": "EUR",
+  "instrument": {
+    "ticker": "AAPL_US_EQ",
+    "isin": "US0378331005",
+    "instrument_currency": "USD"
+  },
+  "observed_at": "2026-11-03T16:15:47Z",
+  "valid_until": "2026-11-10T16:15:47Z",
+  "source": {
+    "fee_policy_url": "https://helpcentre.trading212.com/hc/en-us/articles/360018909758-What-is-the-FX-fee-Invest-Stocks-ISA",
+    "fee_policy": "0.15% per cross-currency conversion on Invest/Stocks ISA trades",
+    "provider_history_endpoint": "GET /api/v0/equity/history/orders"
+  },
+  "policy": {
+    "fx_fee_fraction": "0.0015",
+    "applies_to": ["BUY_CONVERSION", "SELL_CONVERSION"],
+    "rounding": "Use checked decimal arithmetic and provider-reported wallet impact; never round the fee to zero.",
+    "missing_or_higher_observed_fee": "BLOCK_ENTRY_AND_REQUIRE_REVIEW"
+  },
+  "observations": [
+    {
+      "order_id": "57500062513",
+      "side": "BUY",
+      "fill_price_usd": "330.44",
+      "wallet_net_value_eur": "295.73",
+      "fx_rate": "1.11903552",
+      "conversion_fee_eur": "0.44",
+      "fee_fraction_of_wallet_value": "0.0014878436411591655"
+    },
+    {
+      "order_id": "57500062553",
+      "side": "SELL",
+      "fill_price_usd": "330.48",
+      "wallet_net_value_eur": "294.81",
+      "fx_rate": "1.1193226",
+      "conversion_fee_eur": "0.44",
+      "fee_fraction_of_wallet_value": "0.0014924866863403548"
+    }
+  ],
+  "round_trip": {
+    "total_conversion_fee_eur": "0.88",
+    "gross_wallet_notional_eur": "590.54",
+    "fee_fraction_of_gross_round_trip_notional": "0.0014901615470586243",
+    "fee_fraction_of_one_way_entry_notional": "0.002975687282318331"
+  },
+  "review": {
+    "status": "OBSERVED_PENDING_INDEPENDENT_REVIEW",
+    "independent": false,
+    "entry_authorized": false
+  }
+}

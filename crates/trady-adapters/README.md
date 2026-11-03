@@ -38,6 +38,9 @@ ingestion, approved-artifact native inference and Telegram delivery state.
 - `[src/alpaca.rs:AlpacaMarketData]`: read-only paper/live account identity,
   bounded IEX/SIP quotes, and daily bars. It exposes no order API; Trading 212
   remains the execution broker.
+- `[src/yfinance.rs:YfinanceMarketData]`: explicitly mapped, read-only
+  Euronext quote reads through `yfinance-rs`; both bid/ask and freshness are
+  required before an observation can enter the executable quote contract.
 - `[src/sessions.rs:MemorySessionRepository]`: scoped session fixtures with
   generation/revision fencing.
 - [X and news contract](./src/news/README.md): reviewed read-only sources, bounded
@@ -67,8 +70,9 @@ ingestion, approved-artifact native inference and Telegram delivery state.
 ## Invariants
 
 - `[src/api_health.rs:run]` reports no entry authorization or collection-setting
-  changes. `[src/api_health.rs:probe]` makes no transport call offline, leaves X
-  behind the existing cost gate and supports yfinance only as offline imports.
+  changes. `[src/api_health.rs:probe]` makes no transport call offline and leaves X
+  behind the existing cost gate. Runtime Yahoo quotes are a separate explicit
+  `yfinance-rs` adapter and do not authorize trading.
 - `[src/intelligence/book.rs:SequenceBookBuilder]` bounds instrument/venue
   tracks, displayed depth and history; recovery still yields partial depth.
   `[src/intelligence/tools.rs:IntelligenceTools::requires_ephemeral_session]`
@@ -120,6 +124,8 @@ resolves named credentials. `[src/news/x_meter.rs:MeteredHttp::get]` reserves an
 settles the durable X cost ledger. `[src/financial/mod.rs:FinancialClient::fetch]`
 invokes its credential, transport and receipt-clock ports; observations do not
 write broker or execution state.
+`[src/yfinance.rs:YfinanceMarketData]` performs a read-only Yahoo quote request
+for one configured mapping and never writes broker or execution state.
 
 `[src/credentials.rs:CredentialStore::load]` reads environment and configured files;
 `initialize` exclusively creates a private template file. FinBERT, universe and

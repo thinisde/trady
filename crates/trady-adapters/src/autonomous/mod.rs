@@ -9,6 +9,7 @@ use crate::{
     news::{HttpTransport, SafeHttp, http::validate_destination},
     perpetual::NativePerpetualAdvisor,
     screening::{ApprovedUniverseConfig, HttpUniverseSource},
+    yfinance::{YfinanceDataConfig, YfinanceMarketData},
 };
 use chrono::{DateTime, Duration, Utc};
 use reqwest::Url;
@@ -61,16 +62,27 @@ impl TradingInputsConfig {
     pub fn validate(&self, trading: &TradingConfig) -> Result<()> {
         let url =
             Url::parse(&self.base_url).map_err(|_| Error("invalid trading input URL".into()))?;
+        let local_loopback = matches!(url.host_str(), Some("127.0.0.1" | "[::1]" | "::1"))
+            && url.scheme() == "http"
+            && url.port_or_known_default() == Some(8787);
         require(
             self.config_version == 1
                 && self.screening.owner_id == trading.owner_id
                 && url.query().is_none()
                 && url.fragment().is_none()
-                && url.path().ends_with('/'),
+                && url.path().ends_with('/')
+                && (local_loopback || url.scheme() == "https"),
             "invalid trading input configuration",
         )?;
-        validate_destination(&url, &self.allowed_hosts)
-            .map_err(|_| Error("unapproved trading input destination".into()))?;
+        if !local_loopback {
+            validate_destination(&url, &self.allowed_hosts)
+                .map_err(|_| Error("unapproved trading input destination".into()))?;
+        } else {
+            require(
+                self.allowed_hosts.iter().any(|host| host == "127.0.0.1"),
+                "unapproved local trading input destination",
+            )?;
+        }
         self.screening.policy.validate()
     }
 }
@@ -178,6 +190,7 @@ pub struct AutomaticInputs<R, U = HttpUniverseSource, T = SafeHttp> {
     pub repository: R,
     service: market::InputService<T>,
     alpaca: Option<AlpacaMarketData>,
+    yfinance: Option<YfinanceMarketData>,
     clock: Box<dyn trady_application::Clock>,
 }
 impl<R: TradingResearchStore> AutomaticInputs<R> {
@@ -233,6 +246,7 @@ impl<R: TradingResearchStore, U: UniverseSource, T: HttpTransport> AutomaticInpu
             repository,
             service,
             alpaca: None,
+            yfinance: None,
             clock: Box::new(crate::SystemClock),
         })
     }
@@ -252,6 +266,14 @@ impl<R: TradingResearchStore, U: UniverseSource, T: HttpTransport> AutomaticInpu
                     .ok_or_else(|| Error("Alpaca IEX credentials are required".into()))?;
                 Some(AlpacaMarketData::new(config, key, secret)?)
             }
+            None => None,
+        };
+        Ok(self)
+    }
+    /// Use mapped Euronext Yahoo Finance quotes for analyst observations.
+    pub fn with_yfinance(mut self, config: Option<YfinanceDataConfig>) -> Result<Self> {
+        self.yfinance = match config.filter(|value| value.enabled) {
+            Some(config) => Some(YfinanceMarketData::new(config)?),
             None => None,
         };
         Ok(self)
@@ -321,6 +343,11 @@ impl<R: TradingResearchStore, U: UniverseSource, T: HttpTransport> TradingInputs
         self.service.session(account, self.clock.as_ref())
     }
     fn quote(&mut self, instrument: &InstrumentId) -> Result<Quote> {
+        if let Some(yfinance) = &self.yfinance
+            && yfinance.supports(instrument)
+        {
+            return yfinance.latest_quote(instrument, self.clock.now());
+        }
         if let Some(alpaca) = &self.alpaca {
             alpaca
                 .latest_quote(instrument, self.clock.now())

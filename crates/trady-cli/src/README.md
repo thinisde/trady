@@ -51,6 +51,10 @@ bounded JSON, exact-option and RFC3339 helpers shared by command modules.
 `[financial.rs:run]` exposes reviewed provider collection, rights-aware snapshots
 and status through the [financial-data contract](../../../docs/financial-data.md).
 
+`[yfinance.rs:run]` exposes the read-only `yfinance quote --config FILE
+--instrument ID` command. It validates the explicit Euronext mapping, fetches a
+Yahoo snapshot and always reports `entry_authorized=false`.
+
 `[inputs_service.rs:HELP]`, `run(args: &[String]) -> Result<Value>` expose local
 `inputs-service check/import/review/inspect/export-universe/deadline/prune` and
 explicit `serve`. `[model_lab.rs:HELP]`, `run` expose offline
@@ -364,6 +368,9 @@ and uses only a broker information reader. Cycle errors are recorded as
 returns success with `status="shadow_stopped"`. Automation must inspect the cycle
 result to distinguish a blocked shadow cycle. Shadow never submits/cancels orders
 or writes an executor journal; setup, persistence and output errors still propagate.
+Each cycle and recorded intent carries the verified authority-integrity binding
+alongside configuration, source-snapshot and quote-freshness hashes, so later
+shadow evidence cannot be detached from the registered formula or data snapshot.
 An immutable account/session slot is reserved before recording the proposal;
 failure after that reservation can consume the session's slot
 (`[autonomous_shadow.rs:run]`).

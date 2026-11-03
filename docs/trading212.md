@@ -108,11 +108,34 @@ paper reconciliation restrictions have not been extended to live accounts.
 
 ## Capabilities and remaining work
 
-All application capability flags remain `Unknown`. Public stop-order endpoints
-do not establish account-specific fractional support, precision, broker-native
-brackets/OCO, partial-fill protection, no-oversell coordination, quote freshness or
-tradability. Position `currentPrice` is not used as a bid/ask quote feed. New entry
-must remain blocked until those provider and application requirements are verified.
+The current demo observation is recorded in
+[`docs/evidence/trading212-demo-capability-2026-11-03.json`](./evidence/trading212-demo-capability-2026-11-03.json).
+The fee calculation is separately captured in
+[`docs/evidence/trading212-cost-policy-2026-11-03.json`](./evidence/trading212-cost-policy-2026-11-03.json),
+and the quote-compatibility check is captured in
+[`docs/evidence/trading212-quote-compatibility-2026-11-03.json`](./evidence/trading212-quote-compatibility-2026-11-03.json).
+It binds the observed account to a real EUR stock row and records the following
+resolution:
+
+- The cash account and exact stock metadata are verified. A one-share
+  `AAPL_US_EQ`/`US0378331005` market order was accepted and filled on the
+  EUR-primary account; Trading 212 reported the conversion in EUR.
+- A one-share market round trip filled successfully. A quantity `0.01` probe
+  was rejected with `min-quantity-exceeded`, so fractional support is not
+  claimed for this profile.
+- A native sell `STOP_LIMIT` was accepted and cancelled successfully. Trading
+  212 exposes no atomic bracket/OCO or attached-protection request, so the
+  application-level `protective_orders` capability remains explicitly
+  `UNSUPPORTED` even though standalone native stops work.
+- The official v0 OpenAPI has no quote/bid/ask endpoint. Position valuation and
+  fill prices cannot serve as executable quotes, so `quotes` is explicitly
+  `UNSUPPORTED` until a separately approved, venue-compatible feed is wired.
+
+The EUR-primary account can therefore trade at least this USD-listed instrument
+through broker FX conversion. The runtime still needs explicit FX-cost policy,
+venue-compatible quotes, and the two unsupported protection/quote capabilities.
+The evidence artifact is a provider observation only and still needs an
+independent reviewed capability import before any entry authority can be granted.
 
 Next work includes the durable live intent/acknowledgment/unknown state machine,
 broker ID and fill history persistence, restart/takeover recovery, native protection
@@ -132,7 +155,7 @@ cancellation acknowledgments and lost responses, malicious continuations and CLI
 credential/endpoint boundaries. Cancellation racing with a fill remains future work.
 Those fixtures do not complete the live execution acceptance cases.
 
-Current behavior was checked on 2026-10-31 using Context7 and the official
+Current behavior was checked on 2026-11-03 using Context7 and the official
 [Trading 212 API reference](https://docs.trading212.com/), including its downloadable
 [v0 OpenAPI](https://docs.trading212.com/_bundle/api.json?download),
 [orders](https://docs.trading212.com/api/orders),
