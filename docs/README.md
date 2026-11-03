@@ -56,3 +56,9 @@ separately. Internal links reference existing files. No live deployment is claim
 
 Run the workspace checks documented in the root README. No document claims a
 live deployment or authorizes broker mutations by itself.
+
+## Requested EUR day-trading migration
+
+- [Complete codebase audit](./trady-codebase-audit.md)
+- [EUR day-trading implementation plan](./trady-bot-implementation-plan.md)
+- [Per-file decision matrix](./trady-codebase-file-matrix.md)
