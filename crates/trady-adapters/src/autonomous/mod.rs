@@ -5,6 +5,7 @@ mod market;
 pub use market::MarketInputs;
 
 use crate::{
+    alpaca::{AlpacaDataConfig, AlpacaMarketData},
     news::{HttpTransport, SafeHttp, http::validate_destination},
     perpetual::NativePerpetualAdvisor,
     screening::{ApprovedUniverseConfig, HttpUniverseSource},
@@ -176,6 +177,7 @@ pub struct AutomaticInputs<R, U = HttpUniverseSource, T = SafeHttp> {
     advisor: NativePerpetualAdvisor,
     pub repository: R,
     service: market::InputService<T>,
+    alpaca: Option<AlpacaMarketData>,
     clock: Box<dyn trady_application::Clock>,
 }
 impl<R: TradingResearchStore> AutomaticInputs<R> {
@@ -230,12 +232,29 @@ impl<R: TradingResearchStore, U: UniverseSource, T: HttpTransport> AutomaticInpu
             advisor,
             repository,
             service,
+            alpaca: None,
             clock: Box::new(crate::SystemClock),
         })
     }
     pub fn with_clock(mut self, clock: impl trady_application::Clock + 'static) -> Self {
         self.clock = Box::new(clock);
         self
+    }
+    /// Use the fixed Alpaca IEX30 quote plane for analyst observations.
+    pub fn with_alpaca(
+        mut self,
+        config: Option<AlpacaDataConfig>,
+        credentials: Option<(String, String)>,
+    ) -> Result<Self> {
+        self.alpaca = match config.filter(|value| value.enabled) {
+            Some(config) => {
+                let (key, secret) = credentials
+                    .ok_or_else(|| Error("Alpaca IEX credentials are required".into()))?;
+                Some(AlpacaMarketData::new(config, key, secret)?)
+            }
+            None => None,
+        };
+        Ok(self)
     }
     fn get<D: DeserializeOwned>(&mut self, path: &[&str]) -> Result<D> {
         self.request(path, None)
@@ -302,7 +321,13 @@ impl<R: TradingResearchStore, U: UniverseSource, T: HttpTransport> TradingInputs
         self.service.session(account, self.clock.as_ref())
     }
     fn quote(&mut self, instrument: &InstrumentId) -> Result<Quote> {
-        self.service.quote(instrument, self.clock.as_ref())
+        if let Some(alpaca) = &self.alpaca {
+            alpaca
+                .latest_quote(instrument, self.clock.now())
+                .map(|q| q.quote)
+        } else {
+            self.service.quote(instrument, self.clock.as_ref())
+        }
     }
     fn current_exit_costs(
         &mut self,
@@ -352,6 +377,15 @@ impl<R: TradingResearchStore, U: UniverseSource, T: HttpTransport> TradingInputs
         let Some(finalist) = result.candidates.first() else {
             return Ok(None);
         };
+        if self.alpaca.is_some() {
+            trady_domain::iex::symbol(&finalist.instrument_id)?;
+            require(
+                screen.universe.as_ref().is_some_and(|snapshot| {
+                    snapshot.index_id == trady_domain::screening::IEX30_INDEX_ID
+                }),
+                "Alpaca IEX candidate is outside the IEX30 scope",
+            )?;
+        }
         let Some(draft) = packet
             .proposals
             .into_iter()

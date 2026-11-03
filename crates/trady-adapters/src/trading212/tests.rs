@@ -615,6 +615,22 @@ fn metadata_rows_with_unrepresentable_tickers_are_counted_and_skipped() {
 }
 
 #[test]
+fn euro_stock_catalog_filters_metadata_without_promoting_capability() {
+    let server = Server::new(vec![
+        summary(),
+        ok(json!([
+            {"ticker":"SAP_DE_EQ","currencyCode":"EUR","isin":"DE0007164600","type":"STOCK"},
+            {"ticker":"AAPL_US_EQ","currencyCode":"USD","isin":"US0378331005","type":"STOCK"},
+            {"ticker":"EURO_ETF","currencyCode":"EUR","isin":"IE00B4L5Y983","type":"ETF"}
+        ])),
+    ]);
+    let stocks = server.reader().euro_stocks().unwrap();
+    assert_eq!(stocks.len(), 1);
+    assert_eq!(stocks[0].instrument_id.as_str(), "SAP_DE_EQ");
+    assert_eq!(server.requests().len(), 2);
+}
+
+#[test]
 fn cancellation_receipt_is_not_terminal_state_and_pending_404_is_only_absence() {
     let server = Server::new(vec![
         summary(),

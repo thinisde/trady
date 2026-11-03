@@ -30,11 +30,22 @@ pub fn div(a: Decimal, b: Decimal) -> Result<Decimal> {
         .ok_or_else(|| Error("decimal division overflow or zero denominator".into()))
 }
 
+fn default_order_cash_fraction() -> Decimal {
+    Decimal::new(98, 2)
+}
+
+fn default_daily_order_limit() -> u8 {
+    1
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Policy {
     pub version: u32,
     pub entry_cash_fraction: Decimal,
+    /// Per-order cash ceiling, applied before costs and quantity rounding.
+    #[serde(default = "default_order_cash_fraction")]
+    pub max_order_cash_fraction: Decimal,
     pub confidence_entry_min: u8,
     pub max_target_fraction: Decimal,
     pub exceptional_targets_enabled: bool,
@@ -44,12 +55,19 @@ pub struct Policy {
     pub leverage: bool,
     pub add_to_position: bool,
     pub rotation_enabled: bool,
+    /// Entry and exit limits are separate. Protective sells do not consume
+    /// the daily exit allowance.
+    #[serde(default = "default_daily_order_limit")]
+    pub max_daily_buy_orders: u8,
+    #[serde(default = "default_daily_order_limit")]
+    pub max_daily_sell_orders: u8,
 }
 impl Default for Policy {
     fn default() -> Self {
         Self {
             version: 1,
             entry_cash_fraction: Decimal::new(98, 2),
+            max_order_cash_fraction: default_order_cash_fraction(),
             confidence_entry_min: 90,
             max_target_fraction: Decimal::new(10, 2),
             exceptional_targets_enabled: false,
@@ -59,6 +77,8 @@ impl Default for Policy {
             leverage: false,
             add_to_position: false,
             rotation_enabled: false,
+            max_daily_buy_orders: default_daily_order_limit(),
+            max_daily_sell_orders: default_daily_order_limit(),
         }
     }
 }
@@ -69,6 +89,11 @@ impl Policy {
             self.entry_cash_fraction > Decimal::ZERO
                 && self.entry_cash_fraction <= Decimal::new(98, 2),
             "entry allocation exceeds 98% or is nonpositive",
+        )?;
+        require(
+            self.max_order_cash_fraction > Decimal::ZERO
+                && self.max_order_cash_fraction <= self.entry_cash_fraction,
+            "per-order cash allocation exceeds entry allocation or is nonpositive",
         )?;
         require(
             (90..=100).contains(&self.confidence_entry_min),
@@ -91,6 +116,10 @@ impl Policy {
         require(
             (1..=5).contains(&self.max_holding_sessions),
             "holding limit must be one through five sessions",
+        )?;
+        require(
+            self.max_daily_buy_orders <= 1 && self.max_daily_sell_orders <= 1,
+            "daily buy and sell limits exceed one order",
         )?;
         require(
             !self.leverage && !self.add_to_position && !self.rotation_enabled,
@@ -424,10 +453,10 @@ pub fn size_entry(
         limit_price >= range.minimum && limit_price <= range.maximum,
         "no valid entry tick inside range",
     )?;
-    let budget = floor_to(
-        mul(cash.amount, policy.entry_cash_fraction)?,
-        rules.currency_unit,
-    )?;
+    let budget_fraction = policy
+        .entry_cash_fraction
+        .min(policy.max_order_cash_fraction);
+    let budget = floor_to(mul(cash.amount, budget_fraction)?, rules.currency_unit)?;
     let fixed = add(costs.fixed.amount, costs.uncertainty.amount)?;
     require(budget > fixed, "cash cannot cover costs")?;
     let unit_cost = mul(mul(limit_price, fx)?, add(Decimal::ONE, costs.rate)?)?;
@@ -612,6 +641,10 @@ mod tests {
         for p in [
             Policy {
                 entry_cash_fraction: d("0.99"),
+                ..Policy::default()
+            },
+            Policy {
+                max_order_cash_fraction: d("0.99"),
                 ..Policy::default()
             },
             Policy {

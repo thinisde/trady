@@ -15,7 +15,9 @@ use std::{
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
+use trady_adapters::alpaca::IexQuoteCache;
 use trady_adapters::autonomous::{AutomaticInputs, MarketInputs};
+use trady_adapters::credentials::CredentialStore;
 use trady_application::perpetual::PerpetualRepository;
 use trady_application::{autonomous::*, contracts::parse_json_bounded};
 use trady_domain::*;
@@ -24,6 +26,24 @@ use trady_storage::trading_research::PgTradingResearch;
 
 const MAX_MESSAGE_BYTES: usize = 4 * 1024 * 1024;
 const ANALYSIS_TIMEOUT: Duration = Duration::from_secs(30);
+
+fn alpaca_credentials(
+    config: &Option<trady_adapters::alpaca::AlpacaDataConfig>,
+) -> Result<Option<(String, String)>> {
+    if !config.as_ref().is_some_and(|config| config.enabled) {
+        return Ok(None);
+    }
+    let store = CredentialStore::load()?;
+    let key = store
+        .optional("TRADY_ALPACA_API_KEY")?
+        .ok_or_else(|| Error("TRADY_ALPACA_API_KEY is required for enabled IEX data".into()))?
+        .into_inner();
+    let secret = store
+        .optional("TRADY_ALPACA_SECRET_KEY")?
+        .ok_or_else(|| Error("TRADY_ALPACA_SECRET_KEY is required for enabled IEX data".into()))?
+        .into_inner();
+    Ok(Some((key, secret)))
+}
 
 // Secrets travel only in the anonymous stdin pipe; never argv, environment or diagnostics.
 #[derive(Serialize, Deserialize)]
@@ -201,6 +221,8 @@ pub(super) fn serve() -> Result<()> {
         boot.config.trading.owner_id.clone(),
         boot.config.trading.account_id.clone(),
     )?)?;
+    let analyst_alpaca_config = boot.config.alpaca_market_data.clone();
+    let analyst_alpaca_credentials = alpaca_credentials(&analyst_alpaca_config)?;
     let mut inputs = AutomaticInputs::new(
         boot.config.inputs,
         boot.config.trading.clone(),
@@ -208,7 +230,8 @@ pub(super) fn serve() -> Result<()> {
         advisor,
         repository,
         boot.token,
-    )?;
+    )?
+    .with_alpaca(analyst_alpaca_config, analyst_alpaca_credentials)?;
     let (jobs, requests) = mpsc::sync_channel(1);
     thread::Builder::new()
         .name("analyst-requests".into())
@@ -408,7 +431,11 @@ impl IsolatedInputs {
             .to_str()
             .ok_or_else(|| Error("invalid runtime path".into()))?
             .to_owned();
-        let market = MarketInputs::new(config.inputs.clone(), &config.trading, token.clone())?;
+        let market = MarketInputs::new(config.inputs.clone(), &config.trading, token.clone())?
+            .with_alpaca(
+                config.alpaca_market_data.clone(),
+                alpaca_credentials(&config.alpaca_market_data)?,
+            )?;
         Ok(Self {
             market,
             boot: Boot {
@@ -435,6 +462,10 @@ impl IsolatedInputs {
         let mut inputs = Self::new(config, path, String::new(), token, stopped)?;
         inputs.external_socket = Some(socket);
         Ok(inputs)
+    }
+
+    pub(super) fn with_iex_stream_cache(&mut self, cache: IexQuoteCache) {
+        self.market.set_iex_stream_cache(cache);
     }
 }
 impl TradingInputs for IsolatedInputs {

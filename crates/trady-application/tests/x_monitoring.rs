@@ -11,7 +11,7 @@ fn now() -> DateTime<Utc> {
 }
 
 #[test]
-fn separate_pilot_is_disabled_and_does_not_replace_owner_registry() {
+fn focused_iex30_registry_is_disabled_and_budgeted() {
     let pilot: ResearchConfig =
         serde_json::from_slice(include_bytes!("../../../config/x-pilot.example.json")).unwrap();
     pilot.validate().unwrap();
@@ -37,13 +37,19 @@ fn separate_pilot_is_disabled_and_does_not_replace_owner_registry() {
         && !s.x_rule.as_ref().unwrap().exclude_reposts));
     let current: ResearchConfig =
         serde_json::from_slice(include_bytes!("../../../config/research.json")).unwrap();
-    // Absent new fields must preserve legacy source fingerprints and pending cursors on upgrade.
-    assert!(!serde_json::to_string(&current).unwrap().contains("x_rule"));
-    assert!(
-        !serde_json::to_string(&current)
-            .unwrap()
-            .contains("x_budget")
+    current.validate().unwrap();
+    assert_eq!(
+        current.x_budget.as_ref().unwrap().ceiling_microusd,
+        1_900_000
     );
+    assert!(current.x_budget.as_ref().unwrap().enabled);
+    assert!(current.sources.iter().all(|s| {
+        s.kind == SourceKind::XTimeline
+            && !s.enabled
+            && !s.rights.store_content
+            && !s.rights.llm_processing
+            && s.x_account.as_ref().is_some_and(|a| a.user_id.is_none())
+    }));
     assert_eq!(
         current
             .sources
@@ -52,11 +58,13 @@ fn separate_pilot_is_disabled_and_does_not_replace_owner_registry() {
             .map(|a| a.handle.as_str())
             .collect::<Vec<_>>(),
         vec![
-            "realDonaldTrump",
-            "elonmusk",
-            "TheRoaringKitty",
-            "BillAckman",
-            "Carl_C_Icahn"
+            "nvidia",
+            "AMD",
+            "Meta",
+            "Tesla",
+            "Reuters",
+            "DeItaone",
+            "KobeissiLetter"
         ]
     );
 }

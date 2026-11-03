@@ -193,7 +193,7 @@ These are future tests that check externally meaningful behavior. Pure policy/st
 | Automatically sell at an active threshold | [Trading policy](./strategy.md) | ORD-02, ORD-06, PLN-02, PLN-03 |
 | Aim for 1%, sometimes 2–3%, exceptional ceiling 10% | [Trading policy](./strategy.md) | POL-01, POL-02, POL-05; report target versus achieved gain |
 | Dynamic deposits and 98% eligible-entry allocation | [Trading policy](./strategy.md) | CAP-01 through CAP-05, REP-01 |
-| Detailed v1 docs and retained original input | [v1 index](./README.md), [original](./v1.1.md) | Reading map, relative-link checks and superseded-rule table |
+| Shared v1 contracts | [v1 index](./README.md) | Reading map and compatibility references |
 | Sector → subsector → S&P 500 stock with separate researched guides | [Funnel](./sector-workflow.md), [sectors](../../skills/sectors/README.md), [subsectors](../../skills/subsectors/README.md) | UNI-01 through UNI-05; catalog contains every 11/25 code |
 | CEO/company deep dive, profiles, praise/criticism and cross-stock links | [Company intelligence](./company-intelligence.md) | CO-01 through CO-04; provenance and revision checks |
 | Owner's five influential X people, their replies/reposts and scoped priority | [X listeners](./watchdogs-and-x.md) | X-01 through X-05; active account identity/capability checks |

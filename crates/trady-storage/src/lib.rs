@@ -33,6 +33,11 @@ pub const OPTIONAL_INTELLIGENCE_SQL: &str =
     include_str!("../../../migrations/0010_optional_intelligence.sql");
 pub const FAIL_CLOSED_STORAGE_SQL: &str =
     include_str!("../../../migrations/0011_fail_closed_storage.sql");
+pub const FIRST_ORDER_DISPATCH_SQL: &str =
+    include_str!("../../../migrations/0012_first_order_dispatch.sql");
+pub const DAILY_ORDER_LIMITS_SQL: &str =
+    include_str!("../../../migrations/0013_daily_order_limits.sql");
+pub const IEX_WATCHDOG_SQL: &str = include_str!("../../../migrations/0014_iex_watchdog.sql");
 
 fn db(error: postgres::Error) -> Error {
     // Deliberately exclude connection strings and provider error detail from service output.
@@ -70,6 +75,9 @@ pub fn migrate(dsn: &str) -> Result<()> {
         (9, FINANCIAL_DATA_SQL),
         (10, OPTIONAL_INTELLIGENCE_SQL),
         (11, FAIL_CLOSED_STORAGE_SQL),
+        (12, FIRST_ORDER_DISPATCH_SQL),
+        (13, DAILY_ORDER_LIMITS_SQL),
+        (14, IEX_WATCHDOG_SQL),
     ] {
         if let Some(row) = tx
             .query_opt(

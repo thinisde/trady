@@ -12,7 +12,7 @@ fn run(args: &[&str]) -> Output {
 }
 
 #[test]
-fn news_status_exposes_disabled_five_account_seeds_without_provider_access() {
+fn news_status_exposes_disabled_iex30_account_seeds_without_provider_access() {
     let output = run(&["news", "status"]);
     assert!(
         output.status.success(),
@@ -23,27 +23,39 @@ fn news_status_exposes_disabled_five_account_seeds_without_provider_access() {
     assert_eq!(value["entry_authorized"], false);
     assert_eq!(value["provider_access_verified"], false);
     let sources = value["sources"].as_array().unwrap();
-    assert_eq!(sources.len(), 12);
+    assert_eq!(sources.len(), 7);
     let accounts: Vec<_> = sources
         .iter()
         .filter(|s| s["kind"] == "X_TIMELINE")
         .collect();
-    assert_eq!(accounts.len(), 5);
+    assert_eq!(accounts.len(), 7);
     assert!(
         accounts
             .iter()
             .all(|s| s["enabled"] == false && s["account"]["user_id"].is_null())
     );
-    let output = run(&["news", "status", "--source", "x_gill"]);
+    let output = run(&["news", "status", "--source", "x_iex_nvidia"]);
     let value: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(value["sources"].as_array().unwrap().len(), 1);
-    assert_eq!(value["sources"][0]["account"]["handle"], "TheRoaringKitty");
+    assert_eq!(value["sources"][0]["account"]["handle"], "nvidia");
 }
 
 #[test]
 fn offline_feed_reading_uses_the_same_provenance_and_rights_rules() {
     let path = format!("{}/tests/fixtures/news.rss", env!("CARGO_MANIFEST_DIR"));
-    let output = run(&["news", "parse-feed", &path, "--source", "google_market"]);
+    let config = format!(
+        "{}/tests/fixtures/research.redacted.json",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let output = run(&[
+        "news",
+        "parse-feed",
+        &path,
+        "--source",
+        "google_market",
+        "--config",
+        &config,
+    ]);
     assert!(
         output.status.success(),
         "{}",

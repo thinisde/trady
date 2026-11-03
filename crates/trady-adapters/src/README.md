@@ -84,6 +84,9 @@ inputs, native advisory inference and Telegram delivery state.
 - `[trading212/mod.rs:Trading212Reader]`, `Trading212Executor` and reexported
   `AutonomousTrading212`: typed broker information, guarded execution and paced
   execution observations; see the [provider contract](./trading212/README.md).
+- `[alpaca.rs:AlpacaMarketData]`: read-only Alpaca Basic client restricted to
+  the exact IEX30 symbol set. It supplies IEX quotes and bounded daily bars;
+  Trading 212 remains the execution broker.
 - `[lib.rs:MemoryExecutionRepository]`: account registration, leases, reconciliation,
   paper reservations and outbox-count inspection. Public methods are `new`,
   `register_paper_account` and `outbox_count`; `ExecutionRepository` supplies

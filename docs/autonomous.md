@@ -1,6 +1,7 @@
 # Autonomous execution implementation
 
-The runtime connects automatic S&P 500 screening, approved mathematical limits,
+The focused runtime connects automatic approved-market screening for the fixed
+IEX30 universe, approved mathematical limits,
 calibrated prediction fusion, native Perpetual advice, durable order submission,
 native stops and position exits. The executable entry point is
 [autonomous.rs](../crates/trady-cli/src/autonomous.rs); the original
@@ -20,7 +21,9 @@ Holdings use separate market reads and retain protection without candidate infer
 ## Commands and configuration
 
 ```sh
-cargo run --locked --bin trady -- autonomous check --config config/autonomous.example.json
+cargo run --locked --bin trady -- autonomous check --config config/autonomous.iex30.demo.json
+cargo run --locked --bin trady -- alpaca stream-plan --config config/alpaca-iex30.paper.example.json
+cargo run --locked --bin trady -- watchdog schedule --config config/watchdog.iex30.json
 cargo run --locked --bin trady -- autonomous run --config /path/to/reviewed-config.json --once
 cargo run --locked --bin trady -- autonomous run --config /path/to/reviewed-config.json
 cargo run --locked --bin trady -- autonomous analyst-service --config /path/to/analyst.json
@@ -29,12 +32,13 @@ cargo run --locked --bin trady -- autonomous review-holding --config /path/to/an
 cargo run --locked --bin trady -- autonomous recover-order --config /path/to/reviewed-config.json --intent INTENT --broker-order BROKER_ID
 ```
 
-[autonomous.example.json](../config/autonomous.example.json) is deliberately
+[autonomous.iex30.demo.json](../config/autonomous.iex30.demo.json) is deliberately
 disabled. It contains unknown capabilities, no approved skill hashes, no formula
-authority, no model artifacts and placeholder provider destinations. `check` reads
-configuration and configured model files without credentials or network requests;
-it reports configuration blockers and always reports `entry_authorized: false`.
-It does not test provider availability, broker permissions or live acceptance.
+authority, no model artifacts and a placeholder input-service destination. `check`
+reads configuration and configured model files without credentials or network
+requests; it reports configuration blockers and always reports
+`entry_authorized: false`. It does not test provider availability, broker
+permissions or live acceptance.
 
 `run` requires explicit `enabled: true`. `--once` executes one reconciliation and
 decision cycle, which may submit an order under an enabled approved configuration.
@@ -94,7 +98,6 @@ with immutable observation and proposal records. Identical reruns reuse the
 same local intent and digest. Additional runtime or broker options are rejected.
 This exercise verifies calculation and submission suppression. Real-data shadow
 execution continues to require its reviewed artifacts and service configuration.
-See the [recorded simulation and deployment search](./simulated-entry-2026-11-01.md).
 
 ## Deployment dependencies
 
@@ -119,10 +122,10 @@ model, approve data rights, manufacture evaluation reports or certify live relea
 - Supply the reviewed HTTPS analyst/market/prediction service described below.
   `TRADY_TRADING_INPUTS_TOKEN` supplies its optional bearer token. Credentials stay
   outside JSON deployment configuration.
-- Approve a current constituent/classification exporter implementing
-  [UniverseDocument](../crates/trady-adapters/src/screening/README.md). Configure
-  actual provider identity, effective taxonomy and retention rights. There is no
-  hardcoded membership fallback. An empty owner instrument allowlist selects nothing.
+- Approve the Alpaca IEX30 constituent snapshot and its retention rights. The
+  focused source rejects every instrument outside the exact 30-symbol USD list;
+  there is no hardcoded fallback for a different market scope. An empty owner
+  instrument allowlist selects nothing.
 - Load exact approved runtime skill hashes, verified account/instrument/protection
   capabilities and a deployment-owned
   [FormulaAuthority](../crates/trady-application/src/optimization/mod.rs). Its
@@ -246,9 +249,8 @@ research/context copies in queued holding updates; only hash identities survive.
 
 ## Verification
 
-The [completion record](./reports/2026-10-31_IMPLEMENTATION.md) records the latest
-checks and activation dependencies. Tests use local fixtures, loopback HTTP and
-a disposable PostgreSQL container. No real broker is contacted by verification.
+Tests use local fixtures, loopback HTTP and a disposable PostgreSQL container. No
+real broker is contacted by verification.
 
 ```sh
 cargo fmt --all -- --check
@@ -266,5 +268,4 @@ These checks do not contact a broker, train/approve a financial model or run a l
 acceptance exercise. Provider latency, outage recovery and real account permissions
 must be demonstrated in the deployment's demo/shadow release evidence.
 
-Remaining contract differences are tracked in the
-[README drift report](./reports/2026-10-31_DRIFT_REPORT.md).
+Focused runtime gaps are tracked in the [IEX30 audit](./iex30-audit.md).

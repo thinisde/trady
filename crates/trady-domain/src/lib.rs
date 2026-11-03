@@ -1,6 +1,7 @@
 //! Provider-neutral, validated identifiers and execution observations.
 
 pub mod financial;
+pub mod iex;
 pub mod intelligence;
 pub mod perpetual;
 pub mod prediction;
@@ -118,6 +119,36 @@ pub enum Mode {
     Paper,
     Shadow,
     Live,
+}
+
+/// Execution lifecycle is separate from the account/environment mode.
+/// Trading 212 demo remains `Mode::Paper`; this value controls whether the
+/// deployment may only record, submit one approved test order, or run its
+/// unattended demo loop.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ExecutionStage {
+    #[default]
+    Shadow,
+    SupervisedDemo,
+    AutonomousDemo,
+    Paused,
+    ManagementOnly,
+    Live,
+}
+
+impl ExecutionStage {
+    pub fn permits_broker_mutation(self) -> bool {
+        matches!(self, Self::SupervisedDemo | Self::AutonomousDemo)
+    }
+
+    pub fn permits_unattended_entry(self) -> bool {
+        matches!(self, Self::AutonomousDemo)
+    }
+
+    pub fn management_only(self) -> bool {
+        matches!(self, Self::Paused | Self::ManagementOnly)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -379,6 +410,22 @@ mod tests {
                 valid_until: Some(now)
             }
             .usable(now)
+        );
+    }
+
+    #[test]
+    fn execution_stage_is_separate_from_paper_environment() {
+        let stage = ExecutionStage::AutonomousDemo;
+        assert!(stage.permits_broker_mutation());
+        assert!(stage.permits_unattended_entry());
+        assert!(!stage.management_only());
+        assert_eq!(
+            serde_json::to_string(&stage).unwrap(),
+            "\"AUTONOMOUS_DEMO\""
+        );
+        assert_eq!(
+            serde_json::from_str::<ExecutionStage>("\"MANAGEMENT_ONLY\"").unwrap(),
+            ExecutionStage::ManagementOnly
         );
     }
 }

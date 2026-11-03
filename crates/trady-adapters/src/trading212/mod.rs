@@ -147,6 +147,20 @@ pub struct InstrumentCatalog {
     pub rejected_count: usize,
 }
 
+impl InstrumentCatalog {
+    /// Return typed stock rows traded in the requested quote currency. The
+    /// broker catalog is only metadata; callers still need independently
+    /// reviewed share-class, venue, quote and capability evidence before an
+    /// instrument can become tradable.
+    pub fn stocks_in_currency(&self, currency: &Currency) -> Vec<BrokerInstrument> {
+        self.instruments
+            .iter()
+            .filter(|instrument| instrument.kind == "STOCK" && &instrument.currency == currency)
+            .cloned()
+            .collect()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BrokerTax {
@@ -380,6 +394,11 @@ impl<C: Clock> Trading212Reader<C> {
         Ok(self.instruments_with_rejections()?.instruments)
     }
 
+    pub fn euro_stocks(&mut self) -> BrokerResult<Vec<BrokerInstrument>> {
+        let catalog = self.instruments_with_rejections()?;
+        Ok(catalog.stocks_in_currency(&Currency::new("EUR").map_err(|_| invalid())?))
+    }
+
     pub fn historical_orders(&mut self, query: &HistoryQuery) -> BrokerResult<HistoryPage> {
         if !(1..=50).contains(&query.limit) || query.cursor.is_some_and(|v| v < 0) {
             return Err(BrokerFailure::new(BrokerFailureKind::InvalidRequest));
@@ -565,6 +584,9 @@ impl<C: Clock> Trading212Executor<C> {
         expires_at: Option<chrono::DateTime<chrono::Utc>>,
     ) -> BrokerResult<BrokerOrder> {
         request.validate()?;
+        if trady_domain::iex::symbol(&request.instrument_id).is_err() {
+            return Err(BrokerFailure::new(BrokerFailureKind::Unsupported));
+        }
         self.reader.check_account(&request.account_id)?;
         let body = dto::order_body(request)?;
         let instruments = self.reader.instruments()?;

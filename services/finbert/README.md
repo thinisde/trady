@@ -4,11 +4,9 @@
 
 An optional CPU inference sidecar for Trady's permitted English research text.
 The [v1 sentiment design](../../docs/v1/finbert/README.md) defines source permissions,
-freshness, the HTTP contract, threshold effects and later activation. The
-[31 October local diagnostic](../../docs/live-demo-run-2026-10-31.md#information-gathering-and-finbert-results)
-records an explicit image build, a running instance and actual inference. Shipped
-client configuration remains disabled; that diagnostic does not approve source
-evidence for trading.
+freshness, the HTTP contract, threshold effects and later activation. Shipped
+client configuration remains disabled and this optional service is outside the
+focused IEX30 runtime.
 
 ## Interface
 

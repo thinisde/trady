@@ -1,165 +1,282 @@
 {
   "config_version": 1,
-  "max_pages": 3,
-  "page_size": 100,
-  "lookback_seconds": 86400,
+  "max_pages": 1,
+  "page_size": 5,
+  "lookback_seconds": 259200,
   "overlap_seconds": 120,
+  "x_budget": {
+    "enabled": true,
+    "billing_scope": "iex30_x_balance",
+    "version": 1,
+    "cycle_start": "2026-11-02T00:00:00Z",
+    "cycle_end": "2026-12-02T00:00:00Z",
+    "ceiling_microusd": 1900000,
+    "ordinary_microusd": 1750000,
+    "support_microusd": 150000,
+    "post_read_microusd": 5000,
+    "user_read_microusd": 10000,
+    "recent_counts_microusd": 5000,
+    "burst_margin_percent": 100,
+    "approval_reference": "owner_instruction_2026-11-02",
+    "entitlement_reference": "owner_stated_remaining_balance_1_90_usd",
+    "provider_limit_reference": "x_developer_pricing_2026-11-02"
+  },
   "sources": [
     {
-      "id": "finnhub_company_news",
-      "kind": "FINNHUB",
-      "enabled": false,
-      "url": "https://api.finnhub.io/api/v1/company-news",
-      "allowed_hosts": ["api.finnhub.io"],
-      "credential_env": "TRADY_FINNHUB_API_KEY",
-      "interval_seconds": 3600,
-      "daily_request_limit": 100,
-      "query": "AAPL",
-      "x_account": null,
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
-    },
-    {
-      "id": "gdelt_company_news",
-      "kind": "GDELT",
-      "enabled": false,
-      "url": "https://api.gdeltproject.org/api/v2/doc/doc",
-      "allowed_hosts": ["api.gdeltproject.org"],
-      "credential_env": null,
-      "interval_seconds": 3600,
-      "daily_request_limit": 100,
-      "query": "\"Apple Inc\"",
-      "x_account": null,
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
-    },
-    {
-      "id": "google_market",
-      "kind": "GOOGLE_NEWS_RSS",
-      "enabled": false,
-      "url": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
-      "allowed_hosts": ["news.google.com"],
-      "credential_env": null,
-      "interval_seconds": 900,
-      "daily_request_limit": 400,
-      "query": null,
-      "x_account": null,
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 168, "terms_reference": ""}
-    },
-    {
-      "id": "google_technology",
-      "kind": "GOOGLE_NEWS_RSS",
-      "enabled": false,
-      "url": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
-      "allowed_hosts": ["news.google.com"],
-      "credential_env": null,
-      "interval_seconds": 900,
-      "daily_request_limit": 400,
-      "query": "technology earnings",
-      "x_account": null,
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 168, "terms_reference": ""}
-    },
-    {
-      "id": "publisher_business",
-      "kind": "PUBLISHER_RSS",
-      "enabled": false,
-      "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
-      "allowed_hosts": ["feeds.bbci.co.uk"],
-      "credential_env": null,
-      "interval_seconds": 900,
-      "daily_request_limit": 400,
-      "query": null,
-      "x_account": null,
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 168, "terms_reference": ""}
-    },
-    {
-      "id": "alpha_vantage",
-      "kind": "ALPHA_VANTAGE",
-      "enabled": false,
-      "url": "https://www.alphavantage.co/query",
-      "allowed_hosts": ["www.alphavantage.co"],
-      "credential_env": "TRADY_ALPHA_VANTAGE_API_KEY",
-      "interval_seconds": 900,
-      "daily_request_limit": 25,
-      "query": null,
-      "x_account": null,
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
-    },
-    {
-      "id": "x_lookup",
-      "kind": "X_LOOKUP",
-      "enabled": false,
-      "url": "https://api.x.com/2/",
-      "allowed_hosts": ["api.x.com"],
-      "credential_env": "TRADY_X_BEARER_TOKEN",
-      "interval_seconds": 60,
-      "daily_request_limit": 100,
-      "query": null,
-      "x_account": null,
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
-    },
-    {
-      "id": "x_trump",
+      "id": "x_iex_nvidia",
       "kind": "X_TIMELINE",
       "enabled": false,
       "url": "https://api.x.com/2/",
-      "allowed_hosts": ["api.x.com"],
+      "allowed_hosts": [
+        "api.x.com"
+      ],
       "credential_env": "TRADY_X_BEARER_TOKEN",
-      "interval_seconds": 60,
-      "daily_request_limit": 100,
+      "interval_seconds": 259200,
+      "daily_request_limit": 2,
       "query": null,
-      "x_account": {"person": "Donald Trump", "handle": "realDonaldTrump", "user_id": null, "verified_at": null, "ownership_reference": "", "priority": 0, "scope": ["trade_policy", "tariffs", "sanctions", "macro"]},
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+      "x_account": {
+        "person": "NVIDIA",
+        "handle": "nvidia",
+        "user_id": null,
+        "verified_at": null,
+        "ownership_reference": "",
+        "priority": 1,
+        "scope": [
+          "NVDA",
+          "MU",
+          "AMD",
+          "SNDK",
+          "AVGO",
+          "TSM",
+          "LRCX",
+          "STX",
+          "WDC",
+          "LITE",
+          "INTC"
+        ]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": ""
+      }
     },
     {
-      "id": "x_musk",
+      "id": "x_iex_amd",
       "kind": "X_TIMELINE",
       "enabled": false,
       "url": "https://api.x.com/2/",
-      "allowed_hosts": ["api.x.com"],
+      "allowed_hosts": [
+        "api.x.com"
+      ],
       "credential_env": "TRADY_X_BEARER_TOKEN",
-      "interval_seconds": 60,
-      "daily_request_limit": 100,
+      "interval_seconds": 259200,
+      "daily_request_limit": 2,
       "query": null,
-      "x_account": {"person": "Elon Musk", "handle": "elonmusk", "user_id": null, "verified_at": null, "ownership_reference": "", "priority": 0, "scope": ["TSLA", "AI", "technology", "crypto_context"]},
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+      "x_account": {
+        "person": "AMD",
+        "handle": "AMD",
+        "user_id": null,
+        "verified_at": null,
+        "ownership_reference": "",
+        "priority": 1,
+        "scope": [
+          "AMD",
+          "MU",
+          "NVDA",
+          "SNDK",
+          "AVGO",
+          "TSM",
+          "LRCX",
+          "STX",
+          "WDC",
+          "LITE",
+          "INTC"
+        ]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": ""
+      }
     },
     {
-      "id": "x_gill",
+      "id": "x_iex_meta",
       "kind": "X_TIMELINE",
       "enabled": false,
       "url": "https://api.x.com/2/",
-      "allowed_hosts": ["api.x.com"],
+      "allowed_hosts": [
+        "api.x.com"
+      ],
       "credential_env": "TRADY_X_BEARER_TOKEN",
-      "interval_seconds": 60,
-      "daily_request_limit": 100,
+      "interval_seconds": 259200,
+      "daily_request_limit": 2,
       "query": null,
-      "x_account": {"person": "Keith Gill", "handle": "TheRoaringKitty", "user_id": null, "verified_at": null, "ownership_reference": "", "priority": 0, "scope": ["GME_context", "meme_stock_context"]},
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+      "x_account": {
+        "person": "Meta",
+        "handle": "Meta",
+        "user_id": null,
+        "verified_at": null,
+        "ownership_reference": "",
+        "priority": 1,
+        "scope": [
+          "META",
+          "GOOGL",
+          "GOOG",
+          "AMZN",
+          "AAPL",
+          "MSFT",
+          "ORCL",
+          "CRM",
+          "SHOP",
+          "BKNG"
+        ]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": ""
+      }
     },
     {
-      "id": "x_ackman",
+      "id": "x_iex_tesla",
       "kind": "X_TIMELINE",
       "enabled": false,
       "url": "https://api.x.com/2/",
-      "allowed_hosts": ["api.x.com"],
+      "allowed_hosts": [
+        "api.x.com"
+      ],
       "credential_env": "TRADY_X_BEARER_TOKEN",
-      "interval_seconds": 60,
-      "daily_request_limit": 100,
+      "interval_seconds": 259200,
+      "daily_request_limit": 2,
       "query": null,
-      "x_account": {"person": "Bill Ackman", "handle": "BillAckman", "user_id": null, "verified_at": null, "ownership_reference": "", "priority": 1, "scope": ["activist_targets", "macro"]},
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+      "x_account": {
+        "person": "Tesla",
+        "handle": "Tesla",
+        "user_id": null,
+        "verified_at": null,
+        "ownership_reference": "",
+        "priority": 1,
+        "scope": [
+          "TSLA",
+          "META",
+          "AMZN",
+          "MSFT",
+          "NVDA",
+          "GOOGL",
+          "GOOG"
+        ]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": ""
+      }
     },
     {
-      "id": "x_icahn",
+      "id": "x_iex_reuters",
       "kind": "X_TIMELINE",
       "enabled": false,
       "url": "https://api.x.com/2/",
-      "allowed_hosts": ["api.x.com"],
+      "allowed_hosts": [
+        "api.x.com"
+      ],
       "credential_env": "TRADY_X_BEARER_TOKEN",
-      "interval_seconds": 60,
-      "daily_request_limit": 100,
+      "interval_seconds": 259200,
+      "daily_request_limit": 2,
       "query": null,
-      "x_account": {"person": "Carl Icahn", "handle": "Carl_C_Icahn", "user_id": null, "verified_at": null, "ownership_reference": "", "priority": 1, "scope": ["activist_targets", "corporate_actions"]},
-      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24, "terms_reference": ""}
+      "x_account": {
+        "person": "Reuters",
+        "handle": "Reuters",
+        "user_id": null,
+        "verified_at": null,
+        "ownership_reference": "",
+        "priority": 1,
+        "scope": [
+          "all_IEX30",
+          "earnings",
+          "regulation",
+          "corporate_actions"
+        ]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": ""
+      }
+    },
+    {
+      "id": "x_iex_deitaone",
+      "kind": "X_TIMELINE",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": [
+        "api.x.com"
+      ],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 259200,
+      "daily_request_limit": 2,
+      "query": null,
+      "x_account": {
+        "person": "Walter Bloomberg",
+        "handle": "DeItaone",
+        "user_id": null,
+        "verified_at": null,
+        "ownership_reference": "",
+        "priority": 1,
+        "scope": [
+          "all_IEX30",
+          "macro",
+          "rates",
+          "energy",
+          "geopolitics"
+        ]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": ""
+      }
+    },
+    {
+      "id": "x_iex_kobeissi",
+      "kind": "X_TIMELINE",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": [
+        "api.x.com"
+      ],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 259200,
+      "daily_request_limit": 2,
+      "query": null,
+      "x_account": {
+        "person": "The Kobeissi Letter",
+        "handle": "KobeissiLetter",
+        "user_id": null,
+        "verified_at": null,
+        "ownership_reference": "",
+        "priority": 1,
+        "scope": [
+          "all_IEX30",
+          "macro",
+          "rates",
+          "commodities",
+          "banks"
+        ]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": ""
+      }
     }
   ]
 }

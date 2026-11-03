@@ -84,7 +84,8 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
   `PerpetualReview` carry predictions, input/model provenance and review reasons.
   `Assessment::{unavailable, validate}` constructs unavailability or validates shape.
 - `[screening.rs:MAX_UNIVERSE_ROWS]`, `MAX_CANDIDATES`, `MAX_PEER_CONTROLS`,
-  `SCREENING_METHOD`: `2048`, `5`, `2`, `sp500-research-screen-v1`.
+  `SP500_INDEX_ID`, `EUROPE_EUR_STOCKS_INDEX_ID`, `SCREENING_METHOD` and
+  `EUROPE_EUR_SCREENING_METHOD` expose the bounded scopes and method identities.
 - `[screening.rs:EffectiveInterval]` exposes `valid` and `contains`;
   `Classification`, `UniverseMember`, `UniverseProvenance`, `UniverseSnapshot`
   describe effective membership/classification and source rights/times.
@@ -99,8 +100,11 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
   `ScreenedCandidate`, `ScreeningPurpose`, `ScreeningResult`: policy, auditable
   exclusions, candidate/peer/finalist output. Purpose has only `ResearchOnly`.
 - `[screening.rs:valid_reference]`, `valid_isin`, `valid_gics_pair` validate syntax/
-  checksum/classification pairs; `screen_universe(universe, owner_allowlist,
-  observations, policy, now) -> Result<ScreeningResult>` evaluates supplied data.
+  checksum/classification pairs; `valid_index_id` and
+  `required_currency_for_index` and `european_listing_mic` validate market scope;
+  `screen_universe(universe, owner_allowlist, observations, policy, now) ->
+  Result<ScreeningResult>` evaluates supplied data. The European scope requires
+  EUR member currencies and a reviewed European MIC.
 - `[prediction.rs:PredictionSource]`, `PredictionTarget`, `CalibrationStatus`,
   `UncertaintyUnit`: source, semantic target, calibration state and uncertainty
   units. `ForecastHorizon::validate` covers decision/deadline/exchange sessions;
@@ -225,8 +229,9 @@ target-hit/scenario probabilities and quantitative indicators as distinct payloa
   participation, 1–5 candidates and 0–2 peers. `screen_universe` bounds membership
   and allowlist to 2048 and each observation vector to 4096. Universe failures
   produce blockers/member rejection reasons; invalid policy or size bounds error.
-- `[screening.rs:screen_universe]` requires complete current `SP500` membership,
-  effective classifications, declared storage permission/retention/provenance,
+- `[screening.rs:screen_universe]` requires complete current membership for a
+  supported scope (`SP500` or `EUROPE_EUR_STOCKS`), effective classifications,
+  declared storage permission/retention/provenance,
   valid ISIN checksum/MIC/currency and no duplicate active share class. It joins
   verified broker `STOCK` support by ISIN, MIC and currency rather than ticker,
   and requires explicit owner allowlisting. Metadata checks do not authenticate

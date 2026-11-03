@@ -17,6 +17,9 @@ is `https://opencode.ai/inference/go/openai/v1`, with model pinned to
 configuration can select another model; there is no automatic model fallback.
 Select a Chat Completions model and verify its context capacity when
 deploying; Responses-, Anthropic- and Google-native endpoints need separate adapters.
+The adapter also calls the authenticated Go catalog at
+`https://opencode.ai/inference/go/v1/models` before the first completion, requires
+an exact configured model ID, and stores the catalog hash in run receipts.
 
 Requests identify Trady with its user agent and send the persisted conversation ID
 in `x-opencode-session`, as required by Go for routing and prompt caching. The ID
@@ -24,7 +27,10 @@ stays the same across tool rounds and resumed conversation runs.
 
 ## Proposed strict model governance for new research agents
 
-The [OpenCodeGo-only LLM extensions](../v1/llm-features/README.md) add a [model allowlist and escalation specification](../v1/llm-features/model-routing-and-governance.md). The owner-selected future deployment rule is **only** `deepseek-v4.1-flash` by default; `deepseek-v4.1-pro` is reserved for explicitly justified complex work **after verifying that exact model ID on OpenCodeGo**. No other generative model/provider or automatic fallback is permitted by that proposed policy. The current adapter accepts arbitrary explicitly configured model strings and therefore **does not yet enforce** the proposed allowlist; the initial configuration remains Flash-pinned. A model-name mismatch must fail closed, not silently substitute the currently advertised `deepseek-v4-pro`.
+The focused runtime keeps model use outside the order gate. Configure only a
+reviewed model ID and treat catalog and rights evidence as deployment
+prerequisites; the adapter rejects an exact model-ID mismatch and never silently
+substitutes a different model.
 
 ## Interface
 
@@ -159,8 +165,5 @@ Tests cover real local HTTP, split SSE calls, native/JSON continuations, malform
 output, retries, limits, cancellation, idempotent recovery, finalization and
 compaction. The disposable database runner verifies reconnection, racing workers,
 revision/generation fencing, roles and CLI dialogue across separate processes.
-These automated suites use local model fixtures. The separate
-[2026-10-31 demo verification](../demo-verification-2026-10-31.md) records actual
-OpenCode Go requests and GET-only Trading 212 demo observations. The pinned
-`deepseek-v4.1-flash` returned correct calculations and completed a streamed,
-persisted two-turn conversation. A separate `glm-5.2` diagnostic also succeeded.
+These automated suites use local model fixtures. They do not authorize broker
+execution or establish production model approval.

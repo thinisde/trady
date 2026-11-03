@@ -10,6 +10,64 @@ fn now() -> DateTime<Utc> {
         .unwrap()
         .to_utc()
 }
+
+#[test]
+fn registered_iex30_donchian_authority_validates_from_deployment_config() {
+    let text = std::fs::read_to_string("../../config/autonomous.iex30.demo.json").unwrap();
+    let document: serde_json::Value = serde_json::from_str(&text).unwrap();
+    let policy: Policy = serde_json::from_value(document["trading"]["policy"].clone()).unwrap();
+    let authority: FormulaAuthority =
+        serde_json::from_value(document["trading"]["limits_authority"].clone()).unwrap();
+    authority
+        .validate_active(
+            &policy,
+            DateTime::parse_from_rfc3339("2026-11-03T12:00:00Z")
+                .unwrap()
+                .to_utc(),
+        )
+        .unwrap();
+}
+
+#[test]
+fn deterministic_donchian_authority_calculates_atr_entry_and_target_without_predictions() {
+    let text = std::fs::read_to_string("../../config/autonomous.iex30.demo.json").unwrap();
+    let document: serde_json::Value = serde_json::from_str(&text).unwrap();
+    let policy: Policy = serde_json::from_value(document["trading"]["policy"].clone()).unwrap();
+    let authority: FormulaAuthority =
+        serde_json::from_value(document["trading"]["limits_authority"].clone()).unwrap();
+    let now = DateTime::parse_from_rfc3339("2026-11-03T12:00:00Z")
+        .unwrap()
+        .to_utc();
+    let input: LimitsInput = serde_json::from_value(serde_json::json!({
+        "account":{"snapshot_id":"donchian_account","account_id":"paper_iex30_demo","mode":"paper",
+            "spendable_cash":{"amount":"1000","currency":"USD"},"positions":[],"orders":[],"observed_at":now},
+        "market_snapshot_id":"donchian_market",
+        "quote":{"instrument_id":"NVDA_US_EQ","currency":"USD","bid":"99.99","ask":"100",
+            "observed_at":now,"received_at":now,"tradable":true},
+        "entry_range":{"minimum":"100","maximum":"100.10","currency":"USD"},
+        "entry_costs":{"fixed":{"amount":"0","currency":"USD"},"rate":"0","uncertainty":{"amount":"0","currency":"USD"},"fx":null},
+        "exit_costs":{"fixed":{"amount":"0","currency":"USD"},"rate":"0","uncertainty":{"amount":"0","currency":"USD"},"fx":null},
+        "rules":{"price_tick":"0.01","quantity_step":"0.01","minimum_quantity":"0.01","currency_unit":"0.01"},
+        "evidence":{"snapshot_id":"donchian_bars","family":"TREND","signal_eligible":true,"atr":"1",
+            "atr_lookback":14,"bar_seconds":86400,"completed_bars":35,"last_completed_at":now-chrono::Duration::hours(1),
+            "available_at":now-chrono::Duration::minutes(30),"valid_until":now+Duration::minutes(5),"minimum_stop_distance":"0.01","noise_distance":"0.10",
+            "base_confidence_score":100,"confidence_score":100,"sentiment_entry_allowed":true,"sentiment_target_ceiling":"0.03","exceptional_verified":false},
+        "holding_deadline_at":now+Duration::days(5),"valid_until":now+Duration::minutes(5)
+    })).unwrap();
+    let calculation = calculate_authoritative_limits(&authority, &policy, &input, now).unwrap();
+    assert_eq!(calculation.limits.buy_limit, d("100.10"));
+    assert_eq!(calculation.limits.stop_trigger, d("98.60"));
+    assert_eq!(calculation.limits.target_sell_limit, d("102.35"));
+    assert!(calculation.limits.target_net_fraction > d("0.02"));
+    let proposal = FormulaProposal {
+        input,
+        calculation,
+        predictions: None,
+    };
+    proposal
+        .validate(&authority, &policy, &proposal.input.quote, now)
+        .unwrap();
+}
 fn d(value: &str) -> Decimal {
     Decimal::from_str_exact(value).unwrap()
 }
@@ -33,6 +91,7 @@ fn fixture() -> (FormulaAuthority, LimitsInput) {
             max_target_net_fraction: d("0.03"),
         },
         max_account_risk_fraction: d("0.01"),
+        strategy: None,
         prediction: None,
         active: ApprovedFormula {
             revision_id: "fixture_revision".into(),

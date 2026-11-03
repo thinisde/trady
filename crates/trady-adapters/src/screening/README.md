@@ -1,4 +1,4 @@
-# Automatic S&P 500 universe ingestion
+# Automatic market-universe ingestion
 
 ## Overview
 
@@ -16,7 +16,9 @@ constituent list and grants no trading authority.
   `with_bearer(Option<String>)` supplies or clears an out-of-band header credential. Automatic inputs
   share their service credential only for the same HTTPS origin.
   `with_transport` supports controlled offline transport tests.
-  [universe.example.json](./universe.example.json) is a valid disabled template.
+  [universe.example.json](./universe.example.json) is the generic disabled
+  template; the focused IEX30 deployment uses the local snapshot selected by
+  `source_id: alpaca_iex30`.
   Replace its placeholder endpoint/provider/edition, update `allowed_hosts`
   to match the new endpoint host exactly, and record reviewed storage rights
   before explicitly enabling it. No approval is implied by the example.
@@ -24,7 +26,7 @@ constituent list and grants no trading authority.
   `UniverseSource` port and retrieves one complete JSON document;
   `retry_at()` exposes provider backoff. Every request fetches provider data.
 - `[mod.rs:UniverseDocument]` is the strict v1 wire contract. Required top-level fields are
-  `schema_version: 1`, `index_id: "SP500"`, `complete: true`, `snapshot_id`,
+  `schema_version: 1`, a supported `index_id` (`SP500` or `IEX30`), `complete: true`, `snapshot_id`,
   `classification_snapshot_id`, `provider`, `taxonomy_edition`, `as_of`,
   `available_at`, `expires_at`, and `members`.
 - `[crates/trady-domain/src/screening.rs:UniverseMember]` has `issuer_id`, `share_class_isin`, `symbol`, `listing_mic`,
@@ -76,6 +78,10 @@ a completed pass can separately contain domain blockers or no eligible candidate
   effective snapshot availability and expiry must be valid. Future memberships
   remain in the input for explicit exclusion by domain gates. Nothing is stamped
   current merely because it was downloaded now.
+- `EUROPE_EUR_STOCKS` is a currency-constrained scope: every member must have
+  `currency: "EUR"` and a MIC in the reviewed European venue allowlist.
+  Listing MIC, ISIN and broker instrument identity remain separate
+  provider-supplied fields and are still checked by the normal crosswalk gates.
 - [crates/trady-domain/src/screening.rs:screen_universe](../../../trady-domain/src/screening.rs)
   checks ISIN checksum, listing/currency identity,
   exclusive effective dates, active duplicates, effective 11/25 GICS pairs,

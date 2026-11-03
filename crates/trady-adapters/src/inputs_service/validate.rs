@@ -1,7 +1,9 @@
 use super::*;
 use rust_decimal::Decimal;
 use std::collections::{BTreeMap, BTreeSet};
-use trady_domain::screening::{valid_gics_pair, valid_isin};
+use trady_domain::screening::{
+    european_listing_mic, required_currency_for_index, valid_gics_pair, valid_index_id, valid_isin,
+};
 use trady_policy::{EntryCosts, fresh};
 
 pub(super) fn quote(q: &Quote, now: DateTime<Utc>) -> Result<()> {
@@ -74,7 +76,7 @@ pub(super) fn session(
 pub(super) fn universe(u: &UniverseDocument, now: DateTime<Utc>) -> Result<()> {
     require(
         u.schema_version == 1
-            && u.index_id == "SP500"
+            && valid_index_id(&u.index_id)
             && u.complete
             && valid_id(&u.snapshot_id)
             && valid_id(&u.classification_snapshot_id)
@@ -109,6 +111,14 @@ pub(super) fn universe(u: &UniverseDocument, now: DateTime<Utc>) -> Result<()> {
                     &row.classification.industry_group_code,
                 ),
             "universe has invalid identity, effective interval or classification",
+        )?;
+    }
+    if let Some(currency) = required_currency_for_index(&u.index_id) {
+        require(
+            u.members.iter().all(|row| {
+                row.currency.as_str() == currency && european_listing_mic(&row.listing_mic)
+            }),
+            "European EUR universe contains a non-EUR member or unsupported venue",
         )?;
     }
     Ok(())

@@ -38,7 +38,12 @@ These are total-cost budgets, not share consideration alone. Fees, rounding, ins
 
 Detect deposits and withdrawals through broker cash events and reconciliation. Pending transfers do not count. If a deposit arrives while holding, record it and continue managing the same quantity; use the increased balance at the next eligible entry. Do not rebalance daily or sell merely to reinvest 98%. An outside manual withdrawal requires account resynchronization before another order.
 
-By default reserve one entry attempt per account/session; the [opt-in bounded rotation policy](#opportunity-rotation) is the only permitted second-attempt exception. Local failures before reservation do not consume a slot. A committed entry intent consumes its slot even if cancelled, failed or never sent; partial fills belong to it. Exits/replacement exits consume no entry slot. Selling then buying requires flat reconciliation, confirmed spendable proceeds and an unused eligible ordinary/replacement slot.
+By default the policy permits one entry buy and one strategy exit sell per UTC
+day. Local failures before reservation do not consume a slot. A committed entry
+intent consumes its buy slot even if cancelled, failed or never sent; partial
+fills belong to it. Protective and risk-reducing sell orders do not consume the
+daily exit allowance. Selling then buying requires flat reconciliation,
+confirmed spendable proceeds and an unused eligible buy slot.
 
 A stop or target can sell on the same day as entry; an already-used entry slot never blocks that exit.
 

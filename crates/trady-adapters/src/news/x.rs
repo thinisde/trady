@@ -129,6 +129,17 @@ pub(super) fn resolve<T: HttpTransport>(
     {
         return Err(SourceFailure::unavailable("invalid_x_handle"));
     }
+    if source.id.starts_with("x_iex_")
+        && let Some(account) = source.x_account.as_ref()
+        && account.handle.eq_ignore_ascii_case(handle)
+        && let Some(user_id) = &account.user_id
+    {
+        return Ok(XUser {
+            id: user_id.clone(),
+            username: account.handle.clone(),
+            name: account.person.clone(),
+        });
+    }
     let url = base(source)?
         .join(&format!("users/by/username/{handle}"))
         .map_err(|_| SourceFailure::unavailable("invalid_x_api_url"))?;

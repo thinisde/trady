@@ -9,7 +9,77 @@ use std::collections::{BTreeMap, BTreeSet};
 pub const MAX_UNIVERSE_ROWS: usize = 2_048;
 pub const MAX_CANDIDATES: usize = 5;
 pub const MAX_PEER_CONTROLS: usize = 2;
+pub const SP500_INDEX_ID: &str = "SP500";
+/// Fixed owner-approved universe consumed by the Alpaca Basic IEX feed.
+pub const IEX30_INDEX_ID: &str = crate::iex::UNIVERSE_ID;
+/// EUR-denominated European equities across approved European venues.
+///
+/// This is intentionally a scope identifier rather than a vendor index name:
+/// the constituent provider remains an owner-approved, independently reviewed
+/// source and must supply the complete point-in-time membership.
+pub const EUROPE_EUR_STOCKS_INDEX_ID: &str = "EUROPE_EUR_STOCKS";
 pub const SCREENING_METHOD: &str = "sp500-research-screen-v1";
+pub const EUROPE_EUR_SCREENING_METHOD: &str = "europe-eur-stock-screen-v1";
+pub const IEX30_SCREENING_METHOD: &str = "alpaca-iex30-screen-v1";
+
+/// Return whether the universe scope is one Trady understands. Unknown scopes
+/// are rejected instead of being silently treated as a US or European market.
+pub fn valid_index_id(value: &str) -> bool {
+    matches!(
+        value,
+        SP500_INDEX_ID | EUROPE_EUR_STOCKS_INDEX_ID | IEX30_INDEX_ID
+    )
+}
+
+pub fn screening_method_for_index(value: &str) -> Option<&'static str> {
+    match value {
+        SP500_INDEX_ID => Some(SCREENING_METHOD),
+        EUROPE_EUR_STOCKS_INDEX_ID => Some(EUROPE_EUR_SCREENING_METHOD),
+        IEX30_INDEX_ID => Some(IEX30_SCREENING_METHOD),
+        _ => None,
+    }
+}
+
+/// European scope is currency constrained. The source and broker crosswalk
+/// still own the share-class identity; the scope also checks the listing MIC
+/// against the reviewed European venue allowlist because the deployment is
+/// EUR-only.
+pub fn required_currency_for_index(value: &str) -> Option<&'static str> {
+    (value == EUROPE_EUR_STOCKS_INDEX_ID || value == IEX30_INDEX_ID).then_some(
+        if value == IEX30_INDEX_ID {
+            "USD"
+        } else {
+            "EUR"
+        },
+    )
+}
+
+/// MICs used by the principal European regulated/regulated-like equity venues
+/// supported by the EUR deployment profile. A provider may add a venue only by
+/// extending this reviewed allowlist; unknown MICs remain unavailable.
+pub fn european_listing_mic(value: &str) -> bool {
+    matches!(
+        value,
+        "XAMS"
+            | "XATH"
+            | "XBAR"
+            | "XBIL"
+            | "XBRU"
+            | "XCSE"
+            | "XETR"
+            | "XFRA"
+            | "XHEL"
+            | "XICE"
+            | "XMAD"
+            | "XMIL"
+            | "XOSL"
+            | "XPAR"
+            | "XSTO"
+            | "XWAR"
+            | "XLIS"
+            | "XVAL"
+    )
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -209,6 +279,8 @@ pub enum RejectionReason {
     StaleOrFutureUniverse,
     EmptyUniverse,
     InvalidIdentity,
+    MarketCurrencyMismatch,
+    NonEuropeanVenue,
     MembershipNotEffective,
     InvalidClassification,
     ClassificationNotEffective,
@@ -370,6 +442,21 @@ pub fn screen_universe(
     now: DateTime<Utc>,
 ) -> Result<ScreeningResult> {
     policy.validate()?;
+    if universe.index_id == IEX30_INDEX_ID {
+        let symbols: BTreeSet<&str> = universe
+            .members
+            .iter()
+            .map(|member| member.symbol.as_str())
+            .collect();
+        require(
+            universe.members.len() == crate::iex::SYMBOLS.len()
+                && symbols.len() == crate::iex::SYMBOLS.len()
+                && crate::iex::SYMBOLS
+                    .iter()
+                    .all(|symbol| symbols.contains(symbol)),
+            "IEX30 universe must contain exactly the approved 30 symbols",
+        )?;
+    }
     require(
         universe.members.len() <= MAX_UNIVERSE_ROWS
             && owner_allowlist.len() <= MAX_UNIVERSE_ROWS
@@ -379,7 +466,9 @@ pub fn screen_universe(
         "screening input bound exceeded",
     )?;
     let mut result = ScreeningResult {
-        method: SCREENING_METHOD.into(),
+        method: screening_method_for_index(&universe.index_id)
+            .unwrap_or(SCREENING_METHOD)
+            .into(),
         purpose: ScreeningPurpose::ResearchOnly,
         as_of: now,
         universe_snapshot_id: universe.snapshot_id.clone(),
@@ -391,7 +480,7 @@ pub fn screen_universe(
         blockers: vec![],
     };
     let lineage = &universe.provenance;
-    if universe.index_id != "SP500"
+    if !valid_index_id(&universe.index_id)
         || !universe.complete
         || !valid_reference(&universe.snapshot_id)
         || !valid_reference(&universe.classification_snapshot_id)
@@ -461,6 +550,16 @@ pub fn screen_universe(
             || !member.membership.valid()
         {
             reasons.push(RejectionReason::InvalidIdentity);
+        }
+        if required_currency_for_index(&universe.index_id)
+            .is_some_and(|currency| member.currency.as_str() != currency)
+        {
+            reasons.push(RejectionReason::MarketCurrencyMismatch);
+        }
+        if universe.index_id == EUROPE_EUR_STOCKS_INDEX_ID
+            && !european_listing_mic(&member.listing_mic)
+        {
+            reasons.push(RejectionReason::NonEuropeanVenue);
         }
         if !member.membership.contains(now) {
             reasons.push(RejectionReason::MembershipNotEffective);

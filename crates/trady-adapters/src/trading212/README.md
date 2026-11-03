@@ -25,7 +25,8 @@ policy, readiness, fencing or deployment authority. See the
   and taxes).
 - `[mod.rs:Trading212Reader]`: `new`, `with_clock`, `config`, `spendable_cash`,
   `discover_account`, `pending_orders`, `pending_order`, `instruments`,
-  `instruments_with_rejections`, `historical_orders`, `read_snapshot`.
+  `instruments_with_rejections`, `euro_stocks`, `historical_orders`,
+  `read_snapshot`.
   Implements application `BrokerInformationPort` and observation-only `BrokerPort`.
   Capabilities remain unknown; `find_order(intent_id)` explicitly fails.
 - `[mod.rs:Trading212Executor]`: `new`, `information`; implements
@@ -138,6 +139,10 @@ policy, readiness, fencing or deployment authority. See the
   `RateLimited` and a delay without sleeping. Quotas across instances/processes need
   caller coordination. `[mod.rs:Trading212Reader::instruments]` caches metadata for
   ten minutes; it does not verify precision, fractional or protective-order capabilities.
+  `[mod.rs:Trading212Reader::euro_stocks]` projects that cache to `STOCK` rows
+  whose provider currency is EUR. It is a convenience filter for the European
+  universe crosswalk; independent ISIN/MIC, quote, calendar and capability
+  evidence remains required.
 - `[http.rs:Http::pace]` is the explicit blocking path used by autonomous operations:
   it sleeps for cooldowns up to 30 seconds and returns `RateLimited` for longer
   waits. It does not replay mutations. `[autonomous.rs:Trading212Executor::observe]`

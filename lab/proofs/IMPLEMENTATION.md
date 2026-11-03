@@ -1,9 +1,8 @@
 # FORMULA_V1 implementation and verification handoff
 
-This is a historical checkpoint. Later parser, account-input and helper fixes,
-along with regenerated verification pins, are recorded in the
-[audit remediation](../../docs/audit-2026-10-31/remediation.md).
-The counts and digests below describe the earlier source revision.
+This is a historical checkpoint for the offline formula proof. The focused IEX30
+deployment audit is maintained in [docs/iex30-audit.md](../../docs/iex30-audit.md);
+this handoff does not grant runtime or broker authority.
 
 Checkpoint: 2026-10-31. The implementation is frozen after the successful clean
 24-theorem/647-case/10-negative run with the corrected SQL inventory. Its scope

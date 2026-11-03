@@ -1,0 +1,15 @@
+{
+  "config_version": 1,
+  "enabled": true,
+  "interval_seconds": 300,
+  "quote_max_age_seconds": 10,
+  "symbols": [
+    "META", "MU", "NVDA", "AMD", "SNDK", "GOOGL", "BKNG", "AMZN", "AAPL", "MSFT",
+    "INTC", "SHOP", "STX", "AVGO", "TSM", "CSCO", "LRCX", "VLO", "TSLA", "ORCL",
+    "BAC", "WDC", "JPM", "GOOG", "LITE", "GEV", "AZO", "DELL", "WBD", "CRM"
+  ],
+  "x_source_ids": [
+    "x_iex_nvidia", "x_iex_amd", "x_iex_meta", "x_iex_tesla",
+    "x_iex_reuters", "x_iex_deitaone", "x_iex_kobeissi"
+  ]
+}

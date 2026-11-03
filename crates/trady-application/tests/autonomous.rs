@@ -588,6 +588,7 @@ fn config() -> TradingConfig {
             max_target_net_fraction: d("0.03"),
         },
         max_account_risk_fraction: d("0.01"),
+        strategy: None,
         active: ApprovedFormula {
             revision_id: "approved_formula_week_44".into(),
             formula_hash: digest(&parameters).unwrap(),

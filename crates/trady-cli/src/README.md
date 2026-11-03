@@ -31,7 +31,8 @@ Relative paths and extra runtime/broker options are rejected. See the
   accepted and rejected events explicitly. Tax remains ephemeral and owner-only.
 - `[opencode/mod.rs:chat]` accepts `--intelligence-config FILE`. Enabled non-tax
   tools use a new ephemeral conversation and reject `--session`/`--resume`;
-  ordinary chat remains durable. See the [operating guide](../../../docs/v1/features/implementation-report.md).
+  ordinary chat remains durable. See the [IEX30 audit](../../../docs/iex30-audit.md)
+  for the focused runtime boundary.
 
 `[api_health.rs:run]` exposes `api-health [--online] [--provider NAME]`, with
 metadata-only default behavior and explicit bounded GET diagnostics.
@@ -117,6 +118,9 @@ These match the policy's unconditional entry capability checks; fractional-order
 support is checked separately when sizing requires it. Evidence must be verified,
 nonempty and unexpired. The command does not make broker capability probes.
 Optional fields are `analyst_socket`, `shadow_directory` and `release_candidate`.
+The focused IEX30 config also reports `iex_watchdog_runtime_unwired` until the
+long-running executor consumes and persists the watchdog ticks; the CLI schedule
+is currently the operator boundary.
 Live requires the socket and exact release candidate; local native model hashes
 must match its model map. Expired native artifacts are excluded from inference.
 

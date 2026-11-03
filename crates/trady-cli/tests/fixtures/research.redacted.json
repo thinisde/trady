@@ -1,0 +1,27 @@
+{
+  "config_version": 1,
+  "max_pages": 3,
+  "page_size": 100,
+  "lookback_seconds": 86400,
+  "overlap_seconds": 120,
+  "sources": [
+    {
+      "id": "google_market",
+      "kind": "GOOGLE_NEWS_RSS",
+      "enabled": true,
+      "url": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
+      "allowed_hosts": ["news.google.com"],
+      "credential_env": null,
+      "interval_seconds": 900,
+      "daily_request_limit": 400,
+      "query": "fixture",
+      "x_account": null,
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": "fixture_redaction_test"
+      }
+    }
+  ]
+}

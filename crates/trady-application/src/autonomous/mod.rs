@@ -225,6 +225,15 @@ pub trait ExecutionJournal {
     ) -> Result<()> {
         Ok(())
     }
+    /// Persist the IEX quote-stream health attestation while a holding is active.
+    /// The default keeps deterministic offline journals usable.
+    fn record_watchdog_observation(
+        &mut self,
+        _fence: &Fence,
+        observation: &crate::watchdog::IexWatchdogObservation,
+    ) -> Result<()> {
+        observation.validate()
+    }
     /// Only a trusted, persisted analyst review may be returned. Models cannot
     /// write directly to this queue or bypass current executor observations.
     fn pending_holding_update(&mut self, _fence: &Fence) -> Result<Option<HoldingUpdate>> {
@@ -272,10 +281,26 @@ pub enum OrderRole {
 pub struct TrackedOrder {
     pub request: BrokerOrderRequest,
     pub role: OrderRole,
+    /// Timestamp of the durable intent. Used for daily entry/exit limits;
+    /// legacy state defaults to the Unix epoch and is not counted today.
+    #[serde(default = "default_tracked_order_created_at")]
+    pub created_at: DateTime<Utc>,
+    /// Risk-reducing protection and emergency exits do not consume the
+    /// strategy's daily exit allowance.
+    #[serde(default = "default_counts_toward_daily_limit")]
+    pub counts_toward_daily_limit: bool,
     pub attempted: bool,
     pub observation: Option<BrokerOrder>,
     pub cancellation_requested: bool,
     pub failure: Option<String>,
+}
+
+fn default_tracked_order_created_at() -> DateTime<Utc> {
+    DateTime::<Utc>::UNIX_EPOCH
+}
+
+fn default_counts_toward_daily_limit() -> bool {
+    true
 }
 impl TrackedOrder {
     pub fn broker_id(&self) -> Option<&str> {
@@ -639,6 +664,8 @@ impl AutonomousTrader {
             &mut state,
             request,
             OrderRole::Entry,
+            dispatch_now,
+            true,
             Some(expires_at),
         )?;
         Ok(report(&state, "entry_submitted", None))
@@ -971,6 +998,8 @@ impl AutonomousTrader {
                 state,
                 request,
                 OrderRole::Exit,
+                now,
+                profit_limit.is_some(),
                 None,
             )?;
             return Ok(report(state, "exit_submitted", None));
@@ -1019,6 +1048,8 @@ impl AutonomousTrader {
                 state,
                 request,
                 OrderRole::Protection,
+                now,
+                false,
                 None,
             )?;
             if state.orders.last().is_some_and(|o| {
@@ -1160,6 +1191,10 @@ fn reconcile_orders(
     Ok(None)
 }
 
+// The dispatch boundary keeps the journal fence, broker, inputs, controls,
+// candidate, observation, clock, release deadline, and order request explicit;
+// bundling them into an untyped context would weaken the mutation audit.
+#[allow(clippy::too_many_arguments)]
 fn dispatch(
     journal: &mut impl ExecutionJournal,
     broker: &mut impl ExecutionBroker,
@@ -1167,12 +1202,20 @@ fn dispatch(
     state: &mut TradingState,
     request: BrokerOrderRequest,
     role: OrderRole,
+    created_at: DateTime<Utc>,
+    counts_toward_daily_limit: bool,
     expires_at: Option<DateTime<Utc>>,
 ) -> Result<()> {
+    require(
+        trady_domain::iex::symbol(&request.instrument_id).is_ok(),
+        "order instrument is outside the approved IEX30 universe",
+    )?;
     request.validate().map_err(|e| Error(e.to_string()))?;
     state.orders.push(TrackedOrder {
         request: request.clone(),
         role,
+        created_at,
+        counts_toward_daily_limit,
         attempted: false,
         observation: None,
         cancellation_requested: false,

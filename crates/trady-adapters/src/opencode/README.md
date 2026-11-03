@@ -16,6 +16,8 @@ tools. The transport implements `LlmProvider`; the tool collection implements
   `https://opencode.ai/inference/go/openai/v1`.
   [OpenCodeGoConfig::endpoint](./llm.rs) appends `/chat/completions`, giving
   `https://opencode.ai/inference/go/openai/v1/chat/completions` by default.
+- [OpenCodeGoConfig::models_endpoint](./llm.rs) resolves the Go model catalog at
+  `https://opencode.ai/inference/go/v1/models` for the default base URL.
 - [llm.rs:OpenCodeGoConfig](./llm.rs) exposes `base_url`, `model`,
   `api_key_env`, `stream`, and `limits`, with `validate()` and `endpoint()`.
   Deserialization supplies defaults and rejects unknown fields. Defaults are
@@ -25,6 +27,9 @@ tools. The transport implements `LlmProvider`; the tool collection implements
   `[llm.rs:OpenCodeGoProvider::from_env]` resolves the credential name only.
 - [llm.rs:OpenCodeGoProvider::from_env and new](./llm.rs) construct the
   provider from the central credential loader or an explicit key.
+  [OpenCodeGoProvider::verify_model](./llm.rs) fetches the bounded model catalog,
+  requires an exact configured model ID, and records a catalog hash before the
+  first completion. Every completion lazily enforces the same check.
   [LlmProvider::identity](./llm.rs) returns provider `opencode-go`, model,
   and endpoint; [LlmProvider::complete](./llm.rs) sends messages,
   `max_tokens`, and the configured streaming setting.
@@ -105,6 +110,8 @@ tools, each version `1.0.0`:
   seconds. [complete](./llm.rs) further caps each request at the lesser of
   `request.timeout` and 30 seconds. Credentials remain in private provider
   state; provider failures carry symbolic codes and retryability flags.
+- Model-catalog failures are fail-closed and never include response bodies or
+  credentials in the returned error.
 - [llm.rs:checked_response](./llm.rs) accepts only `stop` or `tool_calls`
   finish reasons, limits content/reasoning and each call's arguments to
   262,144 bytes, and allows 1–4 native calls with nonempty IDs and names.
@@ -142,8 +149,9 @@ tools, each version `1.0.0`:
 ## Side Effects
 
 - [llm.rs:OpenCodeGoProvider::from_env](./llm.rs) reads the configured
-  credential name through the central loader. [complete](./llm.rs) performs a blocking bearer-
-  authenticated HTTP POST containing the model request.
+  credential name through the central loader. [verify_model](./llm.rs) performs
+  a bounded bearer-authenticated model-catalog GET, and [complete](./llm.rs)
+  performs the model request only after that check.
 - [llm.rs:read_json and read_stream](./llm.rs) invoke `on_text` for
   assistant content. Full JSON invokes it after validation; streaming invokes
   it immediately for text fragments, which can precede a later failure.

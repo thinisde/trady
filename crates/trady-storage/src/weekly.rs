@@ -389,6 +389,10 @@ pub struct ReleaseCandidate {
     pub model_hashes: BTreeMap<String, String>,
     pub parameters: FormulaParameters,
     pub envelope: FormulaEnvelope,
+    /// Optional deterministic strategy binding. Legacy release candidates omit
+    /// it and retain the original FORMULA_V1 parameter hash.
+    #[serde(default)]
+    pub strategy: Option<trady_policy::limits::DonchianAtrSpec>,
     pub effective_from: DateTime<Utc>,
     pub valid_until: DateTime<Utc>,
     pub supersedes_release_id: Option<String>,
@@ -406,7 +410,12 @@ impl ReleaseCandidate {
                 ]
                 .iter()
                 .all(|h| valid_hash(h))
-                && self.formula_hash == digest(&self.parameters)?
+                && self.formula_hash
+                    == if let Some(strategy) = &self.strategy {
+                        digest(&(&self.parameters, strategy))?
+                    } else {
+                        digest(&self.parameters)?
+                    }
                 && self.effective_from < self.valid_until
                 && !self.model_hashes.is_empty()
                 && self

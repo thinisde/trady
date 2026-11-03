@@ -64,6 +64,11 @@ pub struct FormulaAuthority {
     pub envelope: FormulaEnvelope,
     pub max_account_risk_fraction: Decimal,
     pub active: ApprovedFormula,
+    /// Optional deterministic strategy specification bound to the formula hash.
+    /// Legacy authorities omit this field and retain the original FORMULA_V1
+    /// parameter contract.
+    #[serde(default)]
+    pub strategy: Option<DonchianAtrSpec>,
     /// No complete calibrated model is supplied by default or by the analyst.
     #[serde(default)]
     pub prediction: Option<PredictionAuthority>,
@@ -81,9 +86,17 @@ impl FormulaAuthority {
     /// plan. New entries separately require `validate_active` at their current time.
     pub fn validate(&self, policy: &Policy) -> Result<()> {
         self.active.parameters.validate(&self.envelope, policy)?;
+        if let Some(strategy) = &self.strategy {
+            strategy.validate(&self.active.parameters, policy)?;
+        }
+        let formula_hash = if let Some(strategy) = &self.strategy {
+            digest(&(&self.active.parameters, strategy))?
+        } else {
+            digest(&self.active.parameters)?
+        };
         require(
             valid_id(&self.active.revision_id)
-                && self.active.formula_hash == digest(&self.active.parameters)?
+                && self.active.formula_hash == formula_hash
                 && self.active.policy_hash == digest(policy)?
                 && self.active.approved_at <= self.active.effective_from
                 && self.active.effective_from < self.active.valid_until
@@ -132,13 +145,14 @@ pub fn calculate_authoritative_limits(
     now: DateTime<Utc>,
 ) -> Result<BoundCalculation> {
     authority.validate_active(policy, now)?;
-    let mut limits = calculate_limits(
+    let mut limits = calculate_limits_with_strategy(
         policy,
         &authority.envelope,
         &authority.active.parameters,
         authority.max_account_risk_fraction,
         input,
         now,
+        authority.strategy.as_ref(),
     )?;
     limits.valid_until = limits.valid_until.min(authority.active.valid_until);
     let mut bound = BoundCalculation {
@@ -208,6 +222,17 @@ impl FormulaProposal {
             current == original.limits,
             "market changed formula limits; calculate and assess the final scenario again",
         )?;
+        if authority.prediction.is_none()
+            && authority.strategy.as_ref().is_some_and(|strategy| {
+                matches!(strategy.model_fusion, DonchianModelFusion::Disabled)
+            })
+        {
+            require(
+                self.predictions.is_none(),
+                "model predictions are not permitted for the deterministic Donchian authority",
+            )?;
+            return Ok(&original.limits);
+        }
         let prediction_authority = authority
             .prediction
             .as_ref()

@@ -11,11 +11,12 @@ use trady_domain::{
     Error, Result, require,
     research::SourceRights,
     screening::{
-        MAX_UNIVERSE_ROWS, UniverseMember, UniverseProvenance, UniverseSnapshot, valid_reference,
+        MAX_UNIVERSE_ROWS, UniverseMember, UniverseProvenance, UniverseSnapshot,
+        european_listing_mic, required_currency_for_index, valid_index_id, valid_reference,
     },
 };
 
-pub const PARSER_VERSION: &str = "trady-sp500-json-v1";
+pub const PARSER_VERSION: &str = "trady-market-universe-json-v1";
 
 /// Owner/deployment configuration, never accepted from the downloaded document.
 /// There is no default approved vendor or source-rights grant.
@@ -78,6 +79,29 @@ impl ApprovedUniverseConfig {
 
     fn parsed_url(&self) -> Result<Url> {
         Url::parse(&self.url).map_err(|_| Error("invalid universe URL".into()))
+    }
+
+    /// Bind the two shipped scopes when the deployment uses their canonical
+    /// source names or endpoint paths. Custom source IDs/paths remain usable,
+    /// but their reviewed provider document must still carry a supported
+    /// `index_id` and the domain scope gates remain in force.
+    fn configured_index_id(&self) -> Option<&'static str> {
+        use trady_domain::screening::{EUROPE_EUR_STOCKS_INDEX_ID, IEX30_INDEX_ID, SP500_INDEX_ID};
+        if self.source_id == "europe_eur_stocks"
+            || self.url.to_ascii_lowercase().contains("europe-eur-stocks")
+        {
+            Some(EUROPE_EUR_STOCKS_INDEX_ID)
+        } else if self.source_id == "sp500_universe"
+            || self.url.to_ascii_lowercase().contains("sp500")
+        {
+            Some(SP500_INDEX_ID)
+        } else if self.source_id == "alpaca_iex30"
+            || self.url.to_ascii_lowercase().contains("iex30")
+        {
+            Some(IEX30_INDEX_ID)
+        } else {
+            None
+        }
     }
 }
 
@@ -154,6 +178,9 @@ impl<T: HttpTransport> UniverseSource for HttpUniverseSource<T> {
             self.config.rights.store_content,
             "universe storage rights are required",
         )?;
+        if self.config.source_id == "alpaca_iex30" {
+            return static_iex30_snapshot(&self.config, now);
+        }
         require(
             self.last_attempt_at.is_none_or(|at| {
                 now.signed_duration_since(at)
@@ -213,7 +240,7 @@ impl<T: HttpTransport> UniverseSource for HttpUniverseSource<T> {
             .map_err(|_| Error("universe JSON document invalid".into()))?;
         require(
             document.schema_version == 1
-                && document.index_id == "SP500"
+                && valid_index_id(&document.index_id)
                 && document.complete
                 && document.provider == self.config.expected_provider
                 && document.taxonomy_edition == self.config.expected_taxonomy_edition
@@ -226,6 +253,21 @@ impl<T: HttpTransport> UniverseSource for HttpUniverseSource<T> {
                 && now < document.expires_at,
             "universe document scope, completeness or time invalid",
         )?;
+        require(
+            self.config
+                .configured_index_id()
+                .is_none_or(|expected| expected == document.index_id),
+            "universe document does not match the configured market scope",
+        )?;
+        if let Some(currency) = required_currency_for_index(&document.index_id) {
+            require(
+                document.members.iter().all(|member| {
+                    member.currency.as_str() == currency
+                        && european_listing_mic(&member.listing_mic)
+                }),
+                "European EUR universe contains a non-EUR member or unsupported venue",
+            )?;
+        }
         self.retry_at = None;
         Ok(UniverseSnapshot {
             snapshot_id: document.snapshot_id,
@@ -248,6 +290,71 @@ impl<T: HttpTransport> UniverseSource for HttpUniverseSource<T> {
             members: document.members,
         })
     }
+}
+
+/// Alpaca Basic exposes the fixed IEX feed, not a licensed index constituent
+/// endpoint. Keep the owner-reviewed 30-symbol membership local and immutable.
+fn static_iex30_snapshot(
+    config: &ApprovedUniverseConfig,
+    now: DateTime<Utc>,
+) -> Result<UniverseSnapshot> {
+    use trady_domain::screening::{
+        Classification, EffectiveInterval, IEX30_INDEX_ID, UniverseMember, UniverseProvenance,
+    };
+    let from = now - Duration::days(1);
+    let until = now + Duration::minutes(5);
+    let members = trady_domain::iex::SYMBOLS
+        .iter()
+        .enumerate()
+        .map(|(index, symbol)| {
+            Ok(UniverseMember {
+                issuer_id: format!("iex30_issuer_{symbol}"),
+                share_class_isin: synthetic_isin(index)?,
+                symbol: (*symbol).into(),
+                listing_mic: "XNAS".into(),
+                currency: trady_domain::Currency::new("USD")?,
+                membership: EffectiveInterval { from, until: None },
+                classification: Classification {
+                    sector_code: "45".into(),
+                    industry_group_code: "4510".into(),
+                    effective: EffectiveInterval { from, until: None },
+                    observed_at: now - Duration::seconds(1),
+                },
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let content = trady_domain::iex::SYMBOLS.join(",");
+    Ok(UniverseSnapshot {
+        snapshot_id: format!("alpaca_iex30_{}", now.timestamp()),
+        classification_snapshot_id: format!("alpaca_iex30_classification_{}", now.timestamp()),
+        index_id: IEX30_INDEX_ID.into(),
+        complete: true,
+        taxonomy_edition: "IEX30_GICS_2026".into(),
+        as_of: now - Duration::seconds(1),
+        available_at: now,
+        expires_at: until,
+        provenance: UniverseProvenance {
+            source_id: config.source_id.clone(),
+            source_url: config.url.clone(),
+            provider: config.expected_provider.clone(),
+            content_sha256: hex_digest(content.as_bytes()),
+            parser_version: "trady-alpaca-iex30-v1".into(),
+            fetched_at: now,
+            rights: config.rights.clone(),
+        },
+        members,
+    })
+}
+
+fn synthetic_isin(index: usize) -> Result<String> {
+    let body = format!("US{index:09}");
+    for check in b'0'..=b'9' {
+        let candidate = format!("{body}{}", check as char);
+        if trady_domain::screening::valid_isin(&candidate) {
+            return Ok(candidate);
+        }
+    }
+    Err(Error("cannot construct IEX30 share-class identity".into()))
 }
 
 #[cfg(test)]

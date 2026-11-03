@@ -54,8 +54,11 @@ The template covers `OPENCODE_API_KEY`, `TRADY_TELEGRAM_BOT_TOKEN`,
 `TRADY_MIGRATOR_DSN`, `TRADY_LAB_DSN`, `TRADY_VERIFIER_DSN`, `TRADY_SHADOW_DSN`,
 `TRADY_RELEASE_OWNER_DSN` and `TRADY_RELEASE_DSN`. The private input server uses
 `TRADY_INPUTS_SERVICE_TOKEN`; its authorized client uses the same bearer value
-under `TRADY_TRADING_INPUTS_TOKEN`. Keep each deployment identity's file limited
-to its own secret set; the example lists names for setup, not shared authority.
+under `TRADY_TRADING_INPUTS_TOKEN`. The supervised first-order approval command
+requires `TRADY_FIRST_ORDER_APPROVAL_TOKEN`; bind that owner-only secret to the
+configured owner identity before enabling any protected dispatch. Keep each
+deployment identity's file limited to its own secret set; the example lists names
+for setup, not shared authority.
 
 `TRADY_TELEGRAM_WHITELIST_USER_ID` optionally stores one verified private
 Telegram user ID as a decimal string. When set, Telegram configuration loading
@@ -76,6 +79,12 @@ Both pairs can be stored in the same private file. The selected pair must be
 complete; credentials from the other mode are never used as a fallback.
 See the [T212 setup](./trading212.md) for selecting the account-bound demo/live
 configuration.
+
+The first-order approval token is checked before an immutable endorsement can be
+recorded. It is never written into the intent, approval JSON, PostgreSQL journal,
+or command output. The approval hash and exact intent hash are persisted instead;
+the executor still fails closed unless migration 0012, the restricted executor
+DSN, and account-specific protected-order evidence are present.
 
 The X app's consumer key and consumer secret are stored as
 `TRADY_X_CONSUMER_KEY` and `TRADY_X_CONSUMER_SECRET`. The current X lookup and

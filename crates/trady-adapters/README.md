@@ -35,6 +35,9 @@ ingestion, approved-artifact native inference and Telegram delivery state.
 - [OpenCode Go contract](./src/opencode/README.md): authenticated model calls and
   approved skill/memory tools. `[src/opencode/llm.rs:OpenCodeGoConfig::default]`
   selects `deepseek-v4.1-flash`; credential loading supplies no model override.
+- `[src/alpaca.rs:AlpacaMarketData]`: read-only paper/live account identity,
+  bounded IEX/SIP quotes, and daily bars. It exposes no order API; Trading 212
+  remains the execution broker.
 - `[src/sessions.rs:MemorySessionRepository]`: scoped session fixtures with
   generation/revision fencing.
 - [X and news contract](./src/news/README.md): reviewed read-only sources, bounded

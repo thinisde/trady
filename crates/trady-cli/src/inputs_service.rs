@@ -17,7 +17,7 @@ use trady_application::{
 };
 use trady_domain::{AccountId, Error, Result, require};
 
-pub const HELP: &str = "\n  trady inputs-service check --config FILE\n  trady inputs-service import --config FILE --file FILE\n  trady inputs-service review --config FILE --file FILE\n  trady inputs-service inspect --config FILE --id ID\n  trady inputs-service export-universe --config FILE --out FILE\n  trady inputs-service deadline --config FILE --account ID --sessions 1..5\n  trady inputs-service prune --config FILE\n  trady inputs-service serve --config FILE\n\nImports remain unverified until a separately authored exact-hash operator review.\nServe requires TRADY_INPUTS_SERVICE_TOKEN and binds loopback behind an approved TLS proxy.\nThe HTTP read token cannot import, review, approve models or trade. Prune removes expired licensed content.\n";
+pub const HELP: &str = "\n  trady inputs-service check --config FILE\n  trady inputs-service import --config FILE --file FILE\n  trady inputs-service review --config FILE --file FILE\n  trady inputs-service inspect --config FILE --id ID\n  trady inputs-service export-universe --config FILE --out FILE [--index INDEX]\n  trady inputs-service deadline --config FILE --account ID --sessions 1..5\n  trady inputs-service prune --config FILE\n  trady inputs-service serve --config FILE\n\nImports remain unverified until a separately authored exact-hash operator review.\nServe requires TRADY_INPUTS_SERVICE_TOKEN and binds loopback behind an approved TLS proxy.\nThe HTTP read token cannot import, review, approve models or trade. Prune removes expired licensed content.\n";
 
 fn options(args: &[String], names: &[&str]) -> Result<BTreeMap<String, String>> {
     require(
@@ -35,6 +35,28 @@ fn options(args: &[String], names: &[&str]) -> Result<BTreeMap<String, String>> 
     }
     Ok(values)
 }
+
+fn export_universe_options(args: &[String]) -> Result<BTreeMap<String, String>> {
+    require(
+        args.len() == 4 || args.len() == 6,
+        "export-universe requires --config FILE --out FILE [--index INDEX]",
+    )?;
+    let mut values = BTreeMap::new();
+    for pair in args.chunks_exact(2) {
+        require(
+            ["--config", "--out", "--index"].contains(&pair[0].as_str())
+                && !pair[1].is_empty()
+                && values.insert(pair[0].clone(), pair[1].clone()).is_none(),
+            "unknown or duplicate export-universe option",
+        )?;
+    }
+    require(
+        values.contains_key("--config") && values.contains_key("--out"),
+        "export-universe requires --config FILE --out FILE",
+    )?;
+    Ok(values)
+}
+
 pub fn run(args: &[String]) -> Result<Value> {
     let command = args
         .first()
@@ -49,7 +71,11 @@ pub fn run(args: &[String]) -> Result<Value> {
         "help" | "--help" if args.len() == 1 => return Ok(json!({"help":HELP})),
         _ => return Err(Error("unsupported inputs-service command; see help".into())),
     };
-    let p = options(&args[1..], names)?;
+    let p = if command == "export-universe" {
+        export_universe_options(&args[1..])?
+    } else {
+        options(&args[1..], names)?
+    };
     let config = InputsServiceConfig::load(PathBuf::from(&p["--config"]))?;
     if command == "check" {
         return Ok(
@@ -86,7 +112,11 @@ pub fn run(args: &[String]) -> Result<Value> {
             json!({"status":"EXPIRED_CONTENT_PRUNED","removed":ImportStore::open(config)?.prune_expired(now)?}),
         ),
         "export-universe" => {
-            let document = InputsService::open(config)?.universe(now)?;
+            let index = p
+                .get("--index")
+                .map(String::as_str)
+                .unwrap_or(trady_domain::screening::SP500_INDEX_ID);
+            let document = InputsService::open(config)?.universe_for(index, now)?;
             write_immutable(&p["--out"], &document)?;
             Ok(
                 json!({"status":"VERIFIED_UNIVERSE_EXPORTED","path":p["--out"],"snapshot_id":document.snapshot_id,"members":document.members.len()}),

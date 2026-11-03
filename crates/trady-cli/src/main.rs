@@ -1,4 +1,5 @@
 mod account;
+mod alpaca;
 mod api_health;
 mod autonomous;
 mod broker_read;
@@ -13,6 +14,7 @@ mod opencode;
 mod release;
 mod stock_report;
 mod telegram;
+mod watchdog;
 mod weekly;
 
 use chrono::{DateTime, Utc};
@@ -46,8 +48,10 @@ fn print_help() {
     print!("{}", stock_report::HELP);
     print!("{}", financial::HELP);
     print!("{}", intelligence::HELP);
+    print!("{}", alpaca::HELP);
     print!("{}", entry_demo::HELP);
     print!("{}", account::HELP);
+    print!("{}", watchdog::HELP);
 }
 
 fn main() -> std::process::ExitCode {
@@ -96,6 +100,7 @@ fn run() -> Result<()> {
         "api-health" => output(api_health::run(&args[1..])?),
         "research-report" => output(stock_report::run(&args[1..])?),
         "intelligence" => output(intelligence::run(&args[1..])?),
+        "alpaca" => output(alpaca::run(&args[1..])?),
         "sentiment" => output(finbert::run(&args[1..])?),
         "t212" if args.len() == 4 && args[1] == "snapshot" && args[2] == "--config" => {
             trading212_snapshot(&args[3])
@@ -108,10 +113,11 @@ fn run() -> Result<()> {
         "analyst" | "executor" | "gateway" => service(command, &args[1..]),
         "migrate" if args.len() == 1 => {
             trady_storage::migrate(&secret("TRADY_MIGRATOR_DSN")?)?;
-            output(json!({"migration":10,"status":"applied_or_verified"}))
+            output(json!({"migration":12,"status":"applied_or_verified"}))
         }
         "demo" if args.len() == 1 => demo_memory(),
         "demo-entry" => output(entry_demo::run(&args[1..])?),
+        "watchdog" => output(watchdog::run(&args[1..])?),
         "demo-postgres" if args.len() == 1 => demo_postgres(),
         "validate-json" if args.len() == 3 => {
             let contract = match args[1].as_str() {

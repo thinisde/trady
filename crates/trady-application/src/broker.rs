@@ -4,6 +4,7 @@
 //! current account fence and coordinate protection/available sell quantities before
 //! calling the port. A transport acknowledgment does not establish a fill or protection.
 
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -47,6 +48,104 @@ pub struct BrokerOrderRequest {
     pub side: Side,
     pub quantity: Decimal,
     pub kind: OrderKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProtectionSpec {
+    pub stop_price: Decimal,
+    pub quantity: Decimal,
+    pub time_in_force: TimeInForce,
+}
+
+impl ProtectionSpec {
+    pub fn validate(&self) -> BrokerResult<()> {
+        if self.stop_price <= Decimal::ZERO || self.quantity <= Decimal::ZERO {
+            return Err(BrokerFailure::new(BrokerFailureKind::InvalidRequest));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProtectedOrderRequest {
+    pub entry: BrokerOrderRequest,
+    pub protection: ProtectionSpec,
+    pub capability_evidence_id: String,
+    pub capability_evidence_sha256: String,
+    pub expires_at: DateTime<Utc>,
+}
+
+impl ProtectedOrderRequest {
+    pub fn validate(&self, now: DateTime<Utc>) -> BrokerResult<()> {
+        self.entry.validate()?;
+        self.protection.validate()?;
+        let matching_time_in_force = match self.entry.kind {
+            OrderKind::Market { .. } => true,
+            OrderKind::Limit { time_in_force, .. }
+            | OrderKind::Stop { time_in_force, .. }
+            | OrderKind::StopLimit { time_in_force, .. } => {
+                time_in_force == self.protection.time_in_force
+            }
+        };
+        if self.protection.quantity != self.entry.quantity
+            || !matching_time_in_force
+            || self.capability_evidence_id.is_empty()
+            || self.capability_evidence_id.len() > 160
+            || !self
+                .capability_evidence_id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"_-.".contains(&b))
+            || self.capability_evidence_sha256.len() != 64
+            || !self
+                .capability_evidence_sha256
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+            || self.expires_at <= now
+        {
+            return Err(BrokerFailure::new(BrokerFailureKind::InvalidRequest));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProtectedOrderReceipt {
+    pub broker_order_id: String,
+    pub protected_order_ids: Vec<String>,
+    pub account_id: AccountId,
+    pub instrument_id: InstrumentId,
+    pub quantity: Decimal,
+    pub atomic: bool,
+    pub request_sha256: String,
+    pub acknowledged_at: DateTime<Utc>,
+}
+
+impl ProtectedOrderReceipt {
+    /// Validate the broker acknowledgement against the exact protected request.
+    /// This proves transport identity and attachment shape; it does not prove a fill.
+    pub fn validate(&self, request: &ProtectedOrderRequest) -> BrokerResult<()> {
+        request.entry.validate()?;
+        request.protection.validate()?;
+        if self.broker_order_id.is_empty()
+            || self.protected_order_ids.is_empty()
+            || self.protected_order_ids.iter().any(String::is_empty)
+            || !self.atomic
+            || self.account_id != request.entry.account_id
+            || self.instrument_id != request.entry.instrument_id
+            || self.quantity != request.entry.quantity
+            || self.request_sha256.len() != 64
+            || !self
+                .request_sha256
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+        {
+            return Err(BrokerFailure::new(BrokerFailureKind::InvalidResponse));
+        }
+        Ok(())
+    }
 }
 
 impl BrokerOrderRequest {
@@ -133,4 +232,84 @@ pub trait BrokerExecutionPort {
         account: &AccountId,
         broker_order_id: &str,
     ) -> BrokerResult<CancellationReceipt>;
+
+    fn submit_protected_order(
+        &mut self,
+        _request: &ProtectedOrderRequest,
+        _now: DateTime<Utc>,
+    ) -> BrokerResult<ProtectedOrderReceipt> {
+        Err(BrokerFailure::new(BrokerFailureKind::Unsupported))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use trady_domain::AccountId;
+
+    fn request() -> BrokerOrderRequest {
+        BrokerOrderRequest {
+            intent_id: IntentId::new("intent").unwrap(),
+            account_id: AccountId::new("paper_demo").unwrap(),
+            instrument_id: InstrumentId::new("AAPL_US_EQ").unwrap(),
+            instrument_currency: Currency::new("USD").unwrap(),
+            side: Side::Buy,
+            quantity: Decimal::ONE,
+            kind: OrderKind::Limit {
+                price: Decimal::new(100, 0),
+                time_in_force: TimeInForce::Day,
+            },
+        }
+    }
+
+    #[test]
+    fn protected_request_rejects_non_hex_evidence_and_expired_deadline() {
+        let mut protected = ProtectedOrderRequest {
+            entry: request(),
+            protection: ProtectionSpec {
+                stop_price: Decimal::new(99, 0),
+                quantity: Decimal::ONE,
+                time_in_force: TimeInForce::Day,
+            },
+            capability_evidence_id: "capability".into(),
+            capability_evidence_sha256: "z".repeat(64),
+            expires_at: Utc::now() + chrono::Duration::minutes(1),
+        };
+        assert!(protected.validate(Utc::now()).is_err());
+        protected.capability_evidence_sha256 = "a".repeat(64);
+        protected.expires_at = Utc::now() - chrono::Duration::seconds(1);
+        assert!(protected.validate(Utc::now()).is_err());
+    }
+
+    #[test]
+    fn protected_receipt_must_match_account_instrument_quantity_and_attachment() {
+        let request = ProtectedOrderRequest {
+            entry: request(),
+            protection: ProtectionSpec {
+                stop_price: Decimal::new(99, 0),
+                quantity: Decimal::ONE,
+                time_in_force: TimeInForce::Day,
+            },
+            capability_evidence_id: "capability".into(),
+            capability_evidence_sha256: "a".repeat(64),
+            expires_at: Utc::now() + chrono::Duration::minutes(1),
+        };
+        let receipt = ProtectedOrderReceipt {
+            broker_order_id: "order-1".into(),
+            protected_order_ids: vec!["stop-1".into()],
+            account_id: AccountId::new("paper_other").unwrap(),
+            instrument_id: request.entry.instrument_id.clone(),
+            quantity: Decimal::ONE,
+            atomic: true,
+            request_sha256: "b".repeat(64),
+            acknowledged_at: Utc::now(),
+        };
+        assert!(matches!(
+            receipt.validate(&request),
+            Err(BrokerFailure {
+                kind: BrokerFailureKind::InvalidResponse,
+                ..
+            })
+        ));
+    }
 }

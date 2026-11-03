@@ -1,12 +1,11 @@
 # Stock research reports
 
-`trady research-report FILE [--as-of RFC3339]` generates an offline report for
-moderate-risk US/EU research over a declared 6–12 month horizon. The input contains
-1–100 unique symbols, dated financial references, theses, catalysts and risks.
-Run the [dated researched input](./research-us-eu-2026-10-31.input.json):
+`trady research-report FILE [--as-of RFC3339]` generates an offline report from a
+caller-supplied JSON input. It is a shared compatibility command; the focused
+IEX30 runtime uses `config/research.json` for its bounded source registry.
 
 ```sh
-cargo run --locked --bin trady -- research-report docs/research-us-eu-2026-10-31.input.json --as-of 2026-10-31T23:59:59Z
+cargo run --locked --bin trady -- research-report INPUT.json --as-of RFC3339
 ```
 
 The strict version-1 JSON input uses `schema_version`, `horizon_months` and

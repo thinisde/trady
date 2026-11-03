@@ -6,10 +6,9 @@ Updated 2026-10-31. This record distinguishes executable components from the
 historical performance result, Lean 4 proof, QuantConnect LEAN backtest or production
 activation was produced by this implementation.
 
-The later [completion record](../reports/2026-10-31_IMPLEMENTATION.md) supersedes
-the missing-adapter statements below. Concrete input/model pipelines, PostgreSQL
-weekly and prediction ledgers, pinned helper execution, release transitions and
-shadow recording now exist. The older counts describe the earlier scoped snapshot.
+The focused deployment still treats model, formula and capability evidence as
+external release inputs. This record describes the reusable offline subset; it
+does not authorize an IEX30 entry.
 
 ## Executable subset
 

@@ -7,6 +7,7 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
     io::{BufRead, BufReader, Read},
@@ -16,6 +17,7 @@ use trady_application::{contracts::parse_json, harness::*};
 use trady_domain::{Error, Result, require};
 
 pub const OPENCODE_GO_BASE_URL: &str = "https://opencode.ai/inference/go/openai/v1";
+pub const OPENCODE_GO_MODELS_URL: &str = "https://opencode.ai/inference/go/v1/models";
 const MAX_RESPONSE_BYTES: u64 = 1_048_576;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,12 +78,39 @@ impl OpenCodeGoConfig {
     pub fn endpoint(&self) -> String {
         format!("{}/chat/completions", self.base_url.trim_end_matches('/'))
     }
+    pub fn models_endpoint(&self) -> String {
+        if self.base_url == OPENCODE_GO_BASE_URL {
+            return OPENCODE_GO_MODELS_URL.into();
+        }
+        let Ok(mut url) = Url::parse(&self.base_url) else {
+            return format!("{}/models", self.base_url.trim_end_matches('/'));
+        };
+        let path = url.path().trim_end_matches('/');
+        let models_path = if let Some(prefix) = path.strip_suffix("/openai/v1") {
+            format!("{prefix}/v1/models")
+        } else if let Some(prefix) = path.strip_suffix("/v1") {
+            format!("{prefix}/v1/models")
+        } else {
+            format!("{path}/models")
+        };
+        url.set_path(&models_path);
+        url.to_string()
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OpenCodeModelVerification {
+    pub endpoint: String,
+    pub model: String,
+    pub model_count: usize,
+    pub catalog_sha256: String,
 }
 
 pub struct OpenCodeGoProvider {
     config: OpenCodeGoConfig,
     client: Client,
     api_key: String,
+    model_verification: Option<OpenCodeModelVerification>,
 }
 impl OpenCodeGoProvider {
     pub fn from_env(config: OpenCodeGoConfig) -> Result<Self> {
@@ -105,7 +134,82 @@ impl OpenCodeGoProvider {
             config,
             client,
             api_key,
+            model_verification: None,
         })
+    }
+
+    fn verify_model_catalog(
+        &self,
+    ) -> std::result::Result<OpenCodeModelVerification, ProviderError> {
+        let response = self
+            .client
+            .get(self.config.models_endpoint())
+            .bearer_auth(&self.api_key)
+            .header("Accept", "application/json")
+            .header("User-Agent", "trady/0.1")
+            .timeout(Duration::from_secs(30))
+            .send()
+            .map_err(transport)?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(match status.as_u16() {
+                401 | 403 => failed("provider_authentication", false),
+                408 | 429 | 500 | 502 | 503 | 504 => {
+                    failed("provider_model_catalog_unavailable", true)
+                }
+                _ => failed("provider_model_catalog_rejected", false),
+            });
+        }
+        let mut bytes = vec![];
+        response
+            .take(MAX_RESPONSE_BYTES + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| failed("provider_model_catalog_read", true))?;
+        if bytes.len() as u64 > MAX_RESPONSE_BYTES {
+            return Err(failed("provider_model_catalog_limit", false));
+        }
+        let value: Value = serde_json::from_slice(&bytes)
+            .map_err(|_| failed("provider_model_catalog_invalid_json", false))?;
+        let models = value
+            .get("data")
+            .and_then(Value::as_array)
+            .or_else(|| value.as_array())
+            .ok_or_else(|| failed("provider_model_catalog_invalid_shape", false))?;
+        let available = models
+            .iter()
+            .filter_map(|model| model.get("id").and_then(Value::as_str))
+            .any(|model| model == self.config.model);
+        if !available {
+            return Err(failed("provider_model_unavailable", false));
+        }
+        Ok(OpenCodeModelVerification {
+            endpoint: self.config.models_endpoint(),
+            model: self.config.model.clone(),
+            model_count: models.len(),
+            catalog_sha256: Sha256::digest(&bytes)
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
+        })
+    }
+
+    fn ensure_model_verified(&mut self) -> std::result::Result<(), ProviderError> {
+        if self.model_verification.is_none() {
+            self.model_verification = Some(self.verify_model_catalog()?);
+        }
+        Ok(())
+    }
+
+    pub fn verify_model(&mut self) -> Result<OpenCodeModelVerification> {
+        self.ensure_model_verified().map_err(|error| {
+            Error(format!(
+                "OpenCode Go model verification failed: {}",
+                error.code
+            ))
+        })?;
+        self.model_verification
+            .clone()
+            .ok_or_else(|| Error("OpenCode Go model verification missing".into()))
     }
 }
 fn failed(code: &'static str, retryable: bool) -> ProviderError {
@@ -334,6 +438,7 @@ impl LlmProvider for OpenCodeGoProvider {
         if cancel.is_cancelled() {
             return Err(failed("provider_cancelled", false));
         }
+        self.ensure_model_verified()?;
         let mut body = json!({"model":self.config.model,"messages":request.messages,"max_tokens":request.max_output_tokens,"stream":self.config.stream});
         if self.config.stream {
             body["stream_options"] = json!({"include_usage":true});
@@ -375,5 +480,33 @@ impl LlmProvider for OpenCodeGoProvider {
         } else {
             read_json(response, on_text)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{OPENCODE_GO_BASE_URL, OPENCODE_GO_MODELS_URL, OpenCodeGoConfig};
+
+    #[test]
+    fn models_endpoint_uses_the_go_catalog_path() {
+        let config = OpenCodeGoConfig::default();
+        assert_eq!(config.models_endpoint(), OPENCODE_GO_MODELS_URL);
+
+        let custom = OpenCodeGoConfig {
+            base_url: "http://127.0.0.1:8080/inference/go/openai/v1".into(),
+            ..config
+        };
+        assert_eq!(
+            custom.models_endpoint(),
+            "http://127.0.0.1:8080/inference/go/v1/models"
+        );
+    }
+
+    #[test]
+    fn default_endpoint_remains_openai_compatible() {
+        assert_eq!(
+            OpenCodeGoConfig::default().endpoint(),
+            format!("{OPENCODE_GO_BASE_URL}/chat/completions")
+        );
     }
 }

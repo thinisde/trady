@@ -47,7 +47,8 @@ uses the same bearer value under `TRADY_TRADING_INPUTS_TOKEN`.
 All five original HTTP routes use the actual Rust DTOs:
 `session/{account}`, `quote/{instrument}`, `costs/{instrument}`,
 `research/{account}`, `predictions/{account}`. The universe export route is
-`universe/SP500`. Listener binds loopback behind an approved TLS reverse proxy.
+`universe/{index_id}` for the supported `SP500` and `EUROPE_EUR_STOCKS` scopes.
+Listener binds loopback behind an approved TLS reverse proxy.
 
 Root added `HttpUniverseSource::with_bearer` and same-origin input-service bearer
 forwarding, plus central credential registration. This follow-up preserves those

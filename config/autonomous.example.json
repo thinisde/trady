@@ -1,16 +1,18 @@
 {
   "config_version": 1,
   "enabled": false,
+  "execution_stage": "SHADOW",
   "interval_seconds": 5,
   "trading": {
     "config_version": 1,
     "account_id": "paper_autonomous_demo",
     "mode": "paper",
-    "base_currency": "EUR",
+    "base_currency": "USD",
     "owner_id": "configured_owner",
     "policy": {
       "version": 1,
       "entry_cash_fraction": "0.98",
+      "max_order_cash_fraction": "0.98",
       "confidence_entry_min": 90,
       "max_target_fraction": "0.10",
       "exceptional_targets_enabled": false,
@@ -19,7 +21,9 @@
       "max_holding_sessions": 5,
       "leverage": false,
       "add_to_position": false,
-      "rotation_enabled": false
+      "rotation_enabled": false,
+      "max_daily_buy_orders": 1,
+      "max_daily_sell_orders": 1
     },
     "capabilities": {
       "cash_account": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
@@ -37,7 +41,7 @@
     "environment": "demo",
     "account_id": "paper_autonomous_demo",
     "broker_account_id": 12345,
-    "base_currency": "EUR",
+    "base_currency": "USD",
     "timeout_seconds": 10
   },
   "inputs": {
@@ -67,19 +71,19 @@
   "universe": {
     "config_version": 1,
     "enabled": false,
-    "source_id": "sp500_universe",
-    "url": "https://approved-universe.example.invalid/sp500.json",
-    "allowed_hosts": ["approved-universe.example.invalid"],
-    "expected_provider": "REPLACE_WITH_APPROVED_PROVIDER",
-    "expected_taxonomy_edition": "REPLACE_WITH_EFFECTIVE_GICS_EDITION",
+    "source_id": "alpaca_iex30",
+    "url": "https://data.alpaca.markets/iex30",
+    "allowed_hosts": ["data.alpaca.markets"],
+    "expected_provider": "Alpaca Basic IEX",
+    "expected_taxonomy_edition": "IEX30_GICS_2026",
     "rights": {
-      "store_content": false,
-      "llm_processing": false,
+      "store_content": true,
+      "llm_processing": true,
       "retention_hours": 24,
-      "terms_reference": ""
+      "terms_reference": "owner_review_iex30_2026-11-02"
     },
-    "minimum_interval_seconds": 60,
-    "daily_request_limit": 96
+    "minimum_interval_seconds": 300,
+    "daily_request_limit": 288
   },
   "models": [],
   "controls": {"pause_entries": true, "close_position": false}

@@ -20,6 +20,11 @@ bounded capacities/timeouts and a credential environment variable name.
 The file contains no credential value. Verify the model's context window;
 `native_tools: false` selects canonical JSON envelopes.
 
+Before the first completion, the adapter authenticates against the OpenCode Go
+model catalog at `https://opencode.ai/inference/go/v1/models`, requires an exact
+match for the configured model ID, and records the catalog hash in the run
+receipt.
+
 ## Side Effects
 
 None from the file alone. Explicit `trady chat --llm-config` calls read it and

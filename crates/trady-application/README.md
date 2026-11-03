@@ -25,8 +25,9 @@ Perpetual and universe screening supply scoped advisory/research observations.
 
 - `[src/lib.rs:FoundationConfig]`, `ExecutionRepository`, `reconcile`,
   `reconcile_account`: paper configuration, information ports and reconciliation.
-- `[src/broker.rs:BrokerExecutionPort]`, `BrokerOrderRequest`:
-  typed execution transport with caller-established authority.
+- `[src/broker.rs:BrokerExecutionPort]`, `BrokerOrderRequest`,
+  `ProtectedOrderRequest` and `ProtectedOrderReceipt`: typed execution transport
+  with caller-established authority and an explicit attached-protection boundary.
 - `[src/contracts.rs:Contracts]`, `ValidatedDocument`, `parse_json`,
   `parse_json_bounded`: strict embedded-schema and duplicate-free JSON boundaries.
 - `[src/intelligence.rs:IntelligenceConfig]`, `IntelligenceRepository`, `ingest`,
@@ -74,10 +75,12 @@ cancellation. Concrete PostgreSQL/provider implementations remain outside this
 crate. `[src/model_lab/journal.rs:EvaluationJournal]` and `write_immutable` provide
 local artifact and holdout persistence within the crate.
 
-The separate `[src/broker.rs:BrokerExecutionPort]` exposes typed submission and
-cancellation for an executor. Requests confer no authority: durable intent/fencing,
-policy/readiness and protection coordination are caller responsibilities. Transport
-acknowledgments do not establish fills or protected positions.
+The separate `[src/broker.rs:BrokerExecutionPort]` exposes typed submission,
+cancellation, and a default-unsupported protected-order operation for an executor.
+Requests confer no authority: durable intent/fencing, policy/readiness and
+protection coordination are caller responsibilities. Protected acknowledgments
+must match account, instrument, quantity, request hash, and attached order IDs;
+transport acknowledgments do not establish fills.
 
 `[src/autonomous/readiness.rs:EntryCandidate::validate]` requires account/snapshot/
 policy-bound current dossier/skills/screening/advice and approved formula evidence.

@@ -22,7 +22,9 @@ use trady_application::{
     optimization::{FormulaAuthority, digest, valid_hash, valid_id},
 };
 use trady_domain::{
-    AccountId, Currency, Error, InstrumentId, Quote, Result, require, research::SourceRights,
+    AccountId, Currency, Error, InstrumentId, Quote, Result, require,
+    research::SourceRights,
+    screening::{SP500_INDEX_ID, valid_index_id},
 };
 use trady_policy::Policy;
 
@@ -401,10 +403,18 @@ impl InputsService {
         self.validate_research(&import, packet, now)?;
         Ok(packet.clone())
     }
+    /// Read the legacy US scope. New deployments should call `universe_for`
+    /// with the configured market scope so a service cannot accidentally hand
+    /// a European runtime a US constituent set.
     pub fn universe(&self, now: DateTime<Utc>) -> Result<UniverseDocument> {
+        self.universe_for(SP500_INDEX_ID, now)
+    }
+
+    pub fn universe_for(&self, index_id: &str, now: DateTime<Utc>) -> Result<UniverseDocument> {
+        require(valid_index_id(index_id), "unsupported universe scope")?;
         match self
             .store
-            .latest(ImportKind::Universe, "SP500", now)?
+            .latest(ImportKind::Universe, index_id, now)?
             .payload
         {
             ImportPayload::Universe(u) => {

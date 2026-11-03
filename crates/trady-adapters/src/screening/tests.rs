@@ -283,3 +283,37 @@ fn screening_http_empty_universe_is_preserved_for_explicit_domain_blocking() {
     let mut source = HttpUniverseSource::with_transport(config(), transport).unwrap();
     assert!(source.fetch_universe(now()).unwrap().members.is_empty());
 }
+
+#[test]
+fn european_eur_scope_rejects_non_eur_provider_rows() {
+    let mut european_document = document();
+    european_document.index_id = EUROPE_EUR_STOCKS_INDEX_ID.into();
+    european_document.members[0].listing_mic = "XETR".into();
+    european_document.members[0].currency = Currency::new("EUR").unwrap();
+    let mut european_config = config();
+    european_config.source_id = "europe_eur_stocks".into();
+    european_config.url = "https://example.com/europe-eur-stocks.json".into();
+    let (european_transport, _) = transport(vec![HttpResponse {
+        status: 200,
+        final_url: Some(Url::parse(&european_config.url).unwrap()),
+        body: serde_json::to_vec(&european_document).unwrap(),
+        ..HttpResponse::default()
+    }]);
+    let mut source =
+        HttpUniverseSource::with_transport(european_config.clone(), european_transport).unwrap();
+    let snapshot = source.fetch_universe(now()).unwrap();
+    assert_eq!(snapshot.index_id, EUROPE_EUR_STOCKS_INDEX_ID);
+    assert_eq!(snapshot.members[0].currency, Currency::new("EUR").unwrap());
+
+    let mut invalid_document = document();
+    invalid_document.index_id = EUROPE_EUR_STOCKS_INDEX_ID.into();
+    let (invalid_transport, _) = transport(vec![HttpResponse {
+        status: 200,
+        final_url: Some(Url::parse(&european_config.url).unwrap()),
+        body: serde_json::to_vec(&invalid_document).unwrap(),
+        ..HttpResponse::default()
+    }]);
+    let mut source =
+        HttpUniverseSource::with_transport(european_config, invalid_transport).unwrap();
+    assert!(source.fetch_universe(now()).is_err());
+}

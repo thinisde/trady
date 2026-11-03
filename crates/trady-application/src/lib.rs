@@ -15,6 +15,7 @@ pub mod screening;
 pub mod sentiment;
 pub mod stock_report;
 pub mod telegram;
+pub mod watchdog;
 pub mod x_monitoring;
 
 use chrono::{DateTime, Utc};

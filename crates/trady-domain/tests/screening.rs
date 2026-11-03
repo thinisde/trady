@@ -563,3 +563,35 @@ fn screening_isin_validation_rejects_bad_checksum_and_unicode_without_panicking(
     assert!(valid_gics_pair("60", "6020"));
     assert!(!valid_gics_pair("45", "6020"));
 }
+
+#[test]
+fn european_scope_requires_eur_members_and_uses_its_own_method_identity() {
+    let mut f = Fixture::new(1);
+    f.universe.index_id = EUROPE_EUR_STOCKS_INDEX_ID.into();
+    f.universe.members[0].listing_mic = "XETR".into();
+    f.observations.broker_support[0].listing_mic = "XETR".into();
+    let eur = Currency::new("EUR").unwrap();
+    f.universe.members[0].currency = eur.clone();
+    f.observations.broker_support[0].currency = eur.clone();
+    f.observations.markets[0].currency = eur;
+    let result = f.screen();
+    assert_eq!(result.method, EUROPE_EUR_SCREENING_METHOD);
+    assert_eq!(result.candidates.len(), 1);
+
+    let mut f = Fixture::new(1);
+    f.universe.index_id = EUROPE_EUR_STOCKS_INDEX_ID.into();
+    f.rejects(RejectionReason::MarketCurrencyMismatch);
+
+    let mut f = Fixture::new(1);
+    f.universe.index_id = EUROPE_EUR_STOCKS_INDEX_ID.into();
+    f.universe.members[0].listing_mic = "XNAS".into();
+    let eur = Currency::new("EUR").unwrap();
+    f.universe.members[0].currency = eur.clone();
+    f.observations.broker_support[0].currency = eur.clone();
+    f.observations.markets[0].currency = eur;
+    f.rejects(RejectionReason::NonEuropeanVenue);
+
+    let mut f = Fixture::new(1);
+    f.universe.index_id = "NASDAQ100".into();
+    f.rejects(RejectionReason::InvalidUniverse);
+}

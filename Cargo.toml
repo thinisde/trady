@@ -25,6 +25,7 @@ ctrlc = "=3.5.2"
 socket2 = "=0.6.5"
 nix = { version = "=0.31.3", features = ["socket", "user"] }
 quick-xml = "=0.38.4"
+tungstenite = { version = "=0.30.0", default-features = false, features = ["handshake", "native-tls"] }
 trady-domain = { path = "crates/trady-domain" }
 trady-policy = { path = "crates/trady-policy" }
 trady-application = { path = "crates/trady-application" }

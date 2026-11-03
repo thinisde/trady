@@ -5,7 +5,7 @@ mod shadow;
 #[path = "autonomous_worker.rs"]
 mod worker;
 
-use chrono::Utc;
+use chrono::{Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
@@ -20,13 +20,18 @@ use std::{
 };
 use trady_adapters::{
     SystemClock,
+    alpaca::{AlpacaDataConfig, IexStreamHandle},
     autonomous::TradingInputsConfig,
     credentials::CredentialStore,
     perpetual::{ApprovedArtifact, MAX_ARTIFACT_BYTES, NativePerpetualAdvisor},
     screening::ApprovedUniverseConfig,
     trading212::{AutonomousTrading212, Credentials, Trading212Config},
 };
-use trady_application::{autonomous::*, contracts::parse_json_bounded};
+use trady_application::{
+    autonomous::*,
+    contracts::parse_json_bounded,
+    watchdog::{IexWatchdogObservation, WatchdogStatus},
+};
 use trady_domain::{perpetual::ModelManifest, *};
 use trady_storage::autonomous::PgTradingJournal;
 
@@ -43,9 +48,17 @@ struct ModelFile {
 struct RuntimeConfig {
     config_version: u32,
     enabled: bool,
+    /// Lifecycle stage is separate from the broker environment mode. Missing
+    /// legacy values default to SHADOW so an old config cannot gain mutation
+    /// authority by deserialization alone.
+    #[serde(default)]
+    execution_stage: ExecutionStage,
     interval_seconds: u64,
     trading: TradingConfig,
     broker: Trading212Config,
+    /// Alpaca Basic is the authoritative IEX quote plane for the fixed 30.
+    #[serde(default)]
+    alpaca_market_data: Option<AlpacaDataConfig>,
     inputs: TradingInputsConfig,
     universe: ApprovedUniverseConfig,
     models: Vec<ModelFile>,
@@ -58,6 +71,8 @@ struct RuntimeConfig {
     /// Exact deployment-owned source, calendar, model and formula release scope.
     #[serde(default)]
     release_candidate: Option<trady_storage::weekly::ReleaseCandidate>,
+    #[serde(default)]
+    watchdog: trady_application::watchdog::IexWatchdogConfig,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -75,7 +90,50 @@ impl RuntimeConfig {
             "invalid autonomous runtime configuration",
         )?;
         self.trading.validate_for_management()?;
+        match self.execution_stage {
+            ExecutionStage::Shadow => {
+                require(
+                    self.trading.mode != Mode::Live,
+                    "live deployments require execution_stage LIVE",
+                )?;
+            }
+            ExecutionStage::SupervisedDemo
+            | ExecutionStage::AutonomousDemo
+            | ExecutionStage::Paused
+            | ExecutionStage::ManagementOnly => {
+                require(
+                    self.trading.mode == Mode::Paper,
+                    "demo execution stages require paper broker mode",
+                )?;
+            }
+            ExecutionStage::Live => {
+                require(
+                    self.trading.mode == Mode::Live,
+                    "live execution stage requires live broker mode",
+                )?;
+            }
+        }
         self.broker.validate().map_err(|e| Error(e.to_string()))?;
+        if let Some(alpaca) = &self.alpaca_market_data {
+            alpaca.validate()?;
+            if alpaca.enabled {
+                require(
+                    alpaca.base_currency.as_str() == "USD",
+                    "IEX Alpaca market data must remain USD-denominated",
+                )?;
+                require(
+                    self.inputs.screening.owner_allowlist.len() == 30
+                        && self.inputs.screening.owner_allowlist.iter().all(|id| {
+                            id.as_str().ends_with("_US_EQ")
+                                && trady_domain::iex::SYMBOLS
+                                    .iter()
+                                    .any(|s| id.as_str() == format!("{s}_US_EQ"))
+                        }),
+                    "enabled IEX market data requires the exact IEX30 owner allowlist",
+                )?;
+            }
+        }
+        self.watchdog.validate()?;
         self.inputs.validate(&self.trading)?;
         self.universe.validate()?;
         if let Some(socket) = &self.analyst_socket {
@@ -219,6 +277,20 @@ fn configuration_check(config: &RuntimeConfig, path: &str) -> Result<Value> {
     if config.trading.validate(now).is_err() {
         blockers.push("live_release_expired");
     }
+    if config.enabled
+        && config.trading.mode == Mode::Paper
+        && !config.execution_stage.permits_broker_mutation()
+    {
+        blockers.push("execution_stage_not_mutating");
+    }
+    if config
+        .alpaca_market_data
+        .as_ref()
+        .is_some_and(|data| data.enabled)
+        && !config.watchdog.enabled
+    {
+        blockers.push("iex_watchdog_disabled");
+    }
     let required_actions: Vec<Value> = blockers.iter().map(|code| {
         let required = match *code {
             "runtime_disabled" => "Review the deployment and explicitly enable the runtime.",
@@ -230,18 +302,23 @@ fn configuration_check(config: &RuntimeConfig, path: &str) -> Result<Value> {
             "entry_capabilities_unverified" => "Supply current verified broker/account/instrument evidence for every unverified_entry_capabilities field, with a nonempty evidence_id and future valid_until. A successful metadata or account read alone does not verify protective orders or executable quotes.",
             "approved_formula_unavailable" => "Supply an active policy-compatible formula authority with matching prediction authority, proof, parity, independent evaluation and prospective shadow evidence.",
             "live_release_expired" => "Renew the independently reviewed release evidence for this exact deployment scope.",
+            "execution_stage_not_mutating" => "Select SUPERVISED_DEMO for one approved test order or AUTONOMOUS_DEMO after the acceptance gate; SHADOW cannot submit broker mutations.",
+            "iex_watchdog_disabled" => "Enable the IEX30 watchdog and keep its exact 30-symbol schedule active before enabling unattended entries.",
             _ => unreachable!("every configuration blocker has a required action"),
         };
         json!({"code":code,"required":required})
     }).collect();
     Ok(json!({
         "status":"configuration_checked","account_id":config.trading.account_id,
-        "mode":config.trading.mode,"entry_authorized":false,
+        "mode":config.trading.mode,"execution_stage":config.execution_stage,
+        "entry_authorized":false,
         "configuration_ready":blockers.is_empty(),"blockers":blockers,
         "required_actions":required_actions,"approved_models":advisor.model_count(),
         "unverified_entry_capabilities":unverified_entry_capabilities,
         "entry_controls_enabled":config.enabled && !config.controls.pause_entries && !config.controls.close_position,
         "order_submission_policy":if config.trading.mode == Mode::Shadow { "record_only" } else { "broker_execution" }
+        ,"market_data":{"provider":if config.alpaca_market_data.as_ref().is_some_and(|data| data.enabled) {"alpaca"} else {"input_service"},"feed":if config.alpaca_market_data.as_ref().is_some_and(|data| data.enabled) {"iex"} else {"configured"},"universe":"IEX30"}
+        ,"watchdog":{"enabled":config.watchdog.enabled,"runtime_wired":true,"lifecycle":"holding_scoped","interval_seconds":config.watchdog.interval_seconds,"symbols":config.watchdog.symbols.len()}
     }))
 }
 
@@ -298,6 +375,26 @@ pub fn run(args: &[String]) -> Result<Value> {
         )?;
         return shadow::run(config, path, args.len() == 4);
     }
+    if action == "run" {
+        require(
+            config.execution_stage == ExecutionStage::AutonomousDemo,
+            "autonomous run requires execution_stage AUTONOMOUS_DEMO",
+        )?;
+    } else {
+        require(
+            config.execution_stage.permits_broker_mutation()
+                || config.execution_stage.management_only(),
+            "recovery requires a supervised or management execution stage",
+        )?;
+    }
+    // Run must perform the credential-free gate before loading any broker or
+    // database secret. A paper/demo config with missing evidence therefore
+    // fails without constructing a network client.
+    let preflight = configuration_check(&config, path)?;
+    require(
+        preflight["configuration_ready"].as_bool() == Some(true),
+        "autonomous preflight failed; inspect the configuration report",
+    )?;
     let store = CredentialStore::load()?;
     let credentials = Credentials::from_store(config.broker.environment, &store)?;
     let mut broker = AutonomousTrading212::new(config.broker.clone(), credentials)
@@ -330,6 +427,17 @@ pub fn run(args: &[String]) -> Result<Value> {
         .optional("TRADY_TRADING_INPUTS_TOKEN")?
         .map(|s| s.into_inner());
     let stopped = Arc::new(AtomicBool::new(false));
+    let mut iex_stream = if let Some(alpaca) = config
+        .alpaca_market_data
+        .as_ref()
+        .filter(|data| data.enabled)
+    {
+        let key = store.required("TRADY_ALPACA_API_KEY")?.into_inner();
+        let secret = store.required("TRADY_ALPACA_SECRET_KEY")?.into_inner();
+        Some(IexStreamHandle::new(alpaca.clone(), key, secret)?)
+    } else {
+        None
+    };
     let mut inputs = if config.analyst_socket.is_some() {
         worker::IsolatedInputs::new_external(config.clone(), path, token, stopped.clone())?
     } else {
@@ -345,12 +453,26 @@ pub fn run(args: &[String]) -> Result<Value> {
     ctrlc::set_handler(move || signal.store(true, Ordering::Relaxed))
         .map_err(|_| Error("cannot install trading shutdown handler".into()))?;
     let worker = WorkerId::new(trady_application::harness::new_id("trader"))?;
-    let trader = AutonomousTrader::start(config.trading, worker, &mut journal, &SystemClock)?;
+    let trader =
+        AutonomousTrader::start(config.trading.clone(), worker, &mut journal, &SystemClock)?;
+    if let Some(stream) = &iex_stream {
+        inputs.with_iex_stream_cache(stream.cache());
+    }
     let result = (|| {
         let mut cycles = 0_u64;
+        let mut holding_active = journal.load(&trader.fence)?.plan.is_some();
+        let mut saw_holding = holding_active;
+        let mut last_watchdog_bucket = None;
+        let mut termination = "executor_stopped";
         loop {
             if stopped.load(Ordering::Relaxed) {
                 break;
+            }
+            if let Some(stream) = iex_stream.as_mut()
+                && !stream.started()
+                && should_start_iex_stream(&mut inputs, &config, holding_active, Utc::now())
+            {
+                stream.start()?;
             }
             let report = trader.cycle(
                 &mut journal,
@@ -363,10 +485,48 @@ pub fn run(args: &[String]) -> Result<Value> {
                 .checked_add(1)
                 .ok_or_else(|| Error("cycle counter exhausted".into()))?;
             match report {
-                Ok(report) => super::output(
-                    serde_json::to_value(report)
-                        .map_err(|_| Error("cycle report encoding failed".into()))?,
-                )?,
+                Ok(report) => {
+                    if !matches!(report.state, PositionState::Flat | PositionState::Closed) {
+                        holding_active = true;
+                        saw_holding = true;
+                    } else if report.state == PositionState::Closed {
+                        holding_active = false;
+                    }
+                    super::output(
+                        serde_json::to_value(&report)
+                            .map_err(|_| Error("cycle report encoding failed".into()))?,
+                    )?;
+                    if saw_holding && report.state == PositionState::Closed {
+                        if let Some(stream) = iex_stream.as_mut() {
+                            stream.stop()?;
+                        }
+                        termination = "holding_closed";
+                        break;
+                    }
+                    if holding_active
+                        && config.watchdog.enabled
+                        && let Some(stream) = iex_stream.as_ref()
+                    {
+                        let state = journal.load(&trader.fence)?;
+                        let actual_holding = state.plan.is_some()
+                            && state
+                                .last_snapshot
+                                .as_ref()
+                                .is_some_and(|snapshot| !snapshot.positions.is_empty());
+                        if actual_holding {
+                            let observation =
+                                iex_watchdog_observation(&config, stream, &state, Utc::now())?;
+                            if last_watchdog_bucket != Some(observation.bucket) {
+                                journal.record_watchdog_observation(&trader.fence, &observation)?;
+                                super::output(json!({
+                                    "watchdog": observation,
+                                    "entry_authorized": false,
+                                }))?;
+                                last_watchdog_bucket = Some(observation.bucket);
+                            }
+                        }
+                    }
+                }
                 Err(error) if once => return Err(error),
                 Err(error) => {
                     // Check fencing before continuing. A stale worker must not reacquire implicitly.
@@ -386,7 +546,9 @@ pub fn run(args: &[String]) -> Result<Value> {
                 std::thread::sleep(Duration::from_millis(100));
             }
         }
-        Ok(json!({"status":"executor_stopped","cycles":cycles,"broker_protection_retained":true}))
+        Ok(
+            json!({"status":termination,"cycles":cycles,"broker_protection_retained":true,"iex_stream_stopped":iex_stream.as_ref().is_none_or(|stream| !stream.started())}),
+        )
     })();
     let released = journal.release(&trader.fence);
     let value = result?;
@@ -515,4 +677,101 @@ fn holding_advice(
         json!({"status":"holding_review_queued","update_id":update.id,"position_id":update.position_id,
         "valid_until":update.valid_until,"entry_authorized":false}),
     )
+}
+
+fn should_start_iex_stream(
+    inputs: &mut worker::IsolatedInputs,
+    config: &RuntimeConfig,
+    holding_active: bool,
+    now: chrono::DateTime<Utc>,
+) -> bool {
+    if holding_active {
+        return true;
+    }
+    let Some(session) = inputs
+        .session(&config.trading.account_id, now)
+        .ok()
+        .flatten()
+    else {
+        return false;
+    };
+    now >= session.opens_at
+        - ChronoDuration::seconds(
+            i64::try_from(
+                config
+                    .alpaca_market_data
+                    .as_ref()
+                    .map_or(1_800, |data| data.stream_start_lead_seconds),
+            )
+            .unwrap_or(1_800),
+        )
+        && now < session.closes_at
+}
+
+fn iex_watchdog_observation(
+    config: &RuntimeConfig,
+    stream: &IexStreamHandle,
+    state: &TradingState,
+    now: chrono::DateTime<Utc>,
+) -> Result<IexWatchdogObservation> {
+    let tick = config
+        .watchdog
+        .ticks(now)?
+        .into_iter()
+        .next()
+        .ok_or_else(|| Error("IEX watchdog has no symbols".into()))?;
+    let health = stream.health()?;
+    let cache = stream.cache();
+    let stale_symbols = config
+        .watchdog
+        .symbols
+        .iter()
+        .filter_map(|symbol| {
+            let instrument = InstrumentId::new(format!("{symbol}_US_EQ")).ok()?;
+            cache
+                .latest(
+                    &instrument,
+                    now,
+                    u64::from(config.watchdog.quote_max_age_seconds),
+                )
+                .is_err()
+                .then_some(symbol.clone())
+        })
+        .collect::<Vec<_>>();
+    let held_symbol = state
+        .plan
+        .as_ref()
+        .map(|plan| trady_domain::iex::symbol(&plan.candidate.instrument_id).map(str::to_owned))
+        .transpose()?;
+    let quote_age_seconds = state.plan.as_ref().and_then(|plan| {
+        cache
+            .quote_age_seconds(&plan.candidate.instrument_id, now)
+            .ok()
+            .flatten()
+    });
+    let status = if !stream.started() {
+        WatchdogStatus::Stopped
+    } else if !health.connected || !stale_symbols.is_empty() {
+        WatchdogStatus::Degraded
+    } else {
+        WatchdogStatus::Healthy
+    };
+    Ok(IexWatchdogObservation {
+        bucket: tick.bucket,
+        observed_at: now,
+        status,
+        holding: state.plan.is_some()
+            && state
+                .last_snapshot
+                .as_ref()
+                .is_some_and(|snapshot| !snapshot.positions.is_empty()),
+        held_symbol,
+        stream_connected: health.connected,
+        stream_reconnects: health.reconnects,
+        last_error: health.last_error,
+        last_message_at: health.last_message_at,
+        last_quote_at: health.last_quote_at,
+        quote_age_seconds,
+        stale_symbols,
+    })
 }

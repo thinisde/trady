@@ -35,12 +35,17 @@ use trady_application::{
     optimization::{valid_hash, valid_id},
 };
 use trady_domain::{
-    AccountId, Capabilities, Capability, Currency, Error, InstrumentId, Mode, Money, Quote, Result,
-    Side, Support, require,
+    AccountId, Capabilities, Capability, Currency, Error, InstrumentId, IntentId, Mode, Money,
+    Quote, Result, Side, Support, require,
+    screening::{SP500_INDEX_ID, required_currency_for_index, valid_index_id},
 };
 use trady_policy::Policy;
+use trady_storage::autonomous::{
+    FirstOrderApprovalRecord, FirstOrderIntentRecord, FirstOrderReconciliationRecord,
+    PgTradingJournal,
+};
 
-pub const HELP: &str = "\nCold-start account setup:\n  trady account cold-start --config FILE [--llm-review]\n  trady account cold-start capability-evidence --config FILE --file FILE\n  trady account cold-start first-order --config FILE --require-manual-approval [--approve]\n  trady account cold-start reconcile --config FILE --intent FILE --broker-order-id ID\n\nThe cold-start command discovers the broker account, records immutable account/data/universe/model/formula/capability artifacts, and leaves the seed deployment shadow-only. capability-evidence imports a separately reviewed, account-bound capability/crosswalk record and writes an immutable copy; it never changes UNKNOWN to VERIFIED by itself. The first-order command refreshes the account and reviewed input service, then fails closed unless one fresh protected demo order is explicitly approved. Reconcile binds a broker response or fill to an immutable intent and preserves unknown fees, FX and cost fields instead of guessing.\n";
+pub const HELP: &str = "\nCold-start account setup:\n  trady account cold-start --config FILE [--llm-review]\n  trady account cold-start capability-evidence --config FILE --file FILE\n  trady account cold-start first-order prepare --config FILE\n  trady account cold-start first-order approve --config FILE --intent FILE --intent-sha256 HASH\n  trady account cold-start first-order dispatch --config FILE --intent FILE --approval-sha256 HASH\n  trady account cold-start reconcile --config FILE --intent FILE --broker-order-id ID\n\nThe cold-start command records immutable shadow-only evidence. First-order prepare is read-only and records an immutable intent. Approve records an authenticated owner endorsement. Dispatch remains fail-closed until account-specific protected-order capability and restricted persistence are verified. Reconcile binds exact broker facts and preserves unknown fees, FX, and costs.\n";
 
 const MAX_CONFIG_BYTES: usize = 2 * 1024 * 1024;
 const MAX_HISTORY_BYTES: usize = 96 * 1024 * 1024;
@@ -100,6 +105,10 @@ struct MarketDataConfig {
 struct UniverseConfig {
     source_id: String,
     source_url: String,
+    #[serde(default = "default_universe_index")]
+    index_id: String,
+    #[serde(default)]
+    required_currency: Option<Currency>,
     candidate_limit: usize,
     #[serde(default)]
     preferred_symbols: Vec<String>,
@@ -111,14 +120,24 @@ struct UniverseConfig {
     rights_reference: String,
 }
 
+fn default_universe_index() -> String {
+    SP500_INDEX_ID.into()
+}
+
 fn default_dynamic_research() -> String {
     "LLM_NEWS_X_RESEARCH_WITH_BROKER_INTERSECTION".into()
+}
+
+fn default_max_order_cash_fraction() -> Decimal {
+    Decimal::new(98, 2)
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RiskConfig {
     entry_cash_fraction: Decimal,
+    #[serde(default = "default_max_order_cash_fraction")]
+    max_order_cash_fraction: Decimal,
     max_initial_loss_fraction: Decimal,
     max_order_value: Money,
     max_daily_orders: u8,
@@ -348,12 +367,21 @@ impl ColdStartConfig {
         require(
             !self.universe.source_id.is_empty()
                 && !self.universe.source_url.is_empty()
+                && valid_index_id(&self.universe.index_id)
+                && required_currency_for_index(&self.universe.index_id).is_none_or(|required| {
+                    self.universe
+                        .required_currency
+                        .as_ref()
+                        .is_some_and(|currency| currency.as_str() == required)
+                })
                 && (1..=5).contains(&self.universe.candidate_limit),
             "universe source and candidate bound are required",
         )?;
         require(
             self.risk.entry_cash_fraction > Decimal::ZERO
                 && self.risk.entry_cash_fraction <= Decimal::ONE
+                && self.risk.max_order_cash_fraction > Decimal::ZERO
+                && self.risk.max_order_cash_fraction <= self.risk.entry_cash_fraction
                 && self.risk.max_initial_loss_fraction > Decimal::ZERO
                 && self.risk.max_initial_loss_fraction <= Decimal::new(2, 2)
                 && self.risk.max_order_value.amount > Decimal::ZERO
@@ -390,7 +418,7 @@ pub(super) fn run(args: &[String]) -> Result<Value> {
             import_capability_evidence(&args[2..])
         }
         Some("cold-start") if args.get(1).map(String::as_str) == Some("first-order") => {
-            first_order(&args[2..])
+            first_order_command(&args[2..])
         }
         Some("cold-start") if args.get(1).map(String::as_str) == Some("reconcile") => {
             reconcile(&args[2..])
@@ -399,6 +427,357 @@ pub(super) fn run(args: &[String]) -> Result<Value> {
         Some("help") | Some("--help") if args.len() == 1 => Ok(json!({"help": HELP})),
         _ => Err(Error("unsupported account command; see help".into())),
     }
+}
+
+fn first_order_command(args: &[String]) -> Result<Value> {
+    match args.first().map(String::as_str) {
+        Some("prepare") => first_order_prepare(&args[1..]),
+        Some("approve") => first_order_approve(&args[1..]),
+        Some("dispatch") => first_order_dispatch(&args[1..]),
+        _ => Err(Error(
+            "first-order requires prepare, approve, or dispatch; the legacy one-shot form is disabled"
+                .into(),
+        )),
+    }
+}
+
+fn single_path_options(
+    args: &[String],
+    command: &str,
+) -> Result<(PathBuf, PathBuf, Option<String>)> {
+    let mut config = None;
+    let mut intent = None;
+    let mut hash = None;
+    let mut i = 0;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let value = args
+            .get(i)
+            .ok_or_else(|| Error(format!("{command} option requires a value")))?;
+        match key {
+            "--config" if config.is_none() => config = Some(PathBuf::from(value)),
+            "--intent" if intent.is_none() => intent = Some(PathBuf::from(value)),
+            "--intent-sha256" | "--approval-sha256" if hash.is_none() => hash = Some(value.clone()),
+            _ => return Err(Error(format!("unknown or duplicate {command} option"))),
+        }
+        i += 1;
+    }
+    Ok((
+        config.ok_or_else(|| Error(format!("{command} requires --config")))?,
+        intent.ok_or_else(|| Error(format!("{command} requires --intent")))?,
+        hash,
+    ))
+}
+
+fn first_order_prepare(args: &[String]) -> Result<Value> {
+    require(
+        args.len() == 2 && args[0] == "--config",
+        "prepare requires --config FILE",
+    )?;
+    let config_path = PathBuf::from(&args[1]);
+    let mut result = first_order(&[
+        "--config".into(),
+        args[1].clone(),
+        "--require-manual-approval".into(),
+    ])?;
+    let Some(intent_path) = result
+        .get("intent_path")
+        .and_then(Value::as_str)
+        .map(PathBuf::from)
+    else {
+        return Ok(result);
+    };
+    let intent_hash = result
+        .get("intent_sha256")
+        .and_then(Value::as_str)
+        .ok_or_else(|| Error("prepared intent hash is missing".into()))?;
+    let intent_bytes = bounded_file(&intent_path, MAX_CONFIG_BYTES)?;
+    require(
+        hash_bytes(&intent_bytes) == intent_hash,
+        "prepared intent hash changed before persistence",
+    )?;
+    let intent: Value = serde_json::from_slice(&intent_bytes)
+        .map_err(|_| Error("prepared intent is not valid JSON".into()))?;
+    let intent_id = IntentId::new(
+        intent
+            .get("intent_id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| Error("prepared intent ID is missing".into()))?,
+    )?;
+    let config = load(&config_path)?;
+    let environment = match config.account.environment {
+        Environment::Demo => "paper",
+        Environment::Live => "live",
+    };
+    let account_day = intent
+        .get("created_at")
+        .cloned()
+        .and_then(|value| serde_json::from_value::<DateTime<Utc>>(value).ok())
+        .unwrap_or_else(Utc::now)
+        .date_naive();
+    let audit_id = format!("first_order_prepare_{}", Utc::now().timestamp_micros());
+    match trady_adapters::credentials::optional("TRADY_EXECUTOR_DSN")? {
+        Some(dsn) => match PgTradingJournal::connect(dsn.expose()) {
+            Ok(mut journal) => {
+                let record = FirstOrderIntentRecord {
+                    account_id: &config.account.account_id,
+                    environment,
+                    account_day,
+                    intent_id: &intent_id,
+                    intent_sha256: intent_hash,
+                    owner_id: &config.account.owner_id,
+                    intent_document: &intent,
+                    audit_id: &audit_id,
+                };
+                if journal.prepare_first_order(&record).is_ok() {
+                    result["persistence_status"] = Value::String("PREPARED".into());
+                    if let Some(blockers) = result.get_mut("blockers").and_then(Value::as_array_mut)
+                    {
+                        blockers.retain(|value| value.as_str() != Some("manual_approval_required"));
+                    }
+                    if result
+                        .get("blockers")
+                        .and_then(Value::as_array)
+                        .is_some_and(Vec::is_empty)
+                    {
+                        result["status"] = Value::String("INTENT_PENDING".into());
+                    }
+                } else {
+                    append_blocker(&mut result, "dispatch_persistence_unavailable");
+                    result["persistence_status"] = Value::String("REJECTED".into());
+                }
+            }
+            Err(_) => {
+                append_blocker(&mut result, "dispatch_persistence_unavailable");
+                result["persistence_status"] = Value::String("UNAVAILABLE".into());
+            }
+        },
+        None => {
+            append_blocker(&mut result, "dispatch_persistence_unavailable");
+            result["persistence_status"] = Value::String("NOT_RECORDED".into());
+        }
+    }
+    Ok(result)
+}
+
+fn first_order_approve(args: &[String]) -> Result<Value> {
+    let (config_path, intent_path, intent_hash) = single_path_options(args, "approve")?;
+    let expected_hash =
+        intent_hash.ok_or_else(|| Error("approve requires --intent-sha256".into()))?;
+    require(
+        valid_hash(&expected_hash),
+        "approve intent hash must be lowercase SHA-256",
+    )?;
+    let config = load(&config_path)?;
+    let token = trady_adapters::credentials::required("TRADY_FIRST_ORDER_APPROVAL_TOKEN")?;
+    require(
+        !token.expose().is_empty(),
+        "first-order approval credential is empty",
+    )?;
+    let bytes = bounded_file(&intent_path, MAX_CONFIG_BYTES)?;
+    let actual_hash = hash_bytes(&bytes);
+    require(
+        actual_hash == expected_hash,
+        "intent hash does not match file",
+    )?;
+    let intent: Value = serde_json::from_slice(&bytes)
+        .map_err(|_| Error("first-order intent is not valid JSON".into()))?;
+    require(
+        intent.get("kind").and_then(Value::as_str) == Some("supervised_first_order_intent")
+            && intent.get("account_id").and_then(Value::as_str)
+                == Some(config.account.account_id.as_str()),
+        "intent is not a supervised intent for this account",
+    )?;
+    require(
+        intent.get("approved").and_then(Value::as_bool) == Some(false)
+            && intent.get("approval_required").and_then(Value::as_bool) == Some(true)
+            && intent.get("order_mutations").and_then(Value::as_u64) == Some(0),
+        "intent is already authorized or contains an order mutation",
+    )?;
+    let now = Utc::now();
+    let account_day = intent
+        .get("created_at")
+        .cloned()
+        .and_then(|value| serde_json::from_value::<DateTime<Utc>>(value).ok())
+        .unwrap_or(now)
+        .date_naive();
+    let approval = json!({
+        "schema_version":1,
+        "kind":"first_order_approval_endorsement",
+        "account_id":config.account.account_id,
+        "owner_id":config.account.owner_id,
+        "intent_path":intent_path,
+        "intent_sha256":expected_hash,
+        "account_day":account_day,
+        "approved_at":now,
+        "expires_at":now + Duration::minutes(30),
+        "credential":"TRADY_FIRST_ORDER_APPROVAL_TOKEN",
+        "entry_authorized":false,
+        "order_mutations":0
+    });
+    let approval_hash = hash_value(&approval)?;
+    let approval_path = intent_path.with_extension("approval.json");
+    write_immutable(&approval_path, &approval)?;
+    let intent_id = IntentId::new(
+        intent
+            .get("intent_id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| Error("first-order intent ID is missing".into()))?,
+    )?;
+    let environment = match config.account.environment {
+        Environment::Demo => "paper",
+        Environment::Live => "live",
+    };
+    let audit_id = format!("first_order_approval_{}", now.timestamp_micros());
+    let dsn = trady_adapters::credentials::required("TRADY_EXECUTOR_DSN")?;
+    let mut journal = PgTradingJournal::connect(dsn.expose())?;
+    let approval_record = FirstOrderApprovalRecord {
+        account_id: &config.account.account_id,
+        environment,
+        account_day,
+        intent_id: &intent_id,
+        intent_sha256: &expected_hash,
+        owner_id: &config.account.owner_id,
+        approval_sha256: &approval_hash,
+        expires_at: now + Duration::minutes(30),
+        audit_id: &audit_id,
+    };
+    journal.record_first_order_approval(&approval_record)?;
+    Ok(json!({
+        "status":"APPROVAL_RECORDED",
+        "entry_authorized":false,
+        "intent_path":intent_path,
+        "intent_sha256":expected_hash,
+        "approval_path":approval_path,
+        "approval_sha256":approval_hash,
+        "audit_id":audit_id,
+        "order_mutations":0,
+        "note":"Approval is recorded; dispatch remains a separate fail-closed command."
+    }))
+}
+
+fn first_order_dispatch(args: &[String]) -> Result<Value> {
+    let (config_path, intent_path, approval_hash) = single_path_options(args, "dispatch")?;
+    let approval_hash =
+        approval_hash.ok_or_else(|| Error("dispatch requires --approval-sha256".into()))?;
+    require(
+        valid_hash(&approval_hash),
+        "dispatch approval hash must be lowercase SHA-256",
+    )?;
+    let config = load(&config_path)?;
+    let approval_path = intent_path.with_extension("approval.json");
+    let approval_bytes = bounded_file(&approval_path, MAX_CONFIG_BYTES)?;
+    let actual_approval_hash = hash_bytes(&approval_bytes);
+    require(
+        actual_approval_hash == approval_hash,
+        "approval hash does not match file",
+    )?;
+    let approval: Value = serde_json::from_slice(&approval_bytes)
+        .map_err(|_| Error("approval endorsement is not valid JSON".into()))?;
+    let now = Utc::now();
+    let approval_expires_at: DateTime<Utc> = serde_json::from_value(
+        approval
+            .get("expires_at")
+            .cloned()
+            .ok_or_else(|| Error("approval expiry is missing".into()))?,
+    )
+    .map_err(|_| Error("approval expiry is invalid".into()))?;
+    let account_day: NaiveDate = serde_json::from_value(
+        approval
+            .get("account_day")
+            .cloned()
+            .ok_or_else(|| Error("approval account day is missing".into()))?,
+    )
+    .map_err(|_| Error("approval account day is invalid".into()))?;
+    require(
+        approval.get("kind").and_then(Value::as_str) == Some("first_order_approval_endorsement")
+            && approval.get("account_id").and_then(Value::as_str)
+                == Some(config.account.account_id.as_str())
+            && approval.get("owner_id").and_then(Value::as_str)
+                == Some(config.account.owner_id.as_str())
+            && approval.get("entry_authorized").and_then(Value::as_bool) == Some(false)
+            && approval.get("order_mutations").and_then(Value::as_u64) == Some(0),
+        "approval endorsement is outside the configured account scope",
+    )?;
+    require(
+        now < approval_expires_at,
+        "approval endorsement has expired",
+    )?;
+    let intent_bytes = bounded_file(&intent_path, MAX_CONFIG_BYTES)?;
+    let intent_hash = hash_bytes(&intent_bytes);
+    let intent: Value = serde_json::from_slice(&intent_bytes)
+        .map_err(|_| Error("first-order intent is not valid JSON".into()))?;
+    require(
+        approval.get("intent_sha256").and_then(Value::as_str) == Some(intent_hash.as_str()),
+        "approval does not endorse this intent",
+    )?;
+    require(
+        intent.get("kind").and_then(Value::as_str) == Some("supervised_first_order_intent")
+            && intent.get("account_id").and_then(Value::as_str)
+                == Some(config.account.account_id.as_str())
+            && intent.get("approved").and_then(Value::as_bool) == Some(false)
+            && intent.get("approval_required").and_then(Value::as_bool) == Some(true)
+            && intent.get("order_mutations").and_then(Value::as_u64) == Some(0),
+        "dispatch intent is outside the supervised immutable contract",
+    )?;
+    let intent_id = IntentId::new(
+        intent
+            .get("intent_id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| Error("first-order intent ID is missing".into()))?,
+    )?;
+    let environment = match config.account.environment {
+        Environment::Demo => "paper",
+        Environment::Live => "live",
+    };
+    let dsn = trady_adapters::credentials::required("TRADY_EXECUTOR_DSN")?;
+    let mut journal = PgTradingJournal::connect(dsn.expose())?;
+    let stored = journal
+        .read_first_order_approval(
+            &config.account.account_id,
+            environment,
+            account_day,
+            &intent_hash,
+        )?
+        .ok_or_else(|| Error("approval is not persisted for this intent".into()))?;
+    require(
+        stored.get("intent_id").and_then(Value::as_str) == Some(intent_id.as_str()),
+        "approval is not persisted for this intent",
+    )?;
+    require(
+        stored.get("account_id").and_then(Value::as_str)
+            == Some(config.account.account_id.as_str())
+            && stored.get("owner_id").and_then(Value::as_str)
+                == Some(config.account.owner_id.as_str())
+            && stored.get("approval_sha256").and_then(Value::as_str)
+                == Some(approval_hash.as_str())
+            && stored.get("revoked_at").is_some_and(Value::is_null)
+            && stored
+                .get("status")
+                .and_then(Value::as_str)
+                .is_some_and(|status| matches!(status, "APPROVED" | "RESERVED_FOR_DISPATCH")),
+        "approval persistence does not match the immutable endorsement",
+    )?;
+    let stored_expires_at: DateTime<Utc> = serde_json::from_value(
+        stored
+            .get("expires_at")
+            .cloned()
+            .ok_or_else(|| Error("persisted approval expiry is missing".into()))?,
+    )
+    .map_err(|_| Error("persisted approval expiry is invalid".into()))?;
+    require(now < stored_expires_at, "persisted approval has expired")?;
+    Ok(json!({
+        "status":"FIRST_ORDER_BLOCKED",
+        "entry_authorized":false,
+        "intent_path":intent_path,
+        "approval_path":approval_path,
+        "approval_sha256":approval_hash,
+        "intent_sha256":intent_hash,
+        "blockers":["protected_order_contract_unverified"],
+        "order_mutations":0,
+        "note":"No broker mutation was sent. Account-specific protected-order capability remains unverified."
+    }))
 }
 
 fn options(args: &[String], first_order: bool) -> Result<(PathBuf, bool, bool)> {
@@ -524,6 +903,19 @@ fn hash_value(value: &Value) -> Result<String> {
     Ok(hash_bytes(
         &serde_json::to_vec(value).map_err(|_| Error("artifact encoding failed".into()))?,
     ))
+}
+
+fn append_blocker(result: &mut Value, blocker: &str) {
+    if !result.get("blockers").is_some_and(Value::is_array) {
+        result["blockers"] = Value::Array(Vec::new());
+    }
+    let blockers = result
+        .get_mut("blockers")
+        .and_then(Value::as_array_mut)
+        .expect("blocker initialization must produce an array");
+    if !blockers.iter().any(|value| value.as_str() == Some(blocker)) {
+        blockers.push(Value::String(blocker.into()));
+    }
 }
 
 fn write_value(path: &Path, value: &Value) -> Result<String> {
@@ -754,6 +1146,11 @@ fn universe_report(
             .next()
             .unwrap_or(instrument.instrument_id.as_str());
         let allowed = instrument.kind == "STOCK"
+            && config
+                .universe
+                .required_currency
+                .as_ref()
+                .is_none_or(|currency| &instrument.currency == currency)
             && !excluded.contains(symbol)
             && !excluded.contains(instrument.instrument_id.as_str());
         if allowed {
@@ -764,10 +1161,11 @@ fn universe_report(
     }
     let mut candidates = Vec::new();
     for preferred in &config.universe.preferred_symbols {
-        let exact = format!("{preferred}_US_EQ");
+        let exact = preferred.to_owned();
+        let legacy_us_id = format!("{preferred}_US_EQ");
         let instrument = supported
             .iter()
-            .find(|i| i.instrument_id.as_str() == exact)
+            .find(|i| i.instrument_id.as_str() == exact || i.instrument_id.as_str() == legacy_us_id)
             .or_else(|| {
                 let mut matches = supported
                     .iter()
@@ -797,7 +1195,7 @@ fn universe_report(
     candidates.truncate(config.universe.candidate_limit);
     json!({
         "schema_version":1,"kind":"dynamic_universe_initialization","immutable":true,"observed_at":now,
-        "source_id":config.universe.source_id,"source_url":config.universe.source_url,"rights_reference":config.universe.rights_reference,
+        "source_id":config.universe.source_id,"source_url":config.universe.source_url,"index_id":config.universe.index_id,"required_currency":config.universe.required_currency,"rights_reference":config.universe.rights_reference,
         "selection_mode":config.universe.selection_mode,"llm_research_required":true,
         "broker_instrument_count":instruments.len().saturating_add(metadata_rejected_count),"broker_typed_instrument_count":instruments.len(),"broker_metadata_rejected_count":metadata_rejected_count,"supported_stock_count":supported.len(),"excluded_count":rejected.len(),
         "broker_metadata_error":metadata_error,
@@ -841,7 +1239,7 @@ fn seed_artifacts(
     let market_model_hash = hash_value(&market_model)?;
     let formula = json!({
         "schema_version":1,"kind":"deterministic_baseline_formula","revision_id":"seed_formula_v1","status":"SHADOW_ONLY",
-        "parameters":{"entry_cash_fraction":config.risk.entry_cash_fraction,"max_initial_loss_fraction":config.risk.max_initial_loss_fraction,"reward_to_risk":"1.5","max_holding_sessions":5,"price_tick":"0.01","quantity_step":"0.01"},
+        "parameters":{"entry_cash_fraction":config.risk.entry_cash_fraction,"max_order_cash_fraction":config.risk.max_order_cash_fraction,"max_initial_loss_fraction":config.risk.max_initial_loss_fraction,"reward_to_risk":"1.5","max_holding_sessions":5,"price_tick":"0.01","quantity_step":"0.01"},
         "inputs":["account_snapshot","quote","execution_cost_model","market_prediction_model","research_decision"],
         "outputs":["entry_limit","stop_loss","take_profit","quantity"],"cost_model_hash":cost_hash,"prediction_model_hash":market_model_hash,
         "parity":{"rust":true,"lean":false,"report":"pending_runtime_parity"},"approved":false,"created_at":now
@@ -1759,7 +2157,7 @@ fn first_order(args: &[String]) -> Result<Value> {
                            blockers: &[String]|
      -> Result<Value> {
         let intent = json!({
-            "schema_version":1,"kind":"supervised_first_order_intent","intent_id":format!("first_order_{}",now.timestamp()),
+            "schema_version":1,"kind":"supervised_first_order_intent","intent_id":format!("first_order_{}",now.timestamp_micros()),
             "account_id":config.account.account_id,"broker_account_id":broker_id,"instrument_id":instrument,
             "side":Side::Buy,"quantity":null,"entry_limit":null,"stop_loss":null,"take_profit":null,
             "protection_required":config.risk.require_protection,"quote":quote,"costs":costs,
@@ -1873,7 +2271,11 @@ fn first_order(args: &[String]) -> Result<Value> {
         blockers.push("fresh_execution_costs_unavailable".into());
         return persist_blocked(Some(instrument.as_str()), Some(&quote), None, &blockers);
     };
-    let max_value = cash.amount * config.risk.entry_cash_fraction;
+    let max_value = cash.amount
+        * config
+            .risk
+            .entry_cash_fraction
+            .min(config.risk.max_order_cash_fraction);
     let max_value = max_value.min(config.risk.max_order_value.amount);
     let quantity = (max_value / quote.ask).round_dp(2);
     require(
@@ -1893,7 +2295,7 @@ fn first_order(args: &[String]) -> Result<Value> {
         * (Decimal::ONE
             + config.risk.max_initial_loss_fraction * Decimal::from(3u8) / Decimal::from(2u8));
     let mut intent = json!({
-        "schema_version":1,"kind":"supervised_first_order_intent","intent_id":format!("first_order_{}",now.timestamp()),
+        "schema_version":1,"kind":"supervised_first_order_intent","intent_id":format!("first_order_{}",now.timestamp_micros()),
         "account_id":config.account.account_id,"broker_account_id":broker_id,"instrument_id":instrument,"side":Side::Buy,
         "quantity":quantity,"entry_limit":quote.ask,"stop_loss":stop,"take_profit":target,"protection_required":config.risk.require_protection,
         "quote":quote,"costs":costs,"account_snapshot":snapshot,"created_at":now,"approval_required":!approved,"approved":approved,
@@ -1991,10 +2393,11 @@ fn reconcile(args: &[String]) -> Result<Value> {
             .is_some()
     });
     let now = Utc::now();
+    let intent_hash = hash_bytes(&intent_bytes);
     let mut reconciliation = json!({
         "schema_version":1,"kind":"first_order_reconciliation","immutable":true,"reconciled_at":now,
         "account_id":config.account.account_id,"broker_account_id":broker_id,"broker_order_id":broker_order_id,
-        "intent_path":intent_path,"intent_sha256":hash_bytes(&intent_bytes),"account_snapshot":snapshot,
+        "intent_path":intent_path,"intent_sha256":intent_hash,"account_snapshot":snapshot,
         "broker_order":order,"filled_order":filled,"historical_fills":historical_fills,"order_terminal":order_terminal,
         "history_error":history_error,"fees":{"supported":true,"observed":fees_observed},
         "fx":{"supported":true,"observed":fx_observed},
@@ -2015,8 +2418,47 @@ fn reconcile(args: &[String]) -> Result<Value> {
         now.format("%Y%m%dT%H%M%S%3fZ")
     ));
     let hash = write_value(&path, &reconciliation)?;
+    let reconciliation_status = if fill_observed && order_terminal && fees_observed && fx_observed {
+        "RECONCILED_COMPLETE"
+    } else if order_found && !order_terminal {
+        "RECONCILING"
+    } else {
+        "RECOVERY_REQUIRED"
+    };
+    let account_day = intent
+        .get("created_at")
+        .cloned()
+        .and_then(|value| serde_json::from_value::<DateTime<Utc>>(value).ok())
+        .unwrap_or(now)
+        .date_naive();
+    let environment = match config.account.environment {
+        Environment::Demo => "paper",
+        Environment::Live => "live",
+    };
+    let persistence_status = match trady_adapters::credentials::optional("TRADY_EXECUTOR_DSN")? {
+        Some(dsn) => match PgTradingJournal::connect(dsn.expose()) {
+            Ok(mut journal) => {
+                let record = FirstOrderReconciliationRecord {
+                    account_id: &config.account.account_id,
+                    environment,
+                    account_day,
+                    intent_sha256: &intent_hash,
+                    broker_order_id: Some(broker_order_id.as_str()),
+                    status: reconciliation_status,
+                    document: &reconciliation,
+                };
+                if journal.reconcile_first_order(&record).is_ok() {
+                    "PERSISTED"
+                } else {
+                    "PERSISTENCE_REJECTED"
+                }
+            }
+            Err(_) => "PERSISTENCE_UNAVAILABLE",
+        },
+        None => "NOT_RECORDED",
+    };
     Ok(
-        json!({"status":"RECONCILIATION_RECORDED","entry_authorized":false,"path":path,"sha256":hash,"broker_account_id":broker_id,"broker_order_id":broker_order_id,"execution_record_status":reconciliation["execution_record_status"],"order_mutations":0,"reconciliation":reconciliation}),
+        json!({"status":"RECONCILIATION_RECORDED","entry_authorized":false,"path":path,"sha256":hash,"broker_account_id":broker_id,"broker_order_id":broker_order_id,"execution_record_status":reconciliation["execution_record_status"],"persistence_status":persistence_status,"order_mutations":0,"reconciliation":reconciliation}),
     )
 }
 
@@ -2057,6 +2499,46 @@ mod tests {
         assert_eq!(parsed.1, PathBuf::from("intent.json"));
         assert_eq!(parsed.2, "123");
         assert!(reconcile_options(&["--config".into(), "cold.json".into()]).is_err());
+    }
+
+    #[test]
+    fn first_order_command_requires_explicit_safe_phase() {
+        assert!(first_order_command(&["--config".into(), "cold.json".into()]).is_err());
+        assert!(first_order_command(&["unknown".into()]).is_err());
+    }
+
+    #[test]
+    fn approval_and_dispatch_require_hashes() {
+        assert!(
+            single_path_options(
+                &[
+                    "--config".into(),
+                    "cold.json".into(),
+                    "--intent".into(),
+                    "intent.json".into()
+                ],
+                "approve"
+            )
+            .unwrap()
+            .2
+            .is_none()
+        );
+        assert!(
+            single_path_options(
+                &[
+                    "--config".into(),
+                    "cold.json".into(),
+                    "--intent".into(),
+                    "intent.json".into(),
+                    "--approval-sha256".into(),
+                    "not-a-hash".into()
+                ],
+                "dispatch"
+            )
+            .unwrap()
+            .2
+            .is_some()
+        );
     }
 
     #[test]
@@ -2127,6 +2609,40 @@ mod tests {
         let report = universe_report(&config, &instruments, 0, None, Utc::now());
         assert_eq!(report["candidate_pool"][0]["instrument_id"], "PG_US_EQ");
         assert_eq!(report["candidate_pool"][0]["isin"], "US7427181091");
+    }
+
+    #[test]
+    fn european_dynamic_universe_filters_to_eur_and_accepts_full_broker_ids() {
+        let config: ColdStartConfig = serde_json::from_value(json!({
+            "schema_version":1,
+            "account":{"account_id":"paper_test","base_currency":"EUR","environment":"demo","owner_id":"owner"},
+            "broker":{"timeout_seconds":10},
+            "market_data":{"history_path":"history.json","provider":"provider","source_permissions":"rights"},
+            "universe":{"source_id":"europe_eur_stocks","source_url":"https://source.example/europe-eur-stocks.json","index_id":"EUROPE_EUR_STOCKS","required_currency":"EUR","candidate_limit":1,"preferred_symbols":["SAP_DE_EQ"],"rights_reference":"terms"},
+            "risk":{"entry_cash_fraction":"0.02","max_initial_loss_fraction":"0.01","max_order_value":{"amount":"100","currency":"EUR"},"max_daily_orders":1,"require_protection":true},
+            "artifacts":{"directory":"var/test"}
+        }))
+        .unwrap();
+        let instruments = vec![
+            BrokerInstrument {
+                instrument_id: InstrumentId::new("SAP_DE_EQ").unwrap(),
+                currency: Currency::new("EUR").unwrap(),
+                isin: "DE0007164600".into(),
+                kind: "STOCK".into(),
+            },
+            BrokerInstrument {
+                instrument_id: InstrumentId::new("SAP_US_EQ").unwrap(),
+                currency: Currency::new("USD").unwrap(),
+                isin: "US8030542042".into(),
+                kind: "STOCK".into(),
+            },
+        ];
+        let report = universe_report(&config, &instruments, 0, None, Utc::now());
+        assert_eq!(report["index_id"], "EUROPE_EUR_STOCKS");
+        assert_eq!(report["required_currency"], "EUR");
+        assert_eq!(report["candidate_pool"][0]["instrument_id"], "SAP_DE_EQ");
+        assert_eq!(report["supported_stock_count"], 1);
+        assert_eq!(report["excluded_count"], 1);
     }
 
     #[test]

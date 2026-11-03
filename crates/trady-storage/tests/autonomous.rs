@@ -3,6 +3,7 @@ use chrono::Utc;
 use postgres::{Client, NoTls};
 use std::{collections::BTreeMap, env};
 use trady_application::autonomous::{ExecutionJournal, TradingConfig, TradingState};
+use trady_application::watchdog::{IexWatchdogObservation, WatchdogStatus};
 use trady_domain::*;
 use trady_policy::Policy;
 use trady_storage::{autonomous::PgTradingJournal, migrate, trading_research::PgTradingResearch};
@@ -45,6 +46,24 @@ fn autonomous_journal_is_durable_fenced_scoped_and_compare_and_swap() {
     );
     let mut state = repo.load(&fence).unwrap();
     assert_eq!(state.revision, 0);
+    repo.record_watchdog_observation(
+        &fence,
+        &IexWatchdogObservation {
+            bucket: 1,
+            observed_at: Utc::now(),
+            status: WatchdogStatus::Healthy,
+            holding: true,
+            held_symbol: Some("NVDA".into()),
+            stream_connected: true,
+            stream_reconnects: 0,
+            last_error: None,
+            last_message_at: None,
+            last_quote_at: None,
+            quote_age_seconds: Some(1),
+            stale_symbols: vec![],
+        },
+    )
+    .unwrap();
     state.revision = 1;
     state.consumed_sessions.insert("session_a".into());
     state.loss_paused_sessions.insert("session_a".into());

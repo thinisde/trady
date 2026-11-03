@@ -65,8 +65,8 @@ impl InputsService {
             ("GET", "research") => {
                 HttpServiceResponse::json(&self.research(&AccountId::new(parts[1])?, now)?, max)
             }
-            ("GET", "universe") if parts[1] == "SP500" => {
-                HttpServiceResponse::json(&self.universe(now)?, max)
+            ("GET", "universe") => {
+                HttpServiceResponse::json(&self.universe_for(parts[1], now)?, max)
             }
             ("POST", "predictions") => {
                 let text = std::str::from_utf8(body)

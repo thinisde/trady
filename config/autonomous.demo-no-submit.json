@@ -1,16 +1,18 @@
 {
   "config_version": 1,
   "enabled": true,
+  "execution_stage": "SHADOW",
   "interval_seconds": 5,
   "trading": {
     "config_version": 1,
-    "account_id": "shadow_demo_no_submit_20261101",
+    "account_id": "shadow_iex30_demo_no_submit",
     "mode": "shadow",
-    "base_currency": "EUR",
-    "owner_id": "configured_owner",
+    "base_currency": "USD",
+    "owner_id": "iex30_owner",
     "policy": {
       "version": 1,
       "entry_cash_fraction": "0.98",
+      "max_order_cash_fraction": "0.98",
       "confidence_entry_min": 90,
       "max_target_fraction": "0.10",
       "exceptional_targets_enabled": false,
@@ -19,7 +21,9 @@
       "max_holding_sessions": 5,
       "leverage": false,
       "add_to_position": false,
-      "rotation_enabled": false
+      "rotation_enabled": false,
+      "max_daily_buy_orders": 1,
+      "max_daily_sell_orders": 1
     },
     "capabilities": {
       "cash_account": { "support": "UNKNOWN", "evidence_id": null, "valid_until": null },
@@ -88,9 +92,9 @@
   "broker": {
     "config_version": 1,
     "environment": "demo",
-    "account_id": "paper_t212_verification",
+    "account_id": "paper_iex30_demo",
     "broker_account_id": 52211463,
-    "base_currency": "EUR",
+    "base_currency": "USD",
     "timeout_seconds": 10
   },
   "inputs": {
@@ -98,14 +102,15 @@
     "base_url": "https://approved-inputs.example.invalid/v1/",
     "allowed_hosts": ["approved-inputs.example.invalid"],
     "screening": {
-      "owner_id": "configured_owner",
+      "owner_id": "iex30_owner",
       "run_id": "runtime_replaces_this_id",
       "owner_allowlist": [
-        "MSFT_US_EQ",
-        "JPM_US_EQ",
-        "JNJ_US_EQ",
-        "XOM_US_EQ",
-        "PG_US_EQ"
+        "META_US_EQ", "MU_US_EQ", "NVDA_US_EQ", "AMD_US_EQ", "SNDK_US_EQ",
+        "GOOGL_US_EQ", "BKNG_US_EQ", "AMZN_US_EQ", "AAPL_US_EQ", "MSFT_US_EQ",
+        "INTC_US_EQ", "SHOP_US_EQ", "STX_US_EQ", "AVGO_US_EQ", "TSM_US_EQ",
+        "CSCO_US_EQ", "LRCX_US_EQ", "VLO_US_EQ", "TSLA_US_EQ", "ORCL_US_EQ",
+        "BAC_US_EQ", "WDC_US_EQ", "JPM_US_EQ", "GOOG_US_EQ", "LITE_US_EQ",
+        "GEV_US_EQ", "AZO_US_EQ", "DELL_US_EQ", "WBD_US_EQ", "CRM_US_EQ"
       ],
       "policy": {
         "max_membership_age_seconds": 86400,
@@ -126,24 +131,24 @@
   "universe": {
     "config_version": 1,
     "enabled": false,
-    "source_id": "sp500_universe",
-    "url": "https://approved-universe.example.invalid/sp500.json",
-    "allowed_hosts": ["approved-universe.example.invalid"],
-    "expected_provider": "REPLACE_WITH_APPROVED_PROVIDER",
-    "expected_taxonomy_edition": "REPLACE_WITH_EFFECTIVE_GICS_EDITION",
+    "source_id": "alpaca_iex30",
+    "url": "https://data.alpaca.markets/iex30",
+    "allowed_hosts": ["data.alpaca.markets"],
+    "expected_provider": "Alpaca Basic IEX",
+    "expected_taxonomy_edition": "IEX30_GICS_2026",
     "rights": {
-      "store_content": false,
-      "llm_processing": false,
+      "store_content": true,
+      "llm_processing": true,
       "retention_hours": 24,
-      "terms_reference": ""
+      "terms_reference": "owner_review_iex30_2026-11-02"
     },
-    "minimum_interval_seconds": 60,
-    "daily_request_limit": 96
+    "minimum_interval_seconds": 300,
+    "daily_request_limit": 288
   },
   "models": [],
   "controls": {
     "pause_entries": false,
     "close_position": false
   },
-  "shadow_directory": "/tmp/trady-demo-no-submit-20261101/shadow-journal"
+  "shadow_directory": "/tmp/trady-iex30-demo-no-submit/shadow-journal"
 }

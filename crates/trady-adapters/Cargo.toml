@@ -17,6 +17,7 @@ serde_yaml.workspace = true
 reqwest.workspace = true
 sha2.workspace = true
 quick-xml.workspace = true
+tungstenite.workspace = true
 perpetual = "=3.0.0-rc.2"
 
 [lints]

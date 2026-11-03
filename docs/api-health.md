@@ -40,7 +40,7 @@ No raw response is retained. Online checks do not synchronize a registry, write
 database records, enable collection, authorize entries or call a broker. An
 ordinary provider request may consume the existing account's request allowance.
 X reports `requires_existing_cost_gate` without a request; use the reviewed
-[X workflow](./news.md#x-pilot-and-resource-budget) for metered X tests.
+[X workflow](./news.md#iex30-x-budget-and-resource-controls) for metered X tests.
 Yfinance reports `offline_import_only`.
 
 The command exits successfully when it can produce the diagnostic report;

@@ -206,7 +206,11 @@ Treat deposits as positive external flows and withdrawals as negative. A nonposi
 
 Weekly reports include complete round-trip win rate, gain/loss sizes, no-trade days, holding times, sampled drawdown, entry/exit slippage, partial fills, failed/stale research, source completeness, policy violations, external costs and a preselected cash/buy-and-hold comparison. Align benchmark cash flows/timestamps with actual deposits before comparing performance. An unrealized gain is not a completed winning trade.
 
-Store actual broker withholding and statements for the owner's accounting. Applicable taxes depend on account entity and personal circumstances; the LLM does not calculate a definitive liability. The original v1.1 fee/tax examples are historical inputs and must be rechecked against the actual account rather than copied into executable pricing logic.
+Store actual broker withholding and statements for the owner's accounting.
+Applicable taxes depend on account entity and personal circumstances; the LLM does
+not calculate a definitive liability. Historical fee and tax examples must be
+rechecked against the actual account rather than copied into executable pricing
+logic.
 
 ## Live capability record
 

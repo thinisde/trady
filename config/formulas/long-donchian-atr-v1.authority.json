@@ -1,0 +1,48 @@
+{
+  "envelope": {
+    "max_entry_allowance_fraction": "0",
+    "min_stop_atr_multiple": "1.50",
+    "max_stop_atr_multiple": "1.50",
+    "min_target_net_fraction": "0.01",
+    "max_target_net_fraction": "0.10"
+  },
+  "max_account_risk_fraction": "0.02",
+  "active": {
+    "revision_id": "long_donchian_atr_v1",
+    "formula_hash": "cea5665b5197768d592ce2718453af7f0debfaf8e1d8f72c13c1f8442e4f5e5c",
+    "policy_hash": "da61f7453f1da6d1ef6d3e258ed2b33b3ad62cddc320e716334b7848ee3667b3",
+    "parameters": {
+      "version": 1,
+      "family": "TREND",
+      "entry_allowance_fraction": "0",
+      "stop_atr_multiple": "1.50",
+      "target_net_fraction": "0.10",
+      "max_holding_sessions": 5,
+      "atr_lookback": 14,
+      "bar_seconds": 86400
+    },
+    "approved_at": "2026-11-03T00:00:00Z",
+    "effective_from": "2026-11-03T00:00:00Z",
+    "valid_until": "2026-12-31T23:59:59Z",
+    "proof_report_id": "proof_long_donchian_atr_v1_20261103",
+    "parity_report_id": "parity_long_donchian_atr_v1_20261103",
+    "evaluation_report_id": "evaluation_long_donchian_atr_v1_20261103",
+    "shadow_report_id": "shadow_long_donchian_atr_v1_20261103",
+    "owner_approval_id": "owner_approval_long_donchian_atr_v1_20261103"
+  },
+  "strategy": {
+    "formula_id": "long_donchian_atr_v1",
+    "breakout_window": 20,
+    "atr_method": "WILDER",
+    "entry_allowance_atr": "0.10",
+    "stop_atr_multiple": "1.50",
+    "target_r_multiple": "1.50",
+    "max_holding_sessions": 5,
+    "minimum_warmup_bars": 35,
+    "gap_entry_rule": "FIRST_EXECUTABLE_PRICE_BELOW_SIGNAL_CLOSE",
+    "gap_stop_rule": "FIRST_EXECUTABLE_PRICE",
+    "same_bar_rule": "STOP_FIRST",
+    "model_fusion": "DISABLED"
+  },
+  "prediction": null
+}

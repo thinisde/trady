@@ -1,6 +1,7 @@
 //! Executor market reads without model, screening or research persistence capabilities.
 
 use super::{CostsPacket, SessionPacket, TradingInputsConfig};
+use crate::alpaca::{AlpacaDataConfig, AlpacaMarketData, IexQuoteCache};
 use crate::news::{HttpRequest, HttpTransport, MAX_BODY_BYTES, SafeHttp};
 use chrono::{DateTime, Duration, Utc};
 use reqwest::Url;
@@ -16,6 +17,8 @@ use trady_policy::{EntryCosts, fresh};
 pub struct MarketInputs<T = SafeHttp> {
     service: InputService<T>,
     clock: Box<dyn Clock>,
+    alpaca: Option<AlpacaMarketData>,
+    iex_stream: Option<IexQuoteCache>,
 }
 impl MarketInputs {
     pub fn new(
@@ -37,17 +40,70 @@ impl<T: HttpTransport> MarketInputs<T> {
         Ok(Self {
             service: InputService::new(config, transport, token)?,
             clock: Box::new(crate::SystemClock),
+            alpaca: None,
+            iex_stream: None,
         })
     }
     pub fn with_clock(mut self, clock: impl Clock + 'static) -> Self {
         self.clock = Box::new(clock);
         self
     }
+    /// Route executor quote reads through Alpaca Basic's IEX feed. This is
+    /// deliberately explicit; there is no fallback to SIP or a broad market
+    /// source.
+    pub fn with_alpaca(
+        mut self,
+        config: Option<AlpacaDataConfig>,
+        credentials: Option<(String, String)>,
+    ) -> Result<Self> {
+        self.alpaca = match config.filter(|value| value.enabled) {
+            Some(config) => {
+                let (key, secret) = credentials.ok_or_else(|| {
+                    trady_domain::Error("Alpaca IEX credentials are required".into())
+                })?;
+                Some(AlpacaMarketData::new(config, key, secret)?)
+            }
+            None => None,
+        };
+        Ok(self)
+    }
+    pub fn set_iex_stream_cache(&mut self, cache: IexQuoteCache) {
+        self.iex_stream = Some(cache);
+    }
     pub fn session(&mut self, account: &AccountId) -> Result<Option<MarketSession>> {
         self.service.session(account, self.clock.as_ref())
     }
     pub fn quote(&mut self, instrument: &InstrumentId) -> Result<Quote> {
-        self.service.quote(instrument, self.clock.as_ref())
+        if let Some(alpaca) = &self.alpaca {
+            if let Some(stream) = &self.iex_stream
+                && let Ok(quote) = stream.latest(
+                    instrument,
+                    self.clock.now(),
+                    alpaca.config().quote_max_age_seconds,
+                )
+            {
+                return Ok(quote);
+            }
+            alpaca
+                .latest_quote(instrument, self.clock.now())
+                .map(|q| q.quote)
+        } else {
+            self.service.quote(instrument, self.clock.as_ref())
+        }
+    }
+    pub fn stream_quote(&self, instrument: &InstrumentId) -> Result<Quote> {
+        let alpaca = self
+            .alpaca
+            .as_ref()
+            .ok_or_else(|| Error("Alpaca IEX market data is not configured".into()))?;
+        self.iex_stream
+            .as_ref()
+            .ok_or_else(|| Error("Alpaca IEX stream is not running".into()))?
+            .latest(
+                instrument,
+                self.clock.now(),
+                alpaca.config().quote_max_age_seconds,
+            )
     }
     pub fn current_exit_costs(
         &mut self,

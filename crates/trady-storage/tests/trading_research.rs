@@ -56,6 +56,7 @@ fn entry_context_resolves_persisted_economics_screening_and_feature_scope() {
             max_target_net_fraction: Decimal::new(3, 2),
         },
         max_account_risk_fraction: Decimal::new(1, 2),
+        strategy: None,
         prediction: None,
         active: ApprovedFormula {
             revision_id: "join_fixture_formula".into(),

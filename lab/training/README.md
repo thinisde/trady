@@ -10,8 +10,9 @@ It does not produce execution records, an approved four-outcome model or a relea
 
 - `[pipeline.py:main]` exposes `fetch --end DATE --out DIRECTORY` and
   `prepare --history FILE --out DIRECTORY`. Fetch optionally accepts `--selection`
-  and `--start` (default `2016-01-01`); selection defaults to
-  `config/deployment.demo-selection.json` under the repository root.
+  and `--start` (default `2016-01-01`); pass an explicit research-only
+  selection file. The IEX30 runtime universe does not grant historical-data
+  rights or model approval.
 - `[pipeline.py:fetch]` requests one to five selected symbols from Twelve Data's
   fixed HTTPS daily time-series endpoint, with split adjustment and at most 5000
   requested bars. `NoRedirect.redirect_request` rejects redirects. The key comes

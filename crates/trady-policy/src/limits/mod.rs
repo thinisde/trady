@@ -3,7 +3,7 @@
 use chrono::{DateTime, Duration, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use trady_domain::{AccountSnapshot, Money, Quote, Result, require};
+use trady_domain::{AccountSnapshot, Error, Money, Quote, Result, require};
 
 use crate::{
     EntryCosts, EntryRange, InstrumentRules, Policy, add, ceil_to, div,
@@ -11,7 +11,9 @@ use crate::{
     floor_to, fresh, mul, size_entry, sub, target_ceiling, validate_risk,
 };
 
+pub mod donchian;
 pub mod proof_bridge;
+pub use donchian::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -157,7 +159,34 @@ pub fn calculate_limits(
     input: &LimitsInput,
     now: DateTime<Utc>,
 ) -> Result<CalculatedLimits> {
+    calculate_limits_with_strategy(
+        policy,
+        envelope,
+        parameters,
+        max_account_risk_fraction,
+        input,
+        now,
+        None,
+    )
+}
+
+/// Calculate the same checked limits while applying a bound deterministic
+/// strategy specification. The legacy wrapper above remains the generic
+/// FORMULA_V1 contract; the Donchian authority supplies ATR-based entry and
+/// target distances through this path.
+pub fn calculate_limits_with_strategy(
+    policy: &Policy,
+    envelope: &FormulaEnvelope,
+    parameters: &FormulaParameters,
+    max_account_risk_fraction: Decimal,
+    input: &LimitsInput,
+    now: DateTime<Utc>,
+    strategy: Option<&DonchianAtrSpec>,
+) -> Result<CalculatedLimits> {
     parameters.validate(envelope, policy)?;
+    if let Some(strategy) = strategy {
+        strategy.validate(parameters, policy)?;
+    }
     input.account.validate()?;
     require(
         max_account_risk_fraction > Decimal::ZERO
@@ -204,16 +233,31 @@ pub fn calculate_limits(
             && evidence.sentiment_entry_allowed
             && evidence.sentiment_target_ceiling >= Decimal::ZERO
             && evidence.sentiment_target_ceiling <= ceiling
-            && parameters.target_net_fraction <= evidence.sentiment_target_ceiling,
+            && (strategy.is_some()
+                || parameters.target_net_fraction <= evidence.sentiment_target_ceiling),
         "formula target or entry violates the confidence/sentiment gate",
     )?;
 
     // Rounding downward must still leave a marketable price inside the evidence range.
-    let buy_limit = floor_to(
-        input.entry_range.maximum.min(mul(
+    let entry_ceiling = if let Some(strategy) = strategy {
+        input
+            .quote
+            .ask
+            .checked_add(
+                strategy
+                    .entry_allowance_atr
+                    .checked_mul(evidence.atr)
+                    .ok_or_else(|| Error("Donchian entry allowance overflow".into()))?,
+            )
+            .ok_or_else(|| Error("Donchian entry ceiling overflow".into()))?
+    } else {
+        mul(
             input.quote.ask,
             add(Decimal::ONE, parameters.entry_allowance_fraction)?,
-        )?),
+        )?
+    };
+    let buy_limit = floor_to(
+        input.entry_range.maximum.min(entry_ceiling),
         input.rules.price_tick,
     )?;
     require(
@@ -241,8 +285,11 @@ pub fn calculate_limits(
         now,
         policy,
     )?;
+    let stop_multiple = strategy
+        .map(|strategy| strategy.stop_atr_multiple)
+        .unwrap_or(parameters.stop_atr_multiple);
     let stop_trigger = ceil_to(
-        sub(buy_limit, mul(parameters.stop_atr_multiple, evidence.atr)?)?,
+        sub(buy_limit, mul(stop_multiple, evidence.atr)?)?,
         input.rules.price_tick,
     )?;
     let stop_distance = sub(input.quote.bid, stop_trigger)?;
@@ -350,24 +397,60 @@ pub fn calculate_limits(
         "final formula quantity fails allocation or account-risk budget",
     )?;
     let planned_loss_fraction = div(loss, acquisition_cost.amount)?;
-    validate_risk(
-        parameters.target_net_fraction,
-        planned_loss_fraction,
-        evidence.confidence_score,
-        evidence.exceptional_verified,
-        policy,
-    )?;
-    let target_sell_limit = target_price(
-        &basis,
-        parameters.target_net_fraction,
-        &input.exit_costs,
-        input.rules.price_tick,
-        now,
-    )?;
+    if strategy.is_none() {
+        validate_risk(
+            parameters.target_net_fraction,
+            planned_loss_fraction,
+            evidence.confidence_score,
+            evidence.exceptional_verified,
+            policy,
+        )?;
+    }
+    let target_sell_limit = if let Some(strategy) = strategy {
+        let target_distance = strategy
+            .target_r_multiple
+            .checked_mul(stop_multiple)
+            .and_then(|distance| distance.checked_mul(evidence.atr))
+            .ok_or_else(|| Error("Donchian target distance overflow".into()))?;
+        ceil_to(
+            buy_limit
+                .checked_add(target_distance)
+                .ok_or_else(|| Error("Donchian target price overflow".into()))?,
+            input.rules.price_tick,
+        )?
+    } else {
+        target_price(
+            &basis,
+            parameters.target_net_fraction,
+            &input.exit_costs,
+            input.rules.price_tick,
+            now,
+        )?
+    };
     let proceeds_at_target =
         liquidation_proceeds(&basis, target_sell_limit, &input.exit_costs, now)?;
     let reward = sub(proceeds_at_target.amount, acquisition_cost.amount)?;
+    let actual_target_net_fraction = div(reward, acquisition_cost.amount)?;
+    if strategy.is_some() {
+        require(
+            actual_target_net_fraction > Decimal::ZERO
+                && actual_target_net_fraction <= evidence.sentiment_target_ceiling,
+            "Donchian target exceeds the approved confidence or sentiment ceiling",
+        )?;
+        validate_risk(
+            actual_target_net_fraction,
+            planned_loss_fraction,
+            evidence.confidence_score,
+            evidence.exceptional_verified,
+            policy,
+        )?;
+    }
     let reward_to_risk = div(reward, loss)?;
+    let target_net_fraction = if strategy.is_some() {
+        actual_target_net_fraction
+    } else {
+        parameters.target_net_fraction
+    };
     require(
         target_sell_limit > buy_limit
             && reward >= mul(loss, policy.min_reward_to_risk)?
@@ -426,11 +509,12 @@ pub fn calculate_limits(
         quantity,
         stop_trigger,
         target_sell_limit,
-        target_net_fraction: parameters.target_net_fraction,
-        target_rounding_overshoot: sub(
-            div(reward, acquisition_cost.amount)?,
-            parameters.target_net_fraction,
-        )?,
+        target_net_fraction,
+        target_rounding_overshoot: if strategy.is_some() {
+            Decimal::ZERO
+        } else {
+            sub(actual_target_net_fraction, parameters.target_net_fraction)?
+        },
         max_holding_sessions: parameters.max_holding_sessions,
         holding_deadline_at: input.holding_deadline_at,
         budget: upper.budget,

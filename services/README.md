@@ -59,10 +59,8 @@ approve models (`[../crates/trady-adapters/src/inputs_service/http.rs:InputsServ
 ## Global Side Effects
 
 Explicit `[finbert/serve.py:main]` startup can download model artifacts, bind an
-HTTP listener and consume CPU/RAM. The
-[31 October local diagnostic](../docs/live-demo-run-2026-10-31.md#actual-integrations)
-records a separately built and running instance; shipped client configuration
-remains disabled.
+HTTP listener and consume CPU/RAM. The shipped client configuration remains
+disabled; the focused IEX30 runtime does not load this optional sidecar.
 `[runtime/prepare.py:main]` writes new disabled files sequentially and can leave
 partial outputs. Explicit evaluator startup creates its exposure directory
 (`[runtime/trady-evaluator.service:ExecStartPre]`). Deployment and enabled

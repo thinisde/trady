@@ -1,7 +1,7 @@
 # Trady five-account X pilot and API cost controls
 
 Status: proposed watchlist with an offline-tested recent-search implementation,
-checked 2026-10-31. The [implementation record](../news.md#x-pilot-and-resource-budget)
+checked 2026-10-31. The [implementation record](../news.md#iex30-x-budget-and-resource-controls)
 describes the disabled example, preflight counts, resource ledger and local export.
 This document records a proposed cost-conscious watchlist and collection strategy;
 it does not activate accounts, subscriptions, API spending, model training or a
@@ -174,7 +174,7 @@ high-volume source merely because its average week looked affordable.
 ### Budget enforcement to implement
 
 The bounded request implementation now supplies the gate described here; see
-[the operator contract](../news.md#x-pilot-and-resource-budget). Continuous-delivery
+[the operator contract](../news.md#iex30-x-budget-and-resource-controls). Continuous-delivery
 headroom/reconnect controls still require a separate stream implementation.
 
 The existing durable request reservations are not a dollar-denominated billing

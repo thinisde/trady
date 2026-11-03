@@ -1,23 +1,18 @@
 # X and news reading implementation
 
-This slice implements read-only X timeline polling and post lookup, Google News
-RSS searches, publisher RSS/Atom and optional Alpha Vantage news. It stores bounded
-observations, cursors, collection events and correction invalidations in PostgreSQL.
-The [five-account pilot](./v1/x-api-monitoring.md) adds a separate disabled
-recent-search configuration, shared resource-cost ledger, preflight counts and
-local evidence export, described below.
+This slice implements read-only X timeline polling and bounded research storage.
+The focused deployment uses the seven-account IEX30 registry in
+../config/research.json, with Alpaca IEX quotes and Trading 212 demo execution.
+The shared resource-cost ledger, preflight counts and local evidence export stay
+available for the focused registry; no source is enabled by the shipped config.
 The [research specification](./v1/research.md) and [X requirements](./v1/watchdogs-and-x.md)
 remain authoritative for the complete research system.
 
 ## Commands and configuration
 
-Finnhub company news and GDELT discovery are implemented as disabled sources in
-the existing registry. They produce ordinary `SourceItem` records with the same
-rights, lineage, corrections and verified-packet/FinBERT boundaries. GDELT's seen
-time does not become publication time; saturated windows remain incomplete.
-Finnhub uses the central `TRADY_FINNHUB_API_KEY`; GDELT needs no key. Alpha Vantage,
-Finnhub and GDELT share migration 9's account credit ledger across sources.
-See [financial data](./financial-data.md) for synchronized account limits and reviews.
+The collector remains read-only and rights-aware. The focused IEX30 registry
+contains only X timeline sources; RSS and other provider adapters remain
+available to offline compatibility tests but are not loaded by this deployment.
 
 ```sh
 cargo run --locked --bin trady -- news status
@@ -33,10 +28,10 @@ does not store its result. `migrate` uses `TRADY_MIGRATOR_DSN`; collection, look
 identity resolution and database reading use the restricted `TRADY_ANALYST_DSN`.
 Database transport still requires an explicit loopback/Unix development connection.
 
-The [registry](../config/research.json) ships with every source disabled, content
-storage/model processing denied, and the five X user IDs unset. It preserves Trump,
-Musk, Gill, Ackman and Icahn in the owner's order and scoped priorities. No candidate
-identity or provider entitlement has been activated or claimed as verified.
+The [registry](../config/research.json) contains seven IEX30-relevant X
+accounts: NVIDIA, AMD, Meta, Tesla, Reuters, DeItaone and KobeissiLetter. All
+seven user IDs, ownership/coverage references and rights are unset, so the
+sources stay disabled and provider access remains unverified.
 
 An operator enables a source only after reviewing its access, billing, refresh
 interval and content rights. Set `rights.terms_reference` to that review, choose
@@ -51,12 +46,11 @@ under the name in `credential_env`, normally
 `TRADY_X_BEARER_TOKEN` or `TRADY_ALPHA_VANTAGE_API_KEY`. No command accepts tokens
 as arguments, writes them to the registry or returns provider error bodies.
 
-Enable/review `x_lookup` before resolving candidates:
+Stable identities are filled in by owner review before any paid request:
 
 ```sh
-cargo run --locked --bin trady -- news resolve-x realDonaldTrump --source x_lookup --config config/research.json
-cargo run --locked --bin trady -- news x https://x.com/i/status/123 --source x_lookup --config config/research.json
-cargo run --locked --bin trady -- news collect --once --source x_trump --config config/research.json
+cargo run --locked --bin trady -- news status --config config/research.json
+cargo run --locked --bin trady -- news collect --once --source x_iex_nvidia --config config/research.json
 ```
 
 The post URL above is illustrative, not an actual verified post. Identity lookup
@@ -66,38 +60,36 @@ activity; set its `user_id`, `ownership_reference` and UTC `verified_at`. Review
 expire after seven days. Each timeline page checks that current handle resolution
 still matches the approved stable ID; a mismatch blocks that fetch.
 
-## X pilot and resource budget
+## IEX30 X budget and resource controls
 
-The [pilot example](../config/x-pilot.example.json) contains only
-Ackman/Musk/Bessent/Burry/Altman. It does not replace or combine with the owner's
-original registry. Sources, billing, content storage and model processing ship
-disabled; identities and approval references are unset. Use one reviewed registry
-for overlapping author coverage. Configuration rejects duplicate primary handles
-or stable IDs within that registry.
+The focused registry uses one total remaining balance of $1.90, represented as
+1,900,000 USD microdollars. It reserves $1.75 for ordinary post reads and $0.15
+for support reads, with a three-day polling interval and a maximum of five
+returned posts per account. The registry is disabled until stable IDs, rights and
+the owner budget references are present.
 
-Inspect the proposal offline with `news status --config config/x-pilot.example.json`.
-After migration and explicit operator review, these bounded commands are available:
+Inspect it offline with `news status --config config/research.json`. After
+migration and explicit operator review, these bounded commands are available:
 
 ```sh
-cargo run --locked --bin trady -- news counts-x --source x_pilot_ackman --config config/x-pilot.example.json
-cargo run --locked --bin trady -- news collect --once --source x_pilot_ackman --config config/x-pilot.example.json --force
-cargo run --locked --bin trady -- news budget-x --config config/x-pilot.example.json
-cargo run --locked --bin trady -- news reconcile-x /path/to/provider-usage.json --config config/x-pilot.example.json
-cargo run --locked --bin trady -- news export-x --as-of 2026-11-02T12:00:00Z --config config/x-pilot.example.json
+cargo run --locked --bin trady -- news counts-x --source x_iex_nvidia --config config/research.json
+cargo run --locked --bin trady -- news collect --once --source x_iex_nvidia --config config/research.json --force
+cargo run --locked --bin trady -- news budget-x --config config/research.json
+cargo run --locked --bin trady -- news reconcile-x /path/to/provider-usage.json --config config/research.json
+cargo run --locked --bin trady -- news export-x --as-of 2026-11-02T12:00:00Z --config config/research.json
 ```
 
-Do not enable the example unchanged. Verify current pricing/entitlement and the
+Do not enable the registry unchanged. Verify current pricing/entitlement and the
 provider spending limit, set the actual UTC billing-cycle boundaries, and record
 the owner's watchlist/coverage decision in `x_budget.approval_reference` and each
 rule's `approval_reference`/`approved_at`. Review rights and stable identities as
 above. `entitlement_reference` and `provider_limit_reference` record deployment
 reviews; software does not set the provider's limit or auto-recharge policy.
-Both source and budget require explicit enablement. Existing timeline, lookup
-and handle-resolution commands also require a reviewed `x_budget`; the original
-shipped registry has none and therefore authorizes no paid X reads.
+Both source and budget require explicit enablement. Timeline collection requires
+the reviewed `x_budget`; the shipped registry therefore authorizes no paid X reads.
 
-Amounts use integer USD microdollars: `10000000` is $10, split into at most $8
-ordinary posts and $2 support resources. Rates are versioned configuration.
+Amounts use integer USD microdollars: `1900000` is $1.90, split into at most
+$1.75 ordinary posts and $0.15 support resources. Rates are versioned configuration.
 `MeteredHttp` reserves each request's conservative post, user and Recent Counts
 resource bounds before HTTP. Identity, context/edit/user resources, retries and
 repeated results count. Successful responses record observed resources; failures,
@@ -137,14 +129,15 @@ counts remain unknown. Pending pages can resume before normal cadence, preservin
 provider backoff and request/resource limits. Collection requires complete counts
 for the current rule, at most seven days old, whose projected cycle post cost with
 burst margin fits the ordinary allocation. This projection is per rule: sum all
-rules and separately assess support costs before enabling the pilot. Counts are
+rules and separately assess support costs before enabling the IEX30 registry. Counts are
 planning evidence, not a volume forecast or a completeness guarantee.
 
 Search requires page sizes 10–100 and UTC second-aligned intervals ending at
 least ten seconds before request time (the collector uses thirty seconds).
 Observation and counts pagination retain independent original intervals.
 Unsupported history outside seven days stays a gap; the collector does not skip
-to newer history or start another transport. Daily search is a pilot trade-off.
+to newer history or start another transport. Timeline polling is deliberately
+bounded and is not a real-time delivery guarantee.
 
 `export-x` makes zero X requests. It selects current versions ingested/fetched by
 `--as-of`, intersects current source rights, and excludes expired, storage/model-denied,
@@ -260,7 +253,7 @@ and [quick-xml 0.38.4](https://docs.rs/quick-xml/0.38.4/quick_xml/reader/struct.
 Current X requests use `post.fields` with author/reference/edit IDs in `expansions`;
 response parsing also accepts legacy tweet-named aliases. Documentation availability
 does not establish this deployment's access or content-processing rights.
-The pilot was checked against official
+The focused collector was checked against official
 [recent search](https://docs.x.com/x-api/posts/search-recent-posts),
 [Recent Counts](https://docs.x.com/x-api/posts/get-count-of-recent-posts) and
 [resource pricing](https://docs.x.com/x-api/getting-started/pricing) on 2026-10-31.

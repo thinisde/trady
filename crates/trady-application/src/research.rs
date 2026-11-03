@@ -37,11 +37,13 @@ pub struct SourceConfig {
     pub rights: SourceRights,
 }
 
+const MAX_SOURCE_INTERVAL_SECONDS: u32 = 604_800;
+
 impl SourceConfig {
     pub fn validate(&self) -> Result<()> {
         require(valid_key(&self.id), "invalid research source ID")?;
         require(
-            (60..=86400).contains(&self.interval_seconds)
+            (60..=MAX_SOURCE_INTERVAL_SECONDS).contains(&self.interval_seconds)
                 && (1..=10000).contains(&self.daily_request_limit)
                 && (1..=8760).contains(&self.rights.retention_hours)
                 && self.allowed_hosts.len() <= 16

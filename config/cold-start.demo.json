@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "account": {
-    "account_id": "paper_cold_start_eur",
-    "base_currency": "EUR",
+    "account_id": "paper_cold_start_iex30",
+    "base_currency": "USD",
     "environment": "demo",
     "owner_id": "cold_start_owner"
   },
@@ -11,30 +11,38 @@
     "broker_account_id": null
   },
   "market_data": {
-    "history_path": "var/research-training/2026-11-01/history/history.json",
-    "provider": "Twelve Data",
-    "source_permissions": "research-only-import-recorded-2026-11-01",
+    "history_path": "var/research-training/iex30/history/history.json",
+    "provider": "Alpaca Basic IEX",
+    "source_permissions": "research-only-iex30-owner-review-required",
     "expected_symbols": [
-      "MSFT_US_EQ",
-      "JPM_US_EQ",
-      "JNJ_US_EQ",
-      "XOM_US_EQ",
-      "PG_US_EQ"
+      "META_US_EQ", "MU_US_EQ", "NVDA_US_EQ", "AMD_US_EQ", "SNDK_US_EQ",
+      "GOOGL_US_EQ", "BKNG_US_EQ", "AMZN_US_EQ", "AAPL_US_EQ", "MSFT_US_EQ",
+      "INTC_US_EQ", "SHOP_US_EQ", "STX_US_EQ", "AVGO_US_EQ", "TSM_US_EQ",
+      "CSCO_US_EQ", "LRCX_US_EQ", "VLO_US_EQ", "TSLA_US_EQ", "ORCL_US_EQ",
+      "BAC_US_EQ", "WDC_US_EQ", "JPM_US_EQ", "GOOG_US_EQ", "LITE_US_EQ",
+      "GEV_US_EQ", "AZO_US_EQ", "DELL_US_EQ", "WBD_US_EQ", "CRM_US_EQ"
     ]
   },
   "universe": {
-    "source_id": "trading212_metadata_dynamic_research",
-    "source_url": "https://demo.trading212.com/api/v0/equity/metadata/instruments",
+    "source_id": "alpaca_iex30",
+    "source_url": "https://data.alpaca.markets/iex30",
+    "index_id": "IEX30",
+    "required_currency": "USD",
     "candidate_limit": 5,
-    "preferred_symbols": ["XOM", "PG", "MSFT", "JPM", "JNJ"],
+    "preferred_symbols": [
+      "META", "MU", "NVDA", "AMD", "SNDK", "GOOGL", "BKNG", "AMZN", "AAPL", "MSFT",
+      "INTC", "SHOP", "STX", "AVGO", "TSM", "CSCO", "LRCX", "VLO", "TSLA", "ORCL",
+      "BAC", "WDC", "JPM", "GOOG", "LITE", "GEV", "AZO", "DELL", "WBD", "CRM"
+    ],
     "excluded_symbols": [],
     "selection_mode": "LLM_NEWS_X_RESEARCH_WITH_BROKER_INTERSECTION",
     "rights_reference": "broker-metadata-read-and-current-research-rights-required"
   },
   "risk": {
     "entry_cash_fraction": "0.02",
+    "max_order_cash_fraction": "0.02",
     "max_initial_loss_fraction": "0.01",
-    "max_order_value": {"amount": "50.00", "currency": "EUR"},
+    "max_order_value": {"amount": "50.00", "currency": "USD"},
     "max_daily_orders": 1,
     "require_protection": true
   },
@@ -66,14 +74,14 @@
     }
   },
   "research_artifacts": {
-    "dataset_report": "var/research-training/2026-11-01/dataset/dataset-report.json",
-    "candidate_model": "var/research-training/2026-11-01/model/candidate.json",
-    "native_model": "var/research-training/2026-11-01/model/native-model.json",
-    "evaluation_report": "var/research-training/2026-11-01/model/holdout-report.json"
+    "dataset_report": "var/research-training/iex30/dataset/dataset-report.json",
+    "candidate_model": "var/research-training/iex30/model/candidate.json",
+    "native_model": "var/research-training/iex30/model/native-model.json",
+    "evaluation_report": "var/research-training/iex30/model/holdout-report.json"
   },
   "review": {
     "enabled": true,
     "config_path": "config/opencode/llm.json"
   },
-  "capability_evidence_path": "var/cold-start/capability-evidence/capability-review-xom-20261101.json"
+  "capability_evidence_path": "var/cold-start/capability-evidence/capability-review-iex30.json"
 }

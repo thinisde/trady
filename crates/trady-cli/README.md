@@ -2,10 +2,10 @@
 
 ## Overview
 
-The `trady` binary wires offline demonstrations, configuration/database probes,
-research/model/monitoring commands and a gated autonomous runtime. The typed
-Trading 212 snapshot command reads demo/live accounts; the separate autonomous
-command can submit/cancel against its explicitly configured demo/live account.
+The `trady` binary wires configuration/database probes, research/model/monitoring
+commands and a gated autonomous runtime. The typed Trading 212 snapshot command
+reads demo/live accounts; the autonomous command can submit/cancel only against
+its explicitly configured account after all release gates pass.
 
 ## Subdirectories & Boundaries
 
@@ -38,8 +38,8 @@ command can submit/cancel against its explicitly configured demo/live account.
 - `[src/api_health.rs:run]`: credential metadata by default and explicitly enabled,
   bounded provider GET diagnostics; see [health checks](../../docs/api-health.md).
 - `[src/intelligence.rs:run]`: offline assessment/replay and analyst-backed
-  import/read/invalidate/purge. Tax remains owner-only and ephemeral; see the
-  [operating guide](../../docs/v1/features/implementation-report.md).
+  import/read/invalidate/purge. Tax remains owner-only and ephemeral; shared
+  intelligence is outside the focused IEX30 runtime.
 - `[src/stock_report.rs:run]`: bounded local `research-report FILE [--as-of RFC3339]`
   without provider/database access; see [stock reports](../../docs/stock-reports.md).
 - `[src/financial.rs:run]`: `financial status`, `collect --once`, `snapshot`,

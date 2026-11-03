@@ -1,0 +1,11 @@
+{
+  "config_version": 1,
+  "enabled": true,
+  "environment": "paper",
+  "feed": "iex",
+  "base_currency": "USD",
+  "timeout_seconds": 15,
+  "quote_max_age_seconds": 10,
+  "history_limit": 500,
+  "stream_start_lead_seconds": 1800
+}

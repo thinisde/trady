@@ -21,11 +21,11 @@ report verifies cash-account identity and records quote, order-kind,
 protection, cancellation, partial-fill, fee and FX capabilities separately. A
 successful account response does not promote any of those unknown fields.
 
-The dynamic universe has no permanent owner allowlist. Runtime research may
-use news and X through the approved OpenCode Go tools, but a candidate must
-still resolve to a current broker instrument and remain inside the five-name
-bound. The initializer records an empty candidate pool when the broker
-metadata endpoint is unavailable; it never invents an instrument identifier.
+The cold-start seed is bounded by the fixed IEX30 owner universe. Runtime
+research may use approved news and X inputs, but a candidate must still resolve
+to a current broker instrument and remain inside those 30 symbols. The
+initializer records an empty candidate pool when the Alpaca IEX snapshot is
+unavailable; it never invents an instrument identifier.
 
 The command also writes an independent review request. With `review.enabled`
 or `--llm-review`, OpenCode Go receives hash-preserving gate sections rather
@@ -35,9 +35,9 @@ review can approve shadow-only use; it never authorizes an order. Provider
 timeouts or unfinished reasoning remain unavailable and cannot count as
 approval.
 
-The current provider limits, observed free-tier responses, fees and the selected
-Trading 212 Invest/EUR/no-leverage profile are recorded in
-[`provider-api-research-2026-11-01.md`](./provider-api-research-2026-11-01.md).
+The focused provider path is recorded in [iex30.md](./iex30.md): Alpaca IEX
+market data and Trading 212 demo execution. Account and capability evidence
+remain deployment inputs.
 The broker catalog refresh used by `capability-evidence` is rate-limited per
 account; an HTTP 429 is retained as unavailable evidence and is never worked
 around by replaying a mutation.

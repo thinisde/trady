@@ -87,6 +87,7 @@ fn config(now: DateTime<Utc>) -> InputsServiceConfig {
             max_target_net_fraction: d("0.03"),
         },
         max_account_risk_fraction: d("0.01"),
+        strategy: None,
         prediction: None,
         active: ApprovedFormula {
             revision_id: "TEST_ONLY_FORMULA".into(),

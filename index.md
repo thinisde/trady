@@ -15,7 +15,11 @@ listeners, full research readiness, provider integrations, protective orders and
 live execution remain future work. The later-stage package/tool/table descriptions
 remain requirements unless that record explicitly marks their implementation.
 
-Read applicable `AGENTS.md` instructions before working. Inspect the workspace and preserve existing changes. Use the [v1 specification](./docs/v1/README.md) and its linked contracts as the implementation requirements. This index provides navigation and delivery guidance; detailed rules remain in their owning documents. [v1.1.md](./docs/v1/v1.1.md) is historical input, and later v1 decisions replace its superseded requirements. Resolve material contradictions explicitly instead of silently changing policy.
+Read applicable `AGENTS.md` instructions before working. Inspect the workspace and
+preserve existing changes. Use the [IEX30 deployment guide](./docs/iex30.md) and
+[focused audit](./docs/iex30-audit.md) as the implementation entry points; shared
+contracts remain under `docs/v1/` for compatibility tests. Resolve material
+contradictions explicitly instead of silently changing policy.
 
 The files under [skills](./skills/README.md) are instructions for Trady's runtime LLM. Implement their loading, versioning and validation through the approved catalog; they do not replace the coding agent's repository instructions.
 

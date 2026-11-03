@@ -58,13 +58,9 @@ For issuer facts, preserve the distinction between an issuer ID and a stock
 instrument. Price mappings must name the reviewed internal instrument, venue and
 currency; copying an example symbol does not approve a mapping.
 
-Finnhub and GDELT use [config/research.json](../config/research.json) and existing
-news rights. Their shared account limits are also governed by the synchronized
-financial registry. Synchronizing the shipped disabled account entries blocks
-those accounts until reviewed and enabled. A standalone news collector without a
-financial account row uses conservative shared ceilings, additionally constrained
-by its existing source limit. Alpha Vantage continues to use its existing key and
-collector; no second allowance or news copy is created.
+The focused IEX30 runtime does not load Finnhub, GDELT or Alpha Vantage sources.
+Their adapters and rights checks remain available to offline compatibility tests;
+they cannot authorize an IEX30 order or expand the configured research registry.
 
 ## Collection and storage
 

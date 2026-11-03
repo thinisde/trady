@@ -36,7 +36,7 @@ financial evidence. See the [operator guide](../../../../services/inputs/README.
   bounded HTTP/1.1 serving, controlled by an atomic shutdown flag.
 - `[http.rs:InputsService::respond]` dispatches GET `/session/{account}`,
   `/quote/{instrument}`, `/costs/{instrument}`, `/research/{account}` and
-  `/universe/SP500`, plus POST `/predictions/{account}`. Direct method calls
+  `/universe/{index_id}` (`SP500` or `EUROPE_EUR_STOCKS`), plus POST `/predictions/{account}`. Direct method calls
   perform no bearer authentication; the socket receiver enforces it.
 
 ## Invariants
@@ -96,8 +96,10 @@ financial evidence. See the [operator guide](../../../../services/inputs/README.
   unavailable. Receive/send deadlines cover socket operations; inference and
   queue residence have no deadline here. Deploy behind an approved TLS reverse
   proxy for the HTTPS client.
-- `[validate.rs:universe]` requires a complete, current SP500 import of 1–2,048
-  members observed within seven days. `[validate.rs:InputsService::validate_forecast]`
+- `[validate.rs:universe]` requires a complete, current supported market import
+  of 1–2,048 members observed within seven days. The
+  `EUROPE_EUR_STOCKS` scope additionally requires every member to be denominated
+  in EUR; no conversion or relabeling is performed. `[validate.rs:InputsService::validate_forecast]`
   resolves reviewed origins for forecast/signal lineage; payload validation
   bounds forecasts to 1–24 features.
 

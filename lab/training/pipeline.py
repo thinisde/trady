@@ -243,7 +243,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     f = sub.add_parser("fetch")
-    f.add_argument("--selection", default=str(ROOT / "config/deployment.demo-selection.json"))
+    f.add_argument("--selection", required=True,
+                   help="explicit research-only selection; the IEX30 deployment does not imply historical data approval")
     f.add_argument("--start", default="2016-01-01")
     f.add_argument("--end", required=True)
     f.add_argument("--out", required=True)

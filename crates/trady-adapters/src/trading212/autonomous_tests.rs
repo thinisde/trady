@@ -161,6 +161,8 @@ fn tracked(status: OrderStatus) -> TrackedOrder {
             },
         },
         role: OrderRole::Entry,
+        created_at: DateTime::<Utc>::UNIX_EPOCH,
+        counts_toward_daily_limit: true,
         attempted: true,
         observation: Some(BrokerOrder {
             broker_order_id: "42".into(),

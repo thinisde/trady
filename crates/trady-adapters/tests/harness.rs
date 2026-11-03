@@ -558,7 +558,8 @@ fn server(
     let addr = listener.local_addr().unwrap();
     let (tx, rx) = mpsc::channel();
     let handle = thread::spawn(move || {
-        for (status, kind, body) in responses {
+        let mut responses = responses.into_iter();
+        loop {
             let (mut socket, _) = listener.accept().unwrap();
             socket
                 .set_read_timeout(Some(Duration::from_secs(5)))
@@ -575,6 +576,15 @@ fn server(
             };
             let header = String::from_utf8_lossy(&bytes[..header_end]);
             assert!(header.contains("authorization: Bearer fixture-secret"));
+            let request_line = header.lines().next().unwrap_or_default();
+            if request_line.starts_with("GET /v1/models") {
+                let body = r#"{"data":[{"id":"deepseek-v4.1-flash"}]}"#;
+                write!(socket,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
+                continue;
+            }
+            let Some((status, kind, body)) = responses.next() else {
+                break;
+            };
             let session_id = header
                 .lines()
                 .find_map(|line| line.strip_prefix("x-opencode-session: "))
@@ -599,6 +609,9 @@ fn server(
             captured["_test_session_header"] = json!(session_id);
             tx.send(captured).unwrap();
             write!(socket,"HTTP/1.1 {status} OK\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
+            if responses.len() == 0 {
+                break;
+            }
         }
     });
     (format!("http://{addr}/v1"), rx, handle)

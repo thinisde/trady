@@ -16,6 +16,8 @@ trusted-lab ports. Research decisions carry no entry or live activation authorit
   approval/effective/expiry times and proof/parity/evaluation/shadow/owner evidence
   IDs. `[mod.rs:FormulaAuthority]` combines the active approval, `FormulaEnvelope`
   and account-risk ceiling; `validate` and `validate_active` check the binding.
+  Its optional deterministic strategy binding is included in the formula hash;
+  the focused IEX30 deployment uses `long_donchian_atr_v1`.
   Its optional `PredictionAuthority` binds `prediction::FusionConfig` and
   `UtilityConfig`. `ScenarioPredictionInput` carries the frozen fusion context,
   typed predictions and approved conditional net payoff estimates.

@@ -42,7 +42,7 @@ busy queues return `503 SERVICE_BUSY`, and worker/listener failures fail closed.
 | `GET /costs/{instrument}` | `CostsPacket` with current exit charges, uncertainty and FX. Deploy separately for different account currencies. |
 | `GET /research/{account}` | `AnalystPacket` with separately reviewed dossier artifacts, skill hashes, original source comparisons and screening observations. |
 | `POST /predictions/{account}` | The actual `PredictionRequest` containing `LimitsInput` and `BoundCalculation`; response is `ScenarioPredictionInput` for that exact calculation. |
-| `GET /universe/SP500` | The actual `UniverseDocument`, without a hardcoded member list. |
+| `GET /universe/{index_id}` | The actual `UniverseDocument` for `SP500` or `EUROPE_EUR_STOCKS`, without a hardcoded member list. |
 
 Unknown/missing/stale/conflicting/unapproved inputs return a bounded sanitized
 error. There is no neutral forecast, fabricated constituent list or fallback
@@ -68,7 +68,8 @@ trady inputs-service check --config /private/inputs.json
 trady inputs-service import --config /private/inputs.json --file /private/import.json
 trady inputs-service inspect --config /private/inputs.json --id original_import_id
 trady inputs-service review --config /private/inputs.json --file /private/review.json
-trady inputs-service export-universe --config /private/inputs.json --out /private/universe.json
+trady inputs-service export-universe --config /private/inputs.json \
+  --index EUROPE_EUR_STOCKS --out /private/europe-eur-universe.json
 trady inputs-service deadline --config /private/inputs.json --account paper_owner --sessions 3
 trady inputs-service prune --config /private/inputs.json
 ```

@@ -147,6 +147,38 @@ fn configuration_check_reports_unknown_unsupported_and_expired_entry_capabilitie
 }
 
 #[test]
+fn paper_broker_mutation_requires_an_explicit_execution_stage() {
+    let directory = env::temp_dir().join(format!(
+        "trady-execution-stage-preflight-{}-{}",
+        std::process::id(),
+        chrono::Utc::now().timestamp_nanos_opt().unwrap()
+    ));
+    fs::create_dir(&directory).unwrap();
+    let path = directory.join("runtime.json");
+    let mut config: Value =
+        serde_json::from_str(include_str!("../../../config/autonomous.example.json")).unwrap();
+    config["enabled"] = json!(true);
+    config["execution_stage"] = json!("SHADOW");
+    fs::write(&path, config.to_string()).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_trady"))
+        .args(["autonomous", "check", "--config", path.to_str().unwrap()])
+        .env_clear()
+        .env("TRADY_CREDENTIALS_FILE", directory.join("absent.json"))
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{:?}", output.stderr);
+    let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(result["execution_stage"], "SHADOW");
+    assert!(
+        result["blockers"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("execution_stage_not_mutating"))
+    );
+    fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
 #[ignore = "requires isolated PostgreSQL; run python3 scripts/test-postgres.py"]
 fn analyst_child_returns_no_entry_without_formula_or_broker_credentials() {
     assert_eq!(env::var("TRADY_TEST_ISOLATED").as_deref(), Ok("1"));
@@ -162,7 +194,7 @@ fn analyst_child_returns_no_entry_without_formula_or_broker_credentials() {
     });
     let snapshot = json!({
         "snapshot_id":"isolated-worker-snapshot", "account_id":"paper_autonomous_demo", "mode":"paper",
-        "spendable_cash":{"amount":"50","currency":"EUR"}, "positions":[],"orders":[],
+        "spendable_cash":{"amount":"50","currency":"USD"}, "positions":[],"orders":[],
         "observed_at":chrono::Utc::now()
     });
     let mut child = Command::new(env!("CARGO_BIN_EXE_trady"))

@@ -43,7 +43,10 @@ Other primary pages were checked using bounded HTTP reads without account creden
 
 For the multi-round extension, Context7 resolved `OpenAI API` to `/websites/developers_openai_api` and returned current tool-loop guidance. The ordinary function-calling and structured-output pages above were fetched directly as well, to distinguish Trady's application-managed tools from provider-specific programmatic execution features. No provider code-execution tool is required or enabled by this design.
 
-No news/quote subscription, Rust dependency version, LLM provider/model, broker API rate/pricing assumption, current tax treatment or installed PostgreSQL version has been selected or verified for this deployment. These remain explicit capability/configuration work, rather than inherited claims from the historical v1.1 document.
+No news/quote subscription, Rust dependency version, LLM provider/model, broker API
+rate/pricing assumption, current tax treatment or installed PostgreSQL version has
+been selected or verified for this deployment. These remain explicit
+capability/configuration work rather than inherited historical assumptions.
 
 ## Decisions still needed at deployment
 

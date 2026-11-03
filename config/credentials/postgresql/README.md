@@ -55,10 +55,9 @@ Applying it rotates all nine passwords through private psql prompts,
 atomically replaces the private store with mode `0600`, verifies old/new password
 behavior and terminates existing Trady-role sessions. The helper does not operate
 on remote/shared servers through their DSNs. The disposable database runner tests
-plan/apply rotation and actual logins through the saved published endpoints. The
-earlier
-[diagnostic rotation record](../../../docs/workflow-remediation-2026-10-31.md#database-credential-rotation)
-records the historical behavior before this endpoint hardening.
+plan/apply rotation and actual logins through the saved published endpoints.
+Rotation remains separate from the focused IEX30 runtime and never changes broker
+or market-data configuration.
 
 The examples below contain placeholders. Replace the port/password for your
 installation. Runtime role checks require the database `trady`. Explicit loopback

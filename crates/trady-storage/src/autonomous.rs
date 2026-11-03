@@ -11,6 +11,56 @@ pub struct PgTradingJournal {
     client: Client,
     release_binding: Option<crate::weekly::ReleaseCandidate>,
 }
+
+/// The immutable values persisted by the first-order approval function.
+///
+/// Keeping the SQL function's fixed argument set behind one typed record makes
+/// it harder for a caller to swap the intent and approval hashes while also
+/// keeping the journal API readable.
+pub struct FirstOrderApprovalRecord<'a> {
+    pub account_id: &'a AccountId,
+    pub environment: &'a str,
+    pub account_day: chrono::NaiveDate,
+    pub intent_id: &'a IntentId,
+    pub intent_sha256: &'a str,
+    pub owner_id: &'a str,
+    pub approval_sha256: &'a str,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+    pub audit_id: &'a str,
+}
+
+/// The canonical intent persisted before an operator can approve it.
+pub struct FirstOrderIntentRecord<'a> {
+    pub account_id: &'a AccountId,
+    pub environment: &'a str,
+    pub account_day: chrono::NaiveDate,
+    pub intent_id: &'a IntentId,
+    pub intent_sha256: &'a str,
+    pub owner_id: &'a str,
+    pub intent_document: &'a serde_json::Value,
+    pub audit_id: &'a str,
+}
+
+pub struct FirstOrderDispatchRecord<'a> {
+    pub account_id: &'a AccountId,
+    pub environment: &'a str,
+    pub account_day: chrono::NaiveDate,
+    pub intent_sha256: &'a str,
+    pub request_sha256: &'a str,
+    pub status: &'a str,
+    pub broker_order_id: Option<&'a str>,
+}
+
+pub struct FirstOrderReconciliationRecord<'a> {
+    pub account_id: &'a AccountId,
+    pub environment: &'a str,
+    pub account_day: chrono::NaiveDate,
+    pub intent_sha256: &'a str,
+    pub broker_order_id: Option<&'a str>,
+    pub status: &'a str,
+    pub document: &'a serde_json::Value,
+}
+
 impl PgTradingJournal {
     pub fn connect(dsn: &str) -> Result<Self> {
         let mut client = connect_local(dsn)?;
@@ -27,6 +77,138 @@ impl PgTradingJournal {
             "runtime release binding must use live scope",
         )?;
         self.release_binding = Some(candidate);
+        Ok(())
+    }
+
+    pub fn prepare_first_order(
+        &mut self,
+        intent: &FirstOrderIntentRecord<'_>,
+    ) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT execution.prepare_first_order($1,$2,$3,$4,$5,$6,$7,$8)",
+                &[
+                    &intent.account_id.as_str(),
+                    &intent.environment,
+                    &intent.account_day,
+                    &intent.intent_id.as_str(),
+                    &intent.intent_sha256,
+                    &intent.owner_id,
+                    &intent.intent_document,
+                    &intent.audit_id,
+                ],
+            )
+            .map(|row| row.get(0))
+            .map_err(db)
+    }
+
+    pub fn record_first_order_approval(
+        &mut self,
+        approval: &FirstOrderApprovalRecord<'_>,
+    ) -> Result<()> {
+        self.client
+            .query_one(
+                "SELECT execution.record_first_order_approval($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+                &[
+                    &approval.account_id.as_str(),
+                    &approval.environment,
+                    &approval.account_day,
+                    &approval.intent_id.as_str(),
+                    &approval.intent_sha256,
+                    &approval.owner_id,
+                    &approval.approval_sha256,
+                    &approval.expires_at,
+                    &approval.audit_id,
+                ],
+            )
+            .map_err(db)?;
+        Ok(())
+    }
+
+    pub fn read_first_order_approval(
+        &mut self,
+        account_id: &AccountId,
+        environment: &str,
+        account_day: chrono::NaiveDate,
+        intent_sha256: &str,
+    ) -> Result<Option<serde_json::Value>> {
+        let row = self
+            .client
+            .query_opt(
+                "SELECT execution.read_first_order_approval($1,$2,$3,$4)",
+                &[
+                    &account_id.as_str(),
+                    &environment,
+                    &account_day,
+                    &intent_sha256,
+                ],
+            )
+            .map_err(db)?;
+        Ok(row.and_then(|r| r.get::<_, Option<serde_json::Value>>(0)))
+    }
+
+    pub fn reserve_first_order(
+        &mut self,
+        account_id: &AccountId,
+        environment: &str,
+        account_day: chrono::NaiveDate,
+        intent_sha256: &str,
+        approval_sha256: &str,
+    ) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT execution.reserve_first_order($1,$2,$3,$4,$5)",
+                &[
+                    &account_id.as_str(),
+                    &environment,
+                    &account_day,
+                    &intent_sha256,
+                    &approval_sha256,
+                ],
+            )
+            .map(|row| row.get(0))
+            .map_err(db)
+    }
+
+    pub fn mark_first_order_dispatch(
+        &mut self,
+        dispatch: &FirstOrderDispatchRecord<'_>,
+    ) -> Result<()> {
+        self.client
+            .query_one(
+                "SELECT execution.mark_first_order_dispatch($1,$2,$3,$4,$5,$6,$7)",
+                &[
+                    &dispatch.account_id.as_str(),
+                    &dispatch.environment,
+                    &dispatch.account_day,
+                    &dispatch.intent_sha256,
+                    &dispatch.request_sha256,
+                    &dispatch.status,
+                    &dispatch.broker_order_id,
+                ],
+            )
+            .map_err(db)?;
+        Ok(())
+    }
+
+    pub fn reconcile_first_order(
+        &mut self,
+        reconciliation: &FirstOrderReconciliationRecord<'_>,
+    ) -> Result<()> {
+        self.client
+            .query_one(
+                "SELECT execution.reconcile_first_order($1,$2,$3,$4,$5,$6,$7)",
+                &[
+                    &reconciliation.account_id.as_str(),
+                    &reconciliation.environment,
+                    &reconciliation.account_day,
+                    &reconciliation.intent_sha256,
+                    &reconciliation.broker_order_id,
+                    &reconciliation.status,
+                    &reconciliation.document,
+                ],
+            )
+            .map_err(db)?;
         Ok(())
     }
 }
@@ -92,6 +274,7 @@ impl ExecutionJournal for PgTradingJournal {
                 && candidate.revision_id == authority.active.revision_id
                 && candidate.parameters == authority.active.parameters
                 && candidate.envelope == authority.envelope
+                && candidate.strategy == authority.strategy
                 && candidate.effective_from == authority.active.effective_from
                 && candidate.valid_until == authority.active.valid_until
                 && release.valid_until <= candidate.valid_until
@@ -212,6 +395,27 @@ impl ExecutionJournal for PgTradingJournal {
         self.client
             .query_one(
                 "SELECT execution.record_holding_observation($1,$2,$3,$4)",
+                &[
+                    &fence.account_id.as_str(),
+                    &fence.worker_id.as_str(),
+                    &fence.generation,
+                    &body,
+                ],
+            )
+            .map_err(db)?;
+        Ok(())
+    }
+    fn record_watchdog_observation(
+        &mut self,
+        fence: &Fence,
+        observation: &trady_application::watchdog::IexWatchdogObservation,
+    ) -> Result<()> {
+        observation.validate()?;
+        let body = serde_json::to_value(observation)
+            .map_err(|_| Error("watchdog observation encoding failed".into()))?;
+        self.client
+            .query_one(
+                "SELECT execution.record_watchdog_observation($1,$2,$3,$4)",
                 &[
                     &fence.account_id.as_str(),
                     &fence.worker_id.as_str(),

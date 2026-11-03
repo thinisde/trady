@@ -12,10 +12,8 @@
 If your organization already has an appropriate Alpha Vantage key, obtain it
 through its account administrator or secret manager.
 
-Trady's Alpha Vantage source requests `NEWS_SENTIMENT`. Confirm access and
-current request limits with the provider for your key before enabling the source.
-The source's `credential_env` in [research.json](../../research.json) already
-references this name, but the source ships disabled. The
-[news guide](../../../docs/news.md) explains source review and collection.
+The legacy Alpha Vantage adapter requests `NEWS_SENTIMENT`. It is not loaded by
+the focused IEX30 registry; keep this credential only for offline compatibility
+work and do not enable it in the IEX30 deployment.
 
 Storing the key does not change your provider entitlement or enable the source.

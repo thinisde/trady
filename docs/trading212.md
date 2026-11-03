@@ -38,10 +38,9 @@ The command performs GETs for account summary, positions and pending orders and
 prints a normalized snapshot with `entry_authorized=false`. It does not contact
 PostgreSQL or submit/cancel an order. Successful snapshot collection is tested at
 the adapter level against local HTTP fixtures. CLI tests cover help, missing
-credentials and configuration/command rejection. The separate
-[2026-10-31 demo verification](./demo-verification-2026-10-31.md) also exercised the
-real demo account summary and normalized CLI snapshot using GET requests only:
-EUR 5,000 cash, no positions, no pending orders and `entry_authorized=false`.
+credentials and configuration/command rejection. A real account snapshot still
+requires the operator's demo credentials and matching account identity; no
+repository fixture authorizes an order.
 
 ## Implemented boundaries
 
@@ -131,9 +130,7 @@ Fixtures cover account binding, decimal precision, all four order bodies and bot
 sides, partial fills, unknown statuses, ambiguous submissions, rejection/rate limits,
 cancellation acknowledgments and lost responses, malicious continuations and CLI
 credential/endpoint boundaries. Cancellation racing with a fill remains future work.
-The broker verification run on 2026-10-31 passed 16 adapter tests and two CLI tests.
-Those fixtures and the subsequent GET-only demo checks do not complete the live
-execution acceptance cases.
+Those fixtures do not complete the live execution acceptance cases.
 
 Current behavior was checked on 2026-10-31 using Context7 and the official
 [Trading 212 API reference](https://docs.trading212.com/), including its downloadable

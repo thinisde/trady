@@ -81,9 +81,12 @@ Its feature inputs require verification by the application; they are not model a
   Exact configured revision correlation belongs to the provider/application;
   this policy checks the model ID and revision shape, not an approval registry.
 
-- `[lib.rs:Policy::validate]` bounds allocation to 98%, entry confidence to 90–100,
-  target ceiling to 10%, initial loss to 2%, reward/risk to at least 1.5, and holding
-  duration to 1–5 sessions. Leverage, additions and rotation are disabled.
+- `[lib.rs:Policy::validate]` bounds total allocation to 98%, per-order cash to
+  the configured entry ceiling, entry confidence to 90–100, target ceiling to
+  10%, initial loss to 2%, reward/risk to at least 1.5, and holding duration
+  to 1–5 sessions. Daily entry/exit limits are separately bounded to one;
+  protective sells do not consume the exit allowance. Leverage, additions and
+  rotation are disabled.
   Version and decimal limits must be positive. Policy fields are public and
   deserialization does not invoke validation. `[holding.rs:evaluate_holding]`
   consumes a caller-verified exchange-session number; `[lib.rs:Policy]` itself

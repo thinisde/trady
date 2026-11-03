@@ -12,6 +12,8 @@ do not certify readiness or grant permission to place orders.
   family and owner-bounded numeric parameter records with validation.
 - `[mod.rs:FormulaEvidence]`, `LimitsInput`: causal completed-bar/ATR inputs,
   supplied evidence flags and account/quote/cost/rule snapshots.
+- `[donchian.rs:DonchianAtrSpec]`, `evaluate_signal`, `trade_plan`: the frozen
+  long-only 20-bar/Wilder-ATR research baseline used by the IEX30 authority.
 - `[mod.rs:CalculatedLimits]`, `calculate_limits`: checked quantity, entry/stop/
   target prices, modeled account risk and correlated source snapshot identifiers.
 - `[proof_bridge.rs:Request]`, `Operation`, `Reply`, `evaluate`: offline execution
@@ -40,6 +42,12 @@ a different arithmetic branch. `[mod.rs:FormulaEvidence]` supplies ATR and signa
 eligibility, and `[mod.rs:calculate_limits]` requires
 `completed_bars > atr_lookback`. The public records reject unknown deserialized
 fields; deserialization does not invoke their numeric or temporal validators.
+
+`[donchian.rs:DonchianAtrSpec]` validates the 20-bar breakout, 14-bar Wilder
+seed, 0.10 ATR entry allowance, 1.50 ATR stop, 1.50R target, 35-bar warm-up,
+five-session hold and disabled model fusion. Its signal evaluator excludes the
+current bar from the channel and rejects unordered, duplicated or insufficient
+bars.
 
 `[mod.rs:calculate_limits]` checks fresh account/quote/FX and unexpired inputs,
 matching causal completed-bar evidence and supplied sentiment/score constraints.

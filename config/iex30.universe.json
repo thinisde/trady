@@ -1,0 +1,13 @@
+{
+  "universe_id": "IEX30",
+  "venue": "ALPACA_IEX",
+  "symbols": [
+    "META", "MU", "NVDA", "AMD", "SNDK", "GOOGL", "BKNG", "AMZN", "AAPL", "MSFT",
+    "INTC", "SHOP", "STX", "AVGO", "TSM", "CSCO", "LRCX", "VLO", "TSLA", "ORCL",
+    "BAC", "WDC", "JPM", "GOOG", "LITE", "GEV", "AZO", "DELL", "WBD", "CRM"
+  ],
+  "max_websocket_symbols": 30,
+  "feed": "iex",
+  "currency": "USD",
+  "instrument_suffix": "_US_EQ"
+}

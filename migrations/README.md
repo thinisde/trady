@@ -2,13 +2,27 @@
 
 ## Overview
 
-Administrator role provisioning and eleven transactionally applied Trady migrations.
+Administrator role provisioning and fourteen transactionally applied Trady migrations.
 Use the [disposable test runner](../scripts/test-postgres.py) for local verification.
 
 Subsequent migrations add model-session state, research-source persistence and
 a separate autonomous execution/research ledger.
 
 ## Interface
+
+- [0012_first_order_dispatch.sql](./0012_first_order_dispatch.sql): executor-only
+  supervised first-order intent, approval, account/day reservation, dispatch,
+  unknown-outcome, and reconciliation state. All mutations go through
+  security-definer functions; direct table access remains revoked. A missing or
+  failed migration keeps dispatch fail-closed.
+
+- [0013_daily_order_limits.sql](./0013_daily_order_limits.sql): executor-journal
+  enforcement of the policy's one-entry-buy and one-exit-sell-per-UTC-day
+  limits. Protective and risk-reducing exits are excluded from the exit
+  allowance.
+
+- [0014_iex_watchdog.sql](./0014_iex_watchdog.sql): fenced IEX stream-health
+  observations and deduplicated watchdog notifications for active holdings.
 
 - [0011_fail_closed_storage.sql](./0011_fail_closed_storage.sql): null-rejecting
   weekly/release entry points, renewable runtime readiness checks, bounded and
@@ -119,6 +133,16 @@ a separate autonomous execution/research ledger.
   `execution.acquire_trader`, `assert_trader`, `renew_trader`, `load_trader`,
   `save_trader`, `release_trader`; `research.put_trading_record` and
   `purge_trading_records`. This ledger is separate from paper fixture tables.
+- [0012_first_order_dispatch.sql](./0012_first_order_dispatch.sql) stores the
+  supervised intent document and approval hash, enforces one
+  account/environment/day reservation, records rejected or unknown dispatch
+  outcomes, and binds reconciliation to the exact intent and broker order ID.
+  It stores no broker order ledger and grants execution only to
+  `trady_executor`.
+- [0013_daily_order_limits.sql](./0013_daily_order_limits.sql) adds a trigger to
+  the fenced autonomous account journal. It counts durable `ENTRY`/`BUY` and
+  `EXIT`/`SELL` intents marked as strategy orders by their UTC creation date and
+  leaves protective/risk-reducing sells outside the user exit allowance.
 - [0001_foundation.sql](./0001_foundation.sql): schemas `policy`, `research`,
   `execution`, `control`, `audit`; tables `policy.versions`, `research.runs`,
   `execution.accounts`, `execution.account_leases`, `execution.order_intents`,
@@ -296,7 +320,7 @@ The function call shapes below include
   it contains no repeat-creation guards. `[0001_foundation.sql:REVOKE]` targets
   database `trady`. Neither SQL file creates that database or wraps itself in a
   transaction. `[../crates/trady-storage/src/lib.rs:migrate]` supplies the transaction,
-  owner role and advisory lock; it applies/compares compiled migrations 1 through 11
+  owner role and advisory lock; it applies and compares every compiled migration
   in order. It does not apply the role-provisioning file or inspect catalog drift.
 - `[0002_model_sessions.sql:research.model_sessions]` constrains session/owner/account
   ID syntax, positive policy version, nonnegative revision/lease generation, a JSON

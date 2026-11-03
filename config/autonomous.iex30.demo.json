@@ -1,0 +1,170 @@
+{
+  "config_version": 1,
+  "enabled": false,
+  "execution_stage": "SUPERVISED_DEMO",
+  "interval_seconds": 5,
+  "trading": {
+    "config_version": 1,
+    "account_id": "paper_iex30_demo",
+    "mode": "paper",
+    "base_currency": "USD",
+    "owner_id": "iex30_owner",
+    "policy": {
+      "version": 1,
+      "entry_cash_fraction": "0.02",
+      "max_order_cash_fraction": "0.02",
+      "confidence_entry_min": 90,
+      "max_target_fraction": "0.10",
+      "exceptional_targets_enabled": false,
+      "max_initial_loss_fraction": "0.02",
+      "min_reward_to_risk": "1.50",
+      "max_holding_sessions": 5,
+      "leverage": false,
+      "add_to_position": false,
+      "rotation_enabled": false,
+      "max_daily_buy_orders": 1,
+      "max_daily_sell_orders": 1
+    },
+    "capabilities": {
+      "cash_account": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+      "instrument": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+      "fractional_orders": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+      "protective_orders": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null},
+      "quotes": {"support": "UNKNOWN", "evidence_id": null, "valid_until": null}
+    },
+    "approved_skills": {},
+    "limits_authority": {
+      "envelope": {
+        "max_entry_allowance_fraction": "0",
+        "min_stop_atr_multiple": "1.50",
+        "max_stop_atr_multiple": "1.50",
+        "min_target_net_fraction": "0.01",
+        "max_target_net_fraction": "0.10"
+      },
+      "max_account_risk_fraction": "0.02",
+      "active": {
+        "revision_id": "long_donchian_atr_v1",
+        "formula_hash": "cea5665b5197768d592ce2718453af7f0debfaf8e1d8f72c13c1f8442e4f5e5c",
+        "policy_hash": "da61f7453f1da6d1ef6d3e258ed2b33b3ad62cddc320e716334b7848ee3667b3",
+        "parameters": {
+          "version": 1,
+          "family": "TREND",
+          "entry_allowance_fraction": "0",
+          "stop_atr_multiple": "1.50",
+          "target_net_fraction": "0.10",
+          "max_holding_sessions": 5,
+          "atr_lookback": 14,
+          "bar_seconds": 86400
+        },
+        "approved_at": "2026-11-03T00:00:00Z",
+        "effective_from": "2026-11-03T00:00:00Z",
+        "valid_until": "2026-12-31T23:59:59Z",
+        "proof_report_id": "proof_long_donchian_atr_v1_20261103",
+        "parity_report_id": "parity_long_donchian_atr_v1_20261103",
+        "evaluation_report_id": "evaluation_long_donchian_atr_v1_20261103",
+        "shadow_report_id": "shadow_long_donchian_atr_v1_20261103",
+        "owner_approval_id": "owner_approval_long_donchian_atr_v1_20261103"
+      },
+      "strategy": {
+        "formula_id": "long_donchian_atr_v1",
+        "breakout_window": 20,
+        "atr_method": "WILDER",
+        "entry_allowance_atr": "0.10",
+        "stop_atr_multiple": "1.50",
+        "target_r_multiple": "1.50",
+        "max_holding_sessions": 5,
+        "minimum_warmup_bars": 35,
+        "gap_entry_rule": "FIRST_EXECUTABLE_PRICE_BELOW_SIGNAL_CLOSE",
+        "gap_stop_rule": "FIRST_EXECUTABLE_PRICE",
+        "same_bar_rule": "STOP_FIRST",
+        "model_fusion": "DISABLED"
+      },
+      "prediction": null
+    },
+    "live_release": null
+  },
+  "broker": {
+    "config_version": 1,
+    "environment": "demo",
+    "account_id": "paper_iex30_demo",
+    "broker_account_id": 1,
+    "base_currency": "USD",
+    "timeout_seconds": 10
+  },
+  "alpaca_market_data": {
+    "config_version": 1,
+    "enabled": true,
+    "environment": "paper",
+    "feed": "iex",
+    "base_currency": "USD",
+    "timeout_seconds": 15,
+    "quote_max_age_seconds": 10,
+    "history_limit": 500,
+    "stream_start_lead_seconds": 1800
+  },
+  "inputs": {
+    "config_version": 1,
+    "base_url": "https://approved-inputs.example.invalid/v1/",
+    "allowed_hosts": ["approved-inputs.example.invalid"],
+    "screening": {
+      "owner_id": "iex30_owner",
+      "run_id": "runtime_replaces_this_id",
+      "owner_allowlist": [
+        "META_US_EQ", "MU_US_EQ", "NVDA_US_EQ", "AMD_US_EQ", "SNDK_US_EQ",
+        "GOOGL_US_EQ", "BKNG_US_EQ", "AMZN_US_EQ", "AAPL_US_EQ", "MSFT_US_EQ",
+        "INTC_US_EQ", "SHOP_US_EQ", "STX_US_EQ", "AVGO_US_EQ", "TSM_US_EQ",
+        "CSCO_US_EQ", "LRCX_US_EQ", "VLO_US_EQ", "TSLA_US_EQ", "ORCL_US_EQ",
+        "BAC_US_EQ", "WDC_US_EQ", "JPM_US_EQ", "GOOG_US_EQ", "LITE_US_EQ",
+        "GEV_US_EQ", "AZO_US_EQ", "DELL_US_EQ", "WBD_US_EQ", "CRM_US_EQ"
+      ],
+      "policy": {
+        "max_membership_age_seconds": 86400,
+        "max_broker_age_seconds": 600,
+        "max_quote_age_seconds": 10,
+        "max_priority_age_seconds": 3600,
+        "max_timing_age_seconds": 60,
+        "minimum_seconds_to_close": 1800,
+        "max_spread_bps": "20",
+        "max_round_trip_cost_bps": "50",
+        "minimum_daily_notional": "1000000",
+        "max_order_participation_bps": "10",
+        "candidate_limit": 5,
+        "peer_limit": 2
+      }
+    }
+  },
+  "universe": {
+    "config_version": 1,
+    "enabled": true,
+    "source_id": "alpaca_iex30",
+    "url": "https://data.alpaca.markets/iex30",
+    "allowed_hosts": ["data.alpaca.markets"],
+    "expected_provider": "Alpaca Basic IEX",
+    "expected_taxonomy_edition": "IEX30_GICS_2026",
+    "rights": {
+      "store_content": true,
+      "llm_processing": true,
+      "retention_hours": 24,
+      "terms_reference": "owner_review_iex30_2026-11-02"
+    },
+    "minimum_interval_seconds": 300,
+    "daily_request_limit": 288
+  },
+  "models": [],
+  "controls": {"pause_entries": true, "close_position": false},
+  "watchdog": {
+    "config_version": 1,
+    "enabled": true,
+    "interval_seconds": 300,
+    "quote_max_age_seconds": 10,
+    "symbols": [
+      "META", "MU", "NVDA", "AMD", "SNDK", "GOOGL", "BKNG", "AMZN", "AAPL", "MSFT",
+      "INTC", "SHOP", "STX", "AVGO", "TSM", "CSCO", "LRCX", "VLO", "TSLA", "ORCL",
+      "BAC", "WDC", "JPM", "GOOG", "LITE", "GEV", "AZO", "DELL", "WBD", "CRM"
+    ],
+    "x_source_ids": [
+      "x_iex_nvidia", "x_iex_amd", "x_iex_meta", "x_iex_tesla",
+      "x_iex_reuters", "x_iex_deitaone", "x_iex_kobeissi"
+    ]
+  }
+}

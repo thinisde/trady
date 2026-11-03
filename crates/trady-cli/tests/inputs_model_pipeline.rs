@@ -235,8 +235,14 @@ fn cli_ingestion_training_evaluation_serving_and_offline_inference_preserve_test
     assert!(!denied.status.success());
     assert!(!root.join("must_not_exist.json").exists());
 
-    let close = now.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
+    // Keep the fixture valid when the suite runs near midnight UTC.
+    let close = now
+        .date_naive()
+        .and_hms_nano_opt(23, 59, 59, 999_999_999)
+        .unwrap()
+        .and_utc();
     let open = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
+    let freshness_until = (now + Duration::minutes(5)).min(close);
     let parameters = FormulaParameters {
         version: 1,
         family: FormulaFamily::Trend,
@@ -256,6 +262,7 @@ fn cli_ingestion_training_evaluation_serving_and_offline_inference_preserve_test
             max_target_net_fraction: d("0.03"),
         },
         max_account_risk_fraction: d("0.01"),
+        strategy: None,
         active: ApprovedFormula {
             revision_id: "TEST_ONLY_FORMULA".into(),
             formula_hash: digest(&parameters).unwrap(),
@@ -364,15 +371,15 @@ fn cli_ingestion_training_evaluation_serving_and_offline_inference_preserve_test
         "entry_costs":{"fixed":money("0"),"rate":"0","uncertainty":money("0"),"fx":null},"exit_costs":{"fixed":money("0"),"rate":"0","uncertainty":money("0"),"fx":null},
         "rules":{"price_tick":"0.01","quantity_step":"0.01","minimum_quantity":"0.01","currency_unit":"0.01"},
         "evidence":{"snapshot_id":"TEST_ONLY_BARS","family":"TREND","signal_eligible":true,"atr":"0.5","atr_lookback":14,"bar_seconds":60,"completed_bars":30,
-            "last_completed_at":now-Duration::seconds(45),"available_at":now-Duration::seconds(30),"valid_until":now+Duration::minutes(5),"minimum_stop_distance":"0.01","noise_distance":"0.1",
+            "last_completed_at":now-Duration::seconds(45),"available_at":now-Duration::seconds(30),"valid_until":freshness_until,"minimum_stop_distance":"0.01","noise_distance":"0.1",
             "base_confidence_score":100,"confidence_score":100,"sentiment_entry_allowed":true,"sentiment_target_ceiling":"0.03","exceptional_verified":false},
-        "holding_deadline_at":close,"valid_until":now+Duration::minutes(5)})).unwrap();
+        "holding_deadline_at":close,"valid_until":freshness_until})).unwrap();
     let signal = |version: &str| SignalObservation {
         model_version: version.into(),
         observed_at: now - Duration::seconds(30),
         available_at: now - Duration::seconds(20),
         generated_at: now - Duration::seconds(10),
-        valid_until: now + Duration::minutes(5),
+        valid_until: freshness_until,
         evidence_lineages: vec!["TEST_ONLY_ORIGIN".into()],
     };
     let observation = ForecastObservation {
@@ -385,7 +392,7 @@ fn cli_ingestion_training_evaluation_serving_and_offline_inference_preserve_test
         observed_at: now - Duration::seconds(30),
         available_at: now - Duration::seconds(20),
         generated_at: now - Duration::seconds(10),
-        valid_until: now + Duration::minutes(5),
+        valid_until: freshness_until,
         evidence_lineages: vec!["TEST_ONLY_ORIGIN".into()],
         signals: SupplementalSignals {
             research: signal("TEST_ONLY_RESEARCH"),
@@ -478,7 +485,7 @@ fn cli_ingestion_training_evaluation_serving_and_offline_inference_preserve_test
         ImportPayload::Costs(trady_adapters::autonomous::CostsPacket {
             instrument_id: input.quote.instrument_id.clone(),
             observed_at: now,
-            valid_until: now + Duration::minutes(5),
+            valid_until: freshness_until,
             costs: input.entry_costs.clone(),
         }),
         now,

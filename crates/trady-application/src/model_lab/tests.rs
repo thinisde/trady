@@ -302,6 +302,7 @@ fn inference_fixture(
             max_target_net_fraction: d("0.03"),
         },
         max_account_risk_fraction: d("0.01"),
+        strategy: None,
         active: ApprovedFormula {
             revision_id: "TEST_ONLY_FORMULA".into(),
             formula_hash: digest(&parameters).unwrap(),
