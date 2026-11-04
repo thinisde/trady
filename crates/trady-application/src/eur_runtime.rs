@@ -82,6 +82,8 @@ pub struct EurRuntimeConfig {
     #[serde(default)]
     pub opencode_config: Option<String>,
     #[serde(default)]
+    pub shadow: Option<crate::eur_shadow::ShadowSettings>,
+    #[serde(default)]
     pub notes: Vec<String>,
 }
 
@@ -129,6 +131,9 @@ impl EurRuntimeConfig {
         )?;
         self.policy.validate()?;
         self.eligibility.validate()?;
+        if let Some(settings) = &self.shadow {
+            settings.validate()?;
+        }
         require(
             !self.session_deadlines.is_empty()
                 && self.session_deadlines.iter().all(|deadline| {
@@ -927,6 +932,7 @@ mod tests {
             research_config: Some("config/research.eur.json".into()),
             trading212_config: Some("config/trading212.demo.example.json".into()),
             opencode_config: Some("config/opencode/llm.json".into()),
+            shadow: None,
             notes: vec![],
         }
     }

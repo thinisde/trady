@@ -6,6 +6,7 @@ pub mod broker;
 pub mod contracts;
 pub mod eur_execution;
 pub mod eur_runtime;
+pub mod eur_shadow;
 pub mod eur_universe;
 pub mod evidence;
 pub mod financial;

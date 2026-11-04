@@ -39,6 +39,27 @@ fn eur_fences_restart_acknowledgements_and_outbox_are_durable() {
     let first = store.acquire_executor_lease("worker_one", 30).unwrap();
     let mut rival = open();
     assert!(rival.acquire_executor_lease("worker_one", 30).is_err());
+    // A dead backend cannot continue mutating. A replacement may recover
+    // immediately, without waiting for an otherwise unexpired lease.
+    let crash_account = format!("paper_eur_crash_{}", Utc::now().timestamp_micros());
+    let mut doomed = PgTargetStore::connect(
+        &executor,
+        "trady_executor",
+        "owner".into(),
+        crash_account.clone(),
+    )
+    .unwrap();
+    let old_fence = doomed
+        .acquire_executor_lease("crashed_worker", 120)
+        .unwrap();
+    drop(doomed);
+    let mut restarted =
+        PgTargetStore::connect(&executor, "trady_executor", "owner".into(), crash_account).unwrap();
+    let recovered = restarted
+        .acquire_executor_lease("recovered_worker", 120)
+        .unwrap();
+    assert!(recovered > old_fence);
+    restarted.release_executor_lease().unwrap();
     store.renew_executor_lease(30).unwrap();
     assert!(
         store
@@ -166,6 +187,16 @@ fn eur_fences_restart_acknowledgements_and_outbox_are_durable() {
         content_hash(&delivery.payload.to_string())
     );
     outbox.finish(&delivery, true).unwrap();
+    let summary = restored.telegram_delivery_summary("deployment").unwrap();
+    assert_eq!(
+        summary
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| row["status"] == "SENT")
+            .count(),
+        1
+    );
     assert!(outbox.claim().unwrap().is_none());
     drop(outbox);
     let mut restarted = PgTargetOutbox::connect(&gateway, "deployment".into(), vec![123]).unwrap();

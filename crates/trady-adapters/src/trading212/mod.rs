@@ -412,6 +412,42 @@ impl<C: Clock> Trading212Reader<C> {
         Ok(self.instruments_with_rejections()?.instruments)
     }
 
+    /// Preserve provider metadata, including the working-schedule identity,
+    /// without inferring order precision that the API does not publish.
+    pub fn catalog_snapshot(&mut self) -> BrokerResult<serde_json::Value> {
+        self.ensure_binding()?;
+        let value: serde_json::Value = self.http.json(
+            Bucket::Instruments,
+            Method::GET,
+            &format!("{API}/metadata/instruments"),
+            None,
+        )?;
+        if !value
+            .as_array()
+            .is_some_and(|rows| !rows.is_empty() && rows.len() <= 100_000)
+        {
+            return Err(invalid());
+        }
+        Ok(value)
+    }
+
+    pub fn exchanges_snapshot(&mut self) -> BrokerResult<serde_json::Value> {
+        self.ensure_binding()?;
+        let value: serde_json::Value = self.http.json(
+            Bucket::Exchanges,
+            Method::GET,
+            &format!("{API}/metadata/exchanges"),
+            None,
+        )?;
+        if !value
+            .as_array()
+            .is_some_and(|rows| !rows.is_empty() && rows.len() <= 1000)
+        {
+            return Err(invalid());
+        }
+        Ok(value)
+    }
+
     pub fn euro_stocks(&mut self) -> BrokerResult<Vec<BrokerInstrument>> {
         let catalog = self.instruments_with_rejections()?;
         Ok(catalog.stocks_in_currency(&Currency::new("EUR").map_err(|_| invalid())?))

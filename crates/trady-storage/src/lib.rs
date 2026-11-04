@@ -43,6 +43,9 @@ pub const TARGET_AUTHORITY_SQL: &str =
     include_str!("../../../migrations/0015_target_authority.sql");
 pub const EUR_RUNTIME_BOUNDARY_SQL: &str =
     include_str!("../../../migrations/0016_eur_runtime_boundary.sql");
+pub const EUR_SHADOW_RECOVERY_SQL: &str =
+    include_str!("../../../migrations/0017_eur_shadow_recovery.sql");
+pub const LATEST_MIGRATION: i32 = 17;
 
 fn db(error: postgres::Error) -> Error {
     // Deliberately exclude connection strings and provider error detail from service output.
@@ -85,6 +88,7 @@ pub fn migrate(dsn: &str) -> Result<()> {
         (14, IEX_WATCHDOG_SQL),
         (15, TARGET_AUTHORITY_SQL),
         (16, EUR_RUNTIME_BOUNDARY_SQL),
+        (17, EUR_SHADOW_RECOVERY_SQL),
     ] {
         if let Some(row) = tx
             .query_opt(

@@ -759,6 +759,9 @@ fn is_eur_target_config(path: &str) -> bool {
 /// gate is satisfied; a checked-in disabled SHADOW file therefore never opens
 /// a broker mutation path.
 fn run_eur_target(action: &str, args: &[String], path: &str) -> Result<Value> {
+    if super::eur_shadow::configured(path)? {
+        return super::eur_shadow::autonomous(action, args, path);
+    }
     let text = fs::read_to_string(path)
         .map_err(|_| Error("cannot read EUR runtime configuration".into()))?;
     let config: EurRuntimeConfig = serde_json::from_str(&text)

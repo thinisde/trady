@@ -410,6 +410,16 @@ impl PgTargetStore {
             .map(|row| row.get(0))
     }
 
+    pub fn telegram_delivery_summary(&mut self, deployment_id: &str) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT target.telegram_delivery_summary($1,$2,$3)",
+                &[&deployment_id, &self.owner_id, &self.account_id],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+
     pub fn append_telegram(&mut self, event: &LifecycleEvent, now: DateTime<Utc>) -> Result<bool> {
         self.append_record(&TargetRecord::Telegram(event.clone()), now)
     }

@@ -5,6 +5,7 @@ mod autonomous;
 mod broker_read;
 mod entry_demo;
 mod eur;
+mod eur_shadow;
 mod financial;
 mod finbert;
 mod inputs_service;
@@ -117,7 +118,9 @@ fn run() -> Result<()> {
         "analyst" | "executor" | "gateway" => service(command, &args[1..]),
         "migrate" if args.len() == 1 => {
             trady_storage::migrate(&secret("TRADY_MIGRATOR_DSN")?)?;
-            output(json!({"migration":16,"status":"applied_or_verified"}))
+            output(
+                json!({"migration":trady_storage::LATEST_MIGRATION,"status":"applied_or_verified"}),
+            )
         }
         "demo" if args.len() == 1 => demo_memory(),
         "demo-entry" => output(entry_demo::run(&args[1..])?),
