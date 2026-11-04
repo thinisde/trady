@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "evidence_id": "eur_ibkr_shadow_run_20261104",
+  "recorded_at": "2026-11-04T18:19:45.845633+00:00",
+  "review_status": "SELF_REVIEW_NOT_DEMO_RELEASE_APPROVAL",
+  "cycle_id": "eur_eur_shadow_ibkr_v5_20261104_d0a421b8c643",
+  "runtime_mode": "SHADOW",
+  "broker_account_id": 52211463,
+  "broker_environment": "demo",
+  "base_currency": "EUR",
+  "decision_code_commit": "51939a3ed20b47201f4982f9e94baa7253ad012f",
+  "decision_code_hash": "676adcff79409993b5bfc05c18c587703716aac5961267e71bb24570a3459497",
+  "deployed_code_commit": "c9f85dbdad4b65c21be69964a860be7f9bcdfbd6",
+  "deployed_binary_sha256": "a40a0602a2df0bd8b950ce6018a49872a204f4d51df92ca1789d5cafd06650a1",
+  "configuration_hash": "d0a421b8c6432dcc37c319090bf735c13ae814ef0681c92f2b7410d4a84a34d9",
+  "runtime_configuration_file_sha256": "e990582ddb25fb0a5506955080662a5e69b14a9c6b2ad7fffc2c71fe815aef86",
+  "ibkr_source_configuration_file_sha256": "4fda31d58c1c9a795b7c4645be611eae9c0374c76f4db2e26f7852eb1746659b",
+  "policy_hash": "3338b0bc74e881b0f2f02ba733abf96f4bdefbe7732f0bb30ced1ef386cf72ed",
+  "crosswalk_hash": "432b9dfb2cf26fd4eb9ac9801a0eb9ee7daf8f4f6c1f5466ada5b998a38fa97d",
+  "identity_review_expires_at": "2026-11-05T12:51:52.833037Z",
+  "run_completed_at": "2026-11-04T18:02:05.061040819Z",
+  "provider_observations": 16,
+  "raw_ibkr_capture": {
+    "observation_id": "eur_eur_shadow_ibkr_v5_20261104_d0a421b8c643_ibkr_smart_wire",
+    "response_hash": "593ca3bbc9e24f571725d23a21744d228a22cabf899dd87b0da9041ea5d9bda8",
+    "live_data_type_callbacks": 2,
+    "timestamped_bid_ask_callbacks": 5,
+    "provider_timestamps_preserved": true
+  },
+  "normalized_quotes": [
+    {
+      "instrument_id": "AIR_PA_EQ",
+      "observation_id": "eur_eur_shadow_ibkr_v5_20261104_d0a421b8c643_quote_AIR_PA_EQ",
+      "status": "STALE",
+      "response_hash": "455cb48791565a60f3402d40e71dc96b023295c7fca1f159d4b080892cbcd407",
+      "symbol": "IBKR:29612256",
+      "observed_at": "2026-11-04T18:01:31Z",
+      "received_at": "2026-11-04T18:01:59.689757Z",
+      "normalized_at": "2026-11-04T18:02:05.029492332Z",
+      "market_state": "CLOSED",
+      "fresh": false
+    },
+    {
+      "instrument_id": "ASML_AS_EQ",
+      "observation_id": "eur_eur_shadow_ibkr_v5_20261104_d0a421b8c643_quote_ASML_AS_EQ",
+      "status": "OK",
+      "response_hash": "8cb8986ce55d851c6c7cde53b20f0a4e5851cee5cf59381a5f0ada2876f4c53f",
+      "symbol": "IBKR:117589399",
+      "observed_at": "2026-11-04T18:02:01Z",
+      "received_at": "2026-11-04T18:02:01.965277Z",
+      "normalized_at": "2026-11-04T18:02:05.041445476Z",
+      "market_state": "CLOSED",
+      "fresh": true
+    }
+  ],
+  "selection_status": "BLOCKED_INPUTS",
+  "model_invoked": false,
+  "broker_mutations": 0,
+  "latest_broker_reconciliation": {
+    "orders": 0,
+    "positions": 0,
+    "created_at": "2026-11-04T18:19:00.859372+00:00",
+    "broker_mutations": 0
+  },
+  "telegram_deliveries": [
+    {
+      "event_id": "eur_eur_shadow_ibkr_v5_20261104_d0a421b8c643_summary",
+      "status": "SENT",
+      "attempt_count": 1,
+      "sent_at": "2026-11-04T18:04:06.362989+00:00"
+    },
+    {
+      "event_id": "eur_eur_shadow_ibkr_v5_20261104_fa3bff184df6_summary",
+      "status": "SENT",
+      "attempt_count": 1,
+      "sent_at": "2026-11-04T18:04:06.302844+00:00"
+    }
+  ],
+  "initial_installation_failure": {
+    "cycle_id": "eur_eur_shadow_ibkr_v5_20261104_fa3bff184df6",
+    "reason": "ROOT_OWNED_STATE_DIRECTORY_NOT_WRITABLE_BY_EXECUTOR",
+    "decision_and_notification_preserved": true,
+    "corrected_state_directory": "/var/lib/trady-executor/eur-shadow"
+  },
+  "restart": {
+    "decision_unchanged": true,
+    "acknowledged_notifications_unchanged": true,
+    "broker_reconciled_before_checkpoint_reuse": true
+  },
+  "replay": {
+    "status": "PAPER_DAY_BLOCKED",
+    "selection_reproduced": true,
+    "synthetic_protocol_scenarios_passed": 15,
+    "provider_calls": 0,
+    "paper_day_passed": false,
+    "blockers": [
+      "NO_RECORDED_EXECUTABLE_EUR_CANDIDATE",
+      "PROVIDER_ERRORS_OR_STALE_OBSERVATIONS_RECORDED",
+      "RECORDED_STRATEGY_OR_RISK_PLAN_UNAVAILABLE",
+      "REVIEWED_COST_AND_FX_INPUTS_UNAVAILABLE"
+    ],
+    "capture_manifest_path": "var/eur-first-run-checks/ibkr-shadow-capture-v5/manifest.json",
+    "capture_manifest_file_sha256": "680274168abc5ffa8f27e7f3600f7cf9c6f069b3966deceec2e03e70b2fa9e29",
+    "summary_path": "var/eur-first-run-checks/ibkr-paper-day-final/paper-day-summary.json",
+    "summary_file_sha256": "8b95cba7a9821dbfd0d9ef0b44b7a1671c061573f7ebcb307380a039beea21d2"
+  },
+  "checks": {
+    "workspace_passed": 650,
+    "workspace_ignored": 38,
+    "postgres_ignored_passed": 38,
+    "postgres_migration": 19,
+    "strict_clippy_passed": true,
+    "systemd_verification_passed": true,
+    "log_files": [
+      {
+        "path": "var/eur-first-run-checks/eur-ibkr-final-workspace.log",
+        "sha256": "d400fa1d7852cc6cdbf1c810e50032b197e50fd1391b9d82cd09a985e44efe1b"
+      },
+      {
+        "path": "var/eur-first-run-checks/eur-ibkr-postgres-final.log",
+        "sha256": "8f000d4876b8ce5cc7ee5cf773902db2aefeda8282a7c6059493e1485a77db0e"
+      },
+      {
+        "path": "var/eur-first-run-checks/eur-ibkr-final-clippy.log",
+        "sha256": "3e15ae710fd1dcc7d9867605ceb0ab6b6f9db6309654f10c17c3746321ef6ba0"
+      },
+      {
+        "path": "var/eur-first-run-checks/eur-ibkr-final-systemd.log",
+        "sha256": "ebc3b5f2e067bbda6ede8ac1e43abd1ee7a37440658538e15b9a7bfef55b3c25"
+      }
+    ]
+  },
+  "service_probes": {
+    "trady-daily.service": {
+      "Result": "success",
+      "ExecMainStatus": "0"
+    },
+    "trady-codex-handoff.service": {
+      "Result": "success",
+      "ExecMainStatus": "0"
+    },
+    "trady-eur-weekly-report.service": {
+      "Result": "success",
+      "ExecMainStatus": "0"
+    }
+  },
+  "timers_enabled": [
+    "trady-daily.timer",
+    "trady-eur-weekly-report.timer"
+  ],
+  "reviewer_credential_names": [
+    "TRADY_ANALYST_DSN"
+  ],
+  "handoff_status": "PENDING_REVIEW",
+  "external_codex_review_started": false,
+  "backup_restore": {
+    "pre_migration_manifest": "/var/lib/trady-eur-backups/20261104T175612203965Z/manifest.json",
+    "post_migration_manifest": "/var/lib/trady-eur-backups/20261104T181421490532Z/manifest.json",
+    "full_restore_verified": true,
+    "all_target_tables_included": true,
+    "production_database_restarted_during_ibkr_upgrade": false,
+    "prior_unarchived_history_restored": false
+  },
+  "remaining_demo_gates": [
+    "TRADING212_ORDER_PRECISION_UNVERIFIED",
+    "SMART_TO_TRADING212_QUOTE_COMPATIBILITY_UNACCEPTED",
+    "BROKER_PROTECTION_AND_RECOVERY_DRIVER_NOT_RELEASE_READY",
+    "INDEPENDENT_PROTECTION_CAPABILITY_REVIEW_PENDING",
+    "POSITIVE_COMPLETE_PAPER_DAY_NOT_PASSED",
+    "EXACT_RELEASE_BUNDLE_AND_OWNER_APPROVAL_NOT_CREATED"
+  ],
+  "full_plan_completed": false,
+  "entry_authorized": false,
+  "live_enabled": false
+}

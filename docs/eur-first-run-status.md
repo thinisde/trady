@@ -3,6 +3,8 @@
 Recorded 4 November 2026 on branch `implement/eur-first-run`.
 Authority implementation: `3219fb0`; durable SHADOW deployment: `88078cf`;
 persistent database and systemd credential repair: `712f0fa`.
+IBKR, durable protocol and recorded replay: `51939a3`; delivery and reporting
+follow-up: `c9f85db`.
 
 The first **real-input SHADOW run has completed** with PostgreSQL records and
 an acknowledged Telegram summary. Dedicated analyst, executor and gateway
@@ -10,10 +12,26 @@ services are installed and running. The broker was reconciled flat and no
 broker order was submitted. No complete paper-day replay or demo release has
 passed.
 
-The [current run evidence](./evidence/eur-real-input-shadow-2026-11-04.json)
+The [initial run evidence](./evidence/eur-real-input-shadow-2026-11-04.json)
 binds implementation `f521286` to its deployed binary, configuration, policy,
 15 provider observations and acknowledged Telegram event. The result is an
 operationally completed SHADOW cycle with a blocked selection.
+
+The [IBKR SHADOW run](./evidence/eur-ibkr-shadow-run-2026-11-04.json) subsequently
+stored live SMART callbacks for both EUR identities and 16 provider observations.
+ASML's captured book met the freshness bound; Airbus's older book remained
+STALE. Both approved primary sessions were closed, and entry stayed blocked.
+The broker reconciled flat, both distinct deployment-attempt notifications were
+acknowledged once, and a service restart reused the decision without resending.
+Offline replay reproduced the recorded decision and quote normalization, and
+all 15 synthetic protocol scenarios passed. Positive paper-day acceptance is
+still blocked. Daily/weekly timers and the sanitized pending-review workers
+are installed and their one-shot probes passed.
+
+The current identity review expires on **5 November 2026 at 12:51:52 UTC**.
+Selection and source capture require a current review; Telegram can continue
+delivering journaled events after entry evidence expires. No review was silently
+extended by adding the IBKR source.
 
 A restart test caused the loss of the pre-existing tmpfs PostgreSQL database.
 Only archived records could be recovered; prior unarchived history is lost.
@@ -210,9 +228,9 @@ release evidence; the check record preserves their SHA-256 hashes.
    replay and synthetic protocol suite are implemented; neither substitutes
    for a successful session with actual selection, risk, cost and recovery
    evidence.
-6. Verify the installed daily/session and review workers against durable
-   reports. A pending sanitized handoff is not an external Codex review or
-   owner activation approval.
+6. Consume the installed workers' sanitized `PENDING_REVIEW` handoffs through
+   the separate review process. The service probes passed, but an external
+   Codex review has not been started and no owner activation approval exists.
 7. Build an immutable release bundle and separate owner activation process bound
    to exact hashes, account, limits and expiry. Keep preparation disabled.
    Archive IEX30/Alpaca and redundant preflight paths only after EUR parity and
