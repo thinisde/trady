@@ -963,7 +963,9 @@ mod tests {
         let mut command = Command::new("/bin/sh");
         command
             .env("TRADY_TEST_CREDENTIAL", "fixture-secret")
-            .args(["-c", "printf '%s\\n' \"${TRADY_TEST_CREDENTIAL-cleared}\""]);
+            // Follow the worker handshake so the fixture cannot exit before
+            // exchange queues its request and falsely report a closed IPC pipe.
+            .args(["-c", "IFS= read -r worker_boot; IFS= read -r worker_request; printf '%s\\n' \"${TRADY_TEST_CREDENTIAL-cleared}\""]);
         let mut process = WorkerProcess::start(command, b"{}\n".to_vec()).expect("worker");
         let bytes = process
             .exchange(

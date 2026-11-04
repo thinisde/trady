@@ -410,6 +410,57 @@ impl PgTargetStore {
             .map(|row| row.get(0))
     }
 
+    pub fn daily_entry_count(&mut self, day: chrono::NaiveDate) -> Result<i64> {
+        self.client
+            .query_one(
+                "SELECT target.daily_entry_count($1,$2,$3)",
+                &[&self.owner_id, &self.account_id, &day],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+    pub fn list_documents(
+        &mut self,
+        kind: &str,
+        since: DateTime<Utc>,
+        limit: i32,
+    ) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT target.list_records($1,$2,$3,$4,$5)",
+                &[&kind, &self.owner_id, &self.account_id, &since, &limit],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+    pub fn read_review_artifact(&mut self, id: &str) -> Result<Option<serde_json::Value>> {
+        self.client
+            .query_one(
+                "SELECT target.read_review_artifact($1,$2,$3)",
+                &[&self.owner_id, &self.account_id, &id],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+    pub fn append_review_artifact(&mut self, id: &str, value: &serde_json::Value) -> Result<bool> {
+        let canonical = serde_json::to_string(value)
+            .map_err(|_| Error("review bundle encoding failed".into()))?;
+        self.client
+            .query_one(
+                "SELECT target.append_review_artifact($1,$2,$3,$4,$5,$6)",
+                &[
+                    &self.owner_id,
+                    &self.account_id,
+                    &id,
+                    &value,
+                    &canonical,
+                    &content_hash(&canonical),
+                ],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+
     pub fn telegram_delivery_summary(&mut self, deployment_id: &str) -> Result<serde_json::Value> {
         self.client
             .query_one(
@@ -520,6 +571,64 @@ impl PgTargetStore {
                 Err(error)
             }
         }
+    }
+}
+
+impl trady_application::eur_protocol::ProtocolJournal for PgTargetStore {
+    fn load(
+        &mut self,
+        intent_id: &str,
+    ) -> Result<Vec<trady_application::eur_protocol::ProtocolRecord>> {
+        let value: serde_json::Value = self
+            .client
+            .query_one(
+                "SELECT target.protocol_history($1,$2,$3)",
+                &[&self.owner_id, &self.account_id, &intent_id],
+            )
+            .map_err(crate::db)?
+            .get(0);
+        serde_json::from_value(value)
+            .map_err(|_| Error("invalid durable EUR protocol history".into()))
+    }
+    fn append(
+        &mut self,
+        expected_revision: u64,
+        record: &trady_application::eur_protocol::ProtocolRecord,
+    ) -> Result<()> {
+        require(
+            record.state.context.account_id == self.account_id,
+            "protocol account differs from journal scope",
+        )?;
+        let (worker, generation) = self
+            .fence
+            .clone()
+            .ok_or_else(|| Error("protocol dispatch requires an executor fence".into()))?;
+        let value = serde_json::to_value(record)
+            .map_err(|_| Error("protocol record encoding failed".into()))?;
+        let canonical =
+            serde_json::to_string(record).map_err(|_| Error("protocol encoding failed".into()))?;
+        let state = serde_json::to_string(&record.state)
+            .map_err(|_| Error("protocol state encoding failed".into()))?;
+        let expected = i64::try_from(expected_revision)
+            .map_err(|_| Error("protocol revision overflow".into()))?;
+        self.client
+            .query_one(
+                "SELECT target.append_protocol_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+                &[
+                    &self.owner_id,
+                    &self.account_id,
+                    &record.state.context.intent_id,
+                    &expected,
+                    &value,
+                    &canonical,
+                    &content_hash(&canonical),
+                    &state,
+                    &worker,
+                    &generation,
+                ],
+            )
+            .map_err(crate::db)?;
+        Ok(())
     }
 }
 

@@ -1,0 +1,33 @@
+[Unit]
+Description=Trady EUR daily calendar, reconciliation and selection
+After=network-online.target trady-eur-analyst.service trady-eur-executor.service
+Wants=network-online.target trady-eur-analyst.service trady-eur-executor.service trady-eur-gateway.service
+
+[Service]
+Type=oneshot
+User=trady-executor
+Group=trady-executor
+ExecStart=/opt/trady/bin/trady eur daily --config /etc/trady/runtime/eur-shadow.json
+Environment=TRADY_CREDENTIALS_FILE=%d/credentials.json
+LoadCredential=credentials.json:/etc/trady/secrets/executor.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/opt/trady /etc/trady/runtime
+StateDirectory=trady-executor
+UMask=0077
+TimeoutStartSec=180
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

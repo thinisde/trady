@@ -48,8 +48,23 @@ def inspect_persistence():
 
 
 def footprint(name=NAME):
-    return json.loads(run("docker", "exec", "--user", "postgres", name, "psql", "-X", "-At", "-U", "postgres",
-                          "-d", "trady", "-c", FOOTPRINT))
+    def query(sql):
+        return json.loads(run("docker", "exec", "--user", "postgres", name, "psql", "-X", "-At", "-U", "postgres",
+                              "-d", "trady", "-c", sql))
+    value = query(FOOTPRINT)
+    # Discover target tables so additive migrations cannot silently exclude new
+    # intent/protection/review state from the restore verification footprint.
+    tables = query("SELECT COALESCE(jsonb_agg(tablename ORDER BY tablename),'[]'::jsonb) FROM pg_tables WHERE schemaname='target'")
+    pieces = []
+    for table in tables:
+        identifier = '"' + table.replace('"', '""') + '"'
+        literal = "'" + table.replace("'", "''") + "'"
+        pieces.append("SELECT " + literal + " AS table_name, count(*) AS row_count, "
+                      "encode(sha256(convert_to(COALESCE(string_agg(to_jsonb(t)::text,'|' ORDER BY to_jsonb(t)::text),''),'UTF8')),'hex') AS content_hash "
+                      "FROM target." + identifier + " t")
+    if pieces:
+        value["protected_tables"] = query("SELECT jsonb_object_agg(table_name,jsonb_build_object('rows',row_count,'sha256',content_hash)) FROM (" + " UNION ALL ".join(pieces) + ") f")
+    return value
 
 
 def ready(name):

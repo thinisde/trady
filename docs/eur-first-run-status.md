@@ -81,6 +81,18 @@ existing output files.
   non-display use. TradingView was not added as a runtime provider.
   This tested the public unauthenticated mode. It does not establish what an
   authenticated account with real-time Euronext entitlement can receive.
+- A subsequent password-authenticated TradingView test succeeded, but the two
+  listings still reported `delayed_streaming_900` with no usable bid/ask.
+  The [authenticated assessment](./evidence/tradingview-authenticated-eur-assessment-2026-11-04.json)
+  preserves that narrower result. The market was closed, so last-trade age was
+  not treated as an independent latency measurement.
+- The existing read-only IB Gateway returned **live SMART data** for both exact
+  EUR ISINs. Its `marketDataType=1` callbacks and timestamped `BidAsk` events are
+  recorded in the [IBKR assessment](./evidence/ibkr-smart-eur-assessment-2026-11-04.json).
+  The [SHADOW adapter](./ibkr-shadow-quotes.md) pins conIds and primary exchanges,
+  rejects delayed/frozen or untimed books, and uses provider time for freshness.
+  SMART composite data has not yet been accepted as Trading 212 executable
+  price authority. Yahoo remains a separate research/bar source.
 - `gate explain --snapshot FILE` calls the same application gate as the target
   execution cycle. It checks exact universe-member equality, quote/session
   identity, spread, price/quantity precision, fractional support, buying power,
@@ -113,8 +125,26 @@ existing output files.
   every proposed update retains the full activation checks.
 - `replay manifest-check` verifies all required recorded input paths and hashes
   offline, rejects directory escapes/tampering, and explicitly returns
-  `paper_day_passed=false`. `replay paper-day` fails rather than returning a
-  fabricated acceptance result.
+  `paper_day_passed=false`. `eur export` writes a private, immutable capsule with
+  source observations, lossless catalog chunks, configurations and hashes.
+  `replay paper-day` reconstructs decisions and IBKR normalized quotes offline,
+  writes the full artifact set and persists a separate REPLAY report. Missing
+  executable candidates, costs or strategy evidence produce a nonzero exit and
+  `PAPER_DAY_BLOCKED`, preserving the actual captured failure.
+- A sequential order-protocol reducer persists UNKNOWN before dispatch, checks
+  exact IDs, reconciles cancellation races and protects only final filled
+  quantity. Fifteen synthetic scenarios cover restart, ambiguous submission,
+  partial entry/exit, rejected protection, disconnect, stop widening and
+  exposure timing. Migration 18 adds fenced protocol journals and atomic daily
+  entry-slot reservation. These regressions do not prove broker capability;
+  the reducer is not yet connected to an enabled DEMO broker driver.
+- Migration 19 adds immutable `PENDING_REVIEW` artifacts. Daily analyst cycles
+  create sanitized handoffs from completed reports; the dedicated reviewer
+  service receives only an analyst DSN. The daily timer starts the calendar
+  workflow, and the EUR weekly timer aggregates recorded facts. Unknown
+  economic reconciliation remains unavailable rather than becoming zero P&L.
+  Neither worker can approve or activate its own changes. The existing sealed
+  weekly research worker is retained separately.
 
 ## Verification
 
@@ -124,8 +154,8 @@ implementation commit to archived log hashes.
 | Check | Result |
 | --- | --- |
 | Formatting and strict workspace Clippy | Passed |
-| Workspace tests, all targets | Latest SDK build: 636 passed, zero failed; 36 integration tests ignored by this command |
-| `python3 scripts/test-postgres.py` | Passed against disposable PostgreSQL 18.3 |
+| Workspace tests, all targets | IBKR/protocol build: 648 passed, zero failed; 38 integration tests ignored by this command |
+| `python3 scripts/test-postgres.py` | All 38 ignored tests passed against disposable PostgreSQL 18.3, including migrations 18–19 |
 | New EUR PostgreSQL boundary test | Passed: fencing, role isolation, restart acknowledgements, outbox idempotency and ambiguous delivery |
 | OpenCode/autonomous/Telegram ignored CLI suites | Passed |
 | Credential rotation and post-rotation analyst/executor/gateway logins | Passed |
@@ -135,6 +165,8 @@ implementation commit to archived log hashes.
 | Real SHADOW service restart | Passed: broker reconciliation repeated; acknowledged outbox delivery not resent |
 | Rebuilt PostgreSQL restore and guarded restart | Passed against the persistent named volume; archived in `/var/lib/trady-eur-backups/` |
 | Yahoo SDK and independent wire streaming | Connected; EUR observations stale and without a two-sided book |
+| Authenticated TradingView | Connected; both observed EUR feeds explicitly delayed 900 seconds |
+| IBKR SMART, read-only | Live data type confirmed; exact EUR contracts and timestamped bid/ask received |
 
 Full logs are local deployment artifacts under `var/eur-first-run-checks/`:
 `postgres-test.log`, `workspace-test.log`, `clippy.log` and
@@ -170,11 +202,13 @@ release evidence; the check record preserves their SHA-256 hashes.
    implementation. Existing capability and quote evidence remains
    UNSUPPORTED/pending review. Native protection or separately accepted bounded
    sequential protection is required before any DEMO entry.
-5. Capture a real-input session and implement the complete offline paper-day
-   execution/restart/failure scenarios. Manifest integrity alone is insufficient.
-6. Add the daily/session scheduler and sanitized Codex handoff once the commands
-   they invoke actually execute those workflows. No successful-looking daily
-   service or empty review bundle was added.
+5. Capture and pass a complete real-input paper day. The recorded-decision
+   replay and synthetic protocol suite are implemented; neither substitutes
+   for a successful session with actual selection, risk, cost and recovery
+   evidence.
+6. Verify the installed daily/session and review workers against durable
+   reports. A pending sanitized handoff is not an external Codex review or
+   owner activation approval.
 7. Build an immutable release bundle and separate owner activation process bound
    to exact hashes, account, limits and expiry. Keep preparation disabled.
    Archive IEX30/Alpaca and redundant preflight paths only after EUR parity and

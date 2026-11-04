@@ -5,6 +5,7 @@ pub mod autonomous;
 pub mod broker;
 pub mod contracts;
 pub mod eur_execution;
+pub mod eur_protocol;
 pub mod eur_runtime;
 pub mod eur_shadow;
 pub mod eur_universe;

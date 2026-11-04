@@ -25,7 +25,7 @@ use trady_application::{
 use trady_domain::{Error, FallbackAttempt, RankedCandidate, Result, SelectionRun, require};
 use trady_storage::target::PgTargetStore;
 
-pub const HELP: &str = "\nEUR target (disabled SHADOW by default; LIVE rejected):\n  trady eur config --config FILE\n  trady universe check --config FILE\n  trady universe snapshot --config FILE --review FILE [--catalog RECORDED_FILE] [--out FILE]\n  trady gate explain --config FILE [--snapshot FILE]\n  trady eur select --run FILE --candidates FILE [--fallback FILE]\n  trady replay manifest-check --config FILE --manifest FILE\n\nSnapshot writes require the analyst PostgreSQL role. Crosswalk review must bind exact catalog IDs.\nManifest checking does not certify a complete paper-day replay.\n";
+pub const HELP: &str = "\nEUR target (disabled SHADOW by default; LIVE rejected):\n  trady eur config --config FILE\n  trady eur capture|diagnose-inputs|daily|gateway|report --config FILE [--once]\n  trady eur export --config FILE --out NEW_DIRECTORY\n  trady eur weekly|handoff --config FILE [--out FILE]\n  trady universe check --config FILE\n  trady universe snapshot --config FILE --review FILE [--catalog RECORDED_FILE] [--out FILE]\n  trady gate explain --config FILE [--snapshot FILE]\n  trady eur select --run FILE --candidates FILE [--fallback FILE]\n  trady replay manifest-check --config FILE --manifest FILE\n  trady replay paper-day --config FILE --manifest FILE [--out NEW_DIRECTORY]\n  trady replay protocol-suite --out NEW_FILE\n\nSnapshot writes require the analyst PostgreSQL role. Crosswalk review must bind exact catalog IDs.\nManifest checking and synthetic protocol fixtures do not certify a complete paper-day replay.\n";
 
 pub fn run(args: &[String]) -> Result<Value> {
     let command = args
@@ -47,7 +47,12 @@ pub fn run(args: &[String]) -> Result<Value> {
         "gate-explain" => gate_command(&[vec!["explain".into()], args[1..].to_vec()].concat()),
         "universe-check" => universe_command(&[vec!["check".into()], args[1..].to_vec()].concat()),
         "select" => select(&args[1..]),
-        "capture" | "diagnose-inputs" | "gateway" | "report" => {
+        "weekly" | "handoff" => super::eur_workflow::run(command, &args[1..]),
+        "export" => {
+            let values = options(&args[1..], &["--config", "--out"], &["--config", "--out"])?;
+            super::eur_shadow::export_bundle(&values["--config"], Path::new(&values["--out"]))
+        }
+        "capture" | "diagnose-inputs" | "daily" | "gateway" | "report" => {
             super::eur_shadow::command(command, &args[1..])
         }
         _ => Err(Error(HELP.into())),
@@ -218,13 +223,24 @@ fn snapshot(
 }
 
 pub fn replay_command(args: &[String]) -> Result<Value> {
+    if args.first().map(String::as_str) == Some("protocol-suite") {
+        let values = options(&args[1..], &["--out"], &["--out"])?;
+        let result = trady_application::eur_protocol::scenarios::run_all();
+        super::eur_shadow::private_json(Path::new(&values["--out"]), &result)?;
+        require(result["passed"] == true, "protocol regression suite failed")?;
+        return Ok(
+            json!({"status":"SYNTHETIC_PROTOCOL_SUITE_PASSED","artifact":values["--out"],
+            "scenarios":result["scenarios"].as_array().map(Vec::len),"broker_capability_proven":false,"entry_authorized":false}),
+        );
+    }
+    let paper = args.first().map(String::as_str) == Some("paper-day");
     require(
-        args.first().map(String::as_str) == Some("manifest-check"),
-        "complete paper-day execution replay is not implemented; use trady replay manifest-check for input integrity only",
+        paper || args.first().map(String::as_str) == Some("manifest-check"),
+        "usage: trady replay manifest-check|paper-day --config FILE --manifest FILE [--out NEW_DIRECTORY]",
     )?;
     let options = options(
         &args[1..],
-        &["--config", "--manifest"],
+        &["--config", "--manifest", "--out"],
         &["--config", "--manifest"],
     )?;
     let config: EurRuntimeConfig = read_json(Path::new(&options["--config"]))?;
@@ -248,12 +264,15 @@ pub fn replay_command(args: &[String]) -> Result<Value> {
     ];
     require(
         manifest.schema_version == 1
+            && manifest.inputs.len() <= 512
             && required
                 .iter()
                 .all(|key| manifest.inputs.contains_key(*key)),
         "replay manifest lacks required recorded provider inputs",
     )?;
-    for input in manifest.inputs.values() {
+    let mut documents = BTreeMap::new();
+    let mut total = 0usize;
+    for (key, input) in &manifest.inputs {
         let file = root
             .join(&input.path)
             .canonicalize()
@@ -263,6 +282,11 @@ pub fn replay_command(args: &[String]) -> Result<Value> {
             "replay input escapes the manifest directory",
         )?;
         let bytes = read_bounded(&file, 4_000_000)?;
+        total += bytes.len();
+        require(
+            total <= 128_000_000,
+            "replay capsule exceeds aggregate size bound",
+        )?;
         require(
             content_hash(
                 std::str::from_utf8(&bytes)
@@ -270,6 +294,14 @@ pub fn replay_command(args: &[String]) -> Result<Value> {
             ) == input.sha256,
             "recorded replay input hash differs",
         )?;
+        documents.insert(key.clone(), bytes);
+    }
+    if paper {
+        let out = options
+            .get("--out")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| root.join("paper-day-result"));
+        return super::eur_replay::paper_day(&config, &manifest, &documents, &out);
     }
     Ok(
         json!({"status":"MANIFEST_INTEGRITY_CHECKED","run_id":manifest.run_id,
@@ -280,16 +312,16 @@ pub fn replay_command(args: &[String]) -> Result<Value> {
 
 #[derive(serde::Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct ReplayManifest {
-    schema_version: u32,
-    run_id: String,
-    inputs: BTreeMap<String, ReplayInput>,
+pub(super) struct ReplayManifest {
+    pub schema_version: u32,
+    pub run_id: String,
+    pub inputs: BTreeMap<String, ReplayInput>,
 }
 #[derive(serde::Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct ReplayInput {
-    path: String,
-    sha256: String,
+pub(super) struct ReplayInput {
+    pub path: String,
+    pub sha256: String,
 }
 
 fn select(args: &[String]) -> Result<Value> {

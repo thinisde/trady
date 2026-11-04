@@ -14,6 +14,9 @@ pub struct ShadowSettings {
     pub crosswalk_config: String,
     pub state_directory: String,
     pub interval_seconds: u32,
+    /// Optional read-only IBKR quote source. Yahoo remains the research source.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ibkr_config: Option<String>,
 }
 
 impl ShadowSettings {
@@ -27,6 +30,12 @@ impl ShadowSettings {
                     .any(|part| matches!(part, std::path::Component::ParentDir))
                 && (10..=3600).contains(&self.interval_seconds),
             "invalid durable EUR shadow settings",
+        )?;
+        require(
+            self.ibkr_config
+                .as_ref()
+                .is_none_or(|p| !p.trim().is_empty()),
+            "IBKR source path is empty",
         )
     }
 }
@@ -186,6 +195,14 @@ pub struct ShadowQuote {
     pub market_state: Option<String>,
     pub observed_at: DateTime<Utc>,
     pub received_at: DateTime<Utc>,
+    #[serde(default)]
+    pub provider_instrument_id: Option<i64>,
+    #[serde(default)]
+    pub broker_ticker: Option<String>,
+    #[serde(default)]
+    pub isin: Option<String>,
+    #[serde(default)]
+    pub source_venue: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,6 +215,8 @@ pub struct ShadowCandidate {
     pub research_eligible: bool,
     pub entry_eligible: bool,
     pub blockers: Vec<String>,
+    #[serde(default)]
+    pub assessed_at: Option<DateTime<Utc>>,
 }
 
 pub fn assess_quote(
@@ -215,8 +234,19 @@ pub fn assess_quote(
     let quote: Option<ShadowQuote> = serde_json::from_value(observation.response.clone()).ok();
     match quote {
         Some(quote) => {
+            let symbol_matches = if observation.provider == "ibkr_tws_api" {
+                quote
+                    .provider_instrument_id
+                    .is_some_and(|id| id > 0 && quote.symbol == format!("IBKR:{id}"))
+                    && quote.broker_ticker.as_deref() == Some(&identity.broker_ticker)
+                    && quote.isin.as_deref() == Some(&identity.isin)
+                    && quote.source_venue.as_deref() == Some("SMART")
+            } else {
+                matches!(observation.provider.as_str(), "yfinance_rs" | "recorded")
+                    && quote.symbol == identity.yahoo_symbol
+            };
             if quote.instrument_id != identity.internal_instrument_id
-                || quote.symbol != identity.yahoo_symbol
+                || !symbol_matches
                 || quote.currency != "EUR"
             {
                 blockers.push("QUOTE_IDENTITY_MISMATCH".into());
@@ -255,7 +285,80 @@ pub fn assess_quote(
         research_eligible,
         entry_eligible: false,
         blockers,
+        assessed_at: Some(now),
     })
+}
+
+/// Parse the exact reviewed broker exchange/schedule, including holidays and
+/// DST changes from the provider's explicit UTC events. Unknown or ambiguous
+/// calendars fail closed; no weekday/hour fallback is invented.
+pub fn session_from_catalog(
+    identity: &ShadowIdentity,
+    deadlines: &[crate::eur_runtime::SessionDeadlineConfig],
+    response: &Value,
+    observed_at: DateTime<Utc>,
+    at: DateTime<Utc>,
+) -> Result<trady_domain::SessionWindow> {
+    let venues: Vec<_> = response
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|v| {
+            v["id"].as_i64() == Some(identity.broker_exchange_id)
+                && v["name"].as_str() == Some(&identity.exchange)
+        })
+        .collect();
+    require(
+        venues.len() == 1,
+        "session exchange identity unavailable or ambiguous",
+    )?;
+    let schedules: Vec<_> = venues[0]["workingSchedules"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|s| s["id"].as_i64() == Some(identity.working_schedule_id))
+        .collect();
+    require(
+        schedules.len() == 1,
+        "reviewed broker session schedule unavailable",
+    )?;
+    let mut opens = Vec::new();
+    let mut closes = Vec::new();
+    for event in schedules[0]["timeEvents"].as_array().into_iter().flatten() {
+        if let Some(time) = event["date"]
+            .as_str()
+            .and_then(|v| v.parse::<DateTime<Utc>>().ok())
+            && time.date_naive() == at.date_naive()
+        {
+            match event["type"].as_str() {
+                Some("OPEN") => opens.push(time),
+                Some("CLOSE") => closes.push(time),
+                _ => {}
+            }
+        }
+    }
+    require(
+        opens.len() == 1 && closes.len() == 1,
+        "session is closed or calendar is ambiguous",
+    )?;
+    let deadline = deadlines
+        .iter()
+        .find(|d| {
+            d.exchange_mic == identity.exchange_mic && d.timezone == identity.session_timezone
+        })
+        .ok_or_else(|| Error("reviewed exchange-local flatten policy unavailable".into()))?;
+    let session = trady_domain::SessionWindow {
+        session_id: format!("{}_{}", identity.exchange_mic, at.format("%Y%m%d")),
+        exchange_mic: identity.exchange_mic.clone(),
+        timezone: identity.session_timezone.clone(),
+        opens_at: opens[0],
+        closes_at: closes[0],
+        flatten_at: deadline.flatten_at(closes[0])?,
+        observed_at,
+        source: "trading212_reviewed_schedule".into(),
+    };
+    session.validate(at)?;
+    Ok(session)
 }
 
 fn valid_id(value: &str) -> bool {
@@ -352,5 +455,53 @@ mod tests {
                 .unwrap()
                 .research_eligible
         );
+    }
+
+    #[test]
+    fn midday_calendar_refresh_and_exchange_deadline_survive_dst() {
+        let identity = &crosswalk().members[0];
+        let deadlines = [crate::eur_runtime::SessionDeadlineConfig {
+            exchange_mic: identity.exchange_mic.clone(),
+            timezone: identity.session_timezone.clone(),
+            flatten_minutes_before_close: 15,
+        }];
+        for (day, open, close) in [
+            ("2026-07-01", "07:00", "15:30"),
+            ("2026-11-04", "08:00", "16:30"),
+        ] {
+            let at = format!("{day}T13:00:00Z").parse::<DateTime<Utc>>().unwrap();
+            let calendar = json!([{"id":identity.broker_exchange_id,"name":identity.exchange,
+            "workingSchedules":[{"id":identity.working_schedule_id,"timeEvents":[
+                {"type":"OPEN","date":format!("{day}T{open}:00Z")},
+                {"type":"CLOSE","date":format!("{day}T{close}:00Z")}
+            ]}]}]);
+            let session = session_from_catalog(identity, &deadlines, &calendar, at, at).unwrap();
+            assert!(session.permits_entry(at, 60));
+            assert_eq!(
+                session.flatten_at,
+                session.closes_at - Duration::minutes(15)
+            );
+            assert!(session.must_flatten(session.flatten_at));
+            assert!(
+                session_from_catalog(
+                    identity,
+                    &deadlines,
+                    &calendar,
+                    at + Duration::seconds(1),
+                    at
+                )
+                .is_err()
+            );
+            assert!(
+                session_from_catalog(identity, &deadlines, &calendar, at, at + Duration::days(1))
+                    .is_err()
+            );
+            let mut ambiguous = calendar;
+            let events = ambiguous[0]["workingSchedules"][0]["timeEvents"]
+                .as_array_mut()
+                .unwrap();
+            events.push(events[0].clone());
+            assert!(session_from_catalog(identity, &deadlines, &ambiguous, at, at).is_err());
+        }
     }
 }

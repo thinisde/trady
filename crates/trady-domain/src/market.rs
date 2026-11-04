@@ -216,8 +216,7 @@ impl SessionWindow {
                 && valid_reference(&self.source)
                 && self.opens_at < self.flatten_at
                 && self.flatten_at <= self.closes_at
-                && self.observed_at <= now
-                && self.observed_at <= self.opens_at,
+                && self.observed_at <= now,
             "invalid or unverified exchange session",
         )
     }

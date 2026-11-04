@@ -12,6 +12,7 @@ use std::{
 };
 use trady_adapters::{
     credentials::CredentialStore,
+    ibkr_smart::IbkrSmartConfig,
     telegram::{BotToken, TelegramClient},
     trading212::{Credentials, Environment, Trading212Config, Trading212Reader},
     yfinance::{YfinanceDataConfig, YfinanceMarketData},
@@ -61,7 +62,7 @@ fn read_json<T: DeserializeOwned>(path: &Path) -> Result<T> {
         .map_err(|_| Error("invalid EUR configuration or evidence fields".into()))
 }
 
-fn resolve(config: &Path, reference: &str) -> PathBuf {
+pub(super) fn resolve(config: &Path, reference: &str) -> PathBuf {
     let value = Path::new(reference);
     if value.is_absolute() {
         return value.to_owned();
@@ -117,6 +118,15 @@ fn load(path: &str) -> Result<Loaded> {
             reference.ok_or_else(|| Error("required EUR provider configuration missing".into()))?;
         let document: Value = read_json(&resolve(&config_path, reference))?;
         provider_hashes.insert(name, hash(&document)?);
+    }
+    if let Some(reference) = &settings.ibkr_config {
+        let document: Value = read_json(&resolve(&config_path, reference))?;
+        let ibkr: IbkrSmartConfig = serde_json::from_value(document.clone())
+            .map_err(|_| Error("invalid IBKR shadow source configuration".into()))?;
+        for identity in &crosswalk.members {
+            ibkr.validate_identity(identity)?;
+        }
+        provider_hashes.insert("ibkr", hash(&document)?);
     }
     let config_hash = hash(&json!({"runtime":config,"crosswalk_hash":crosswalk_hash,
         "provider_configuration_hashes":provider_hashes}))?;
@@ -334,11 +344,12 @@ fn provider_path(loaded: &Loaded, value: Option<&str>, name: &str) -> Result<Pat
 pub fn command(action: &str, args: &[String]) -> Result<Value> {
     require(
         (args.len() == 2 || (args.len() == 3 && args[2] == "--once")) && args[0] == "--config",
-        "usage: trady eur capture|diagnose-inputs|gateway|report --config FILE [--once]",
+        "usage: trady eur capture|diagnose-inputs|daily|gateway|report --config FILE [--once]",
     )?;
     let once = args.len() == 3;
     match action {
         "capture" => repeat(&args[1], once, capture),
+        "daily" => run_once(&load(&args[1])?),
         "diagnose-inputs" => {
             let mut loaded = load(&args[1])?;
             // Operator diagnostics capture new evidence without replacing an
@@ -555,9 +566,25 @@ fn capture(loaded: &Loaded) -> Result<Value> {
         &observation_id(loaded, "analyst_manifest"),
         &manifest,
     )?;
+    // The executor may finish after the pre-open daily timer returns. The next
+    // analyst cycle creates the immutable, sanitized daily review handoff.
+    let handoff = if repository
+        .read_document("daily_report", &loaded.cycle_id)?
+        .is_some()
+    {
+        Some(super::eur_workflow::run(
+            "handoff",
+            &[
+                "--config".into(),
+                loaded.config_path.to_string_lossy().into_owned(),
+            ],
+        )?)
+    } else {
+        None
+    };
     Ok(
         json!({"status":"EUR_ANALYST_INPUTS_PERSISTED","cycle_id":loaded.cycle_id,
-        "observations":observations.len(),"entry_authorized":false}),
+        "observations":observations.len(),"review_handoff":handoff,"entry_authorized":false}),
     )
 }
 
@@ -672,6 +699,41 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
         },
     )?;
     let catalog_response = materialize(repository, &catalog)?;
+    let now = Utc::now();
+    let sessions: Vec<_> = loaded
+        .crosswalk
+        .members
+        .iter()
+        .filter_map(|identity| {
+            trady_application::eur_shadow::session_from_catalog(
+                identity,
+                &loaded.config.session_deadlines,
+                &exchanges.response,
+                exchanges.received_at,
+                now,
+            )
+            .ok()
+        })
+        .collect();
+    if sessions.len() == loaded.crosswalk.members.len() && sessions.iter().all(|s| now < s.opens_at)
+    {
+        return Ok(
+            json!({"status":"EUR_SHADOW_WAITING_FOR_SESSION","cycle_id":loaded.cycle_id,
+            "next_session_open":sessions.iter().map(|s|s.opens_at).min(),"broker_mutations":0,"entry_authorized":false}),
+        );
+    }
+    let account_observation = observe(
+        repository,
+        loaded,
+        "account_snapshot",
+        "trading212_demo",
+        "https://demo.trading212.com/api/v0/equity/account/summary",
+        "PRIVATE_ACCOUNT_RECONCILIATION",
+        || {
+            serde_json::to_value(&account)
+                .map_err(|_| Error("account snapshot encoding failed".into()))
+        },
+    )?;
     let mut gaps = Vec::<String>::new();
     let analyst = repository.read_document(
         "provider_snapshot",
@@ -682,21 +744,93 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
     }
     let data_path = provider_path(loaded, loaded.config.yfinance_config.as_deref(), "Yahoo")?;
     let data = YfinanceMarketData::new(read_json(&data_path)?)?;
+    let ibkr = if let Some(reference) = &loaded.settings.ibkr_config {
+        let config: IbkrSmartConfig = read_json(&resolve(&loaded.config_path, reference))?;
+        let raw = observe(
+            repository,
+            loaded,
+            "ibkr_smart_wire",
+            "ibkr_tws_api",
+            "tcp://127.0.0.1/ib-gateway",
+            "IBKR_PRIVATE_API_SHADOW_SMART_COMPOSITE",
+            || {
+                let directory = Path::new(&loaded.settings.state_directory);
+                if !directory.exists() {
+                    private_dir(directory)?;
+                }
+                let metadata = fs::symlink_metadata(directory)
+                    .map_err(|_| Error("IBKR state directory unavailable".into()))?;
+                require(
+                    metadata.is_dir() && !metadata.file_type().is_symlink(),
+                    "IBKR state directory invalid",
+                )?;
+                config.capture(
+                    &resolve(&loaded.config_path, &loaded.settings.crosswalk_config),
+                    &directory.join(format!("{}.json", new_id("ibkr_capture"))),
+                )
+            },
+        )?;
+        Some((config, raw))
+    } else {
+        None
+    };
     let mut candidates = Vec::new();
     let mut observations = vec![
         catalog.observation_id.clone(),
         exchanges.observation_id.clone(),
+        account_observation.observation_id.clone(),
     ];
+    if let Some((_, raw)) = &ibkr {
+        observations.push(raw.observation_id.clone());
+    }
     for identity in &loaded.crosswalk.members {
         let slot = format!("quote_{}", identity.internal_instrument_id);
+        let (provider, endpoint, rights) = if ibkr.is_some() {
+            (
+                "ibkr_tws_api",
+                "tcp://127.0.0.1/ib-gateway",
+                "IBKR_PRIVATE_API_SHADOW_SMART_COMPOSITE",
+            )
+        } else {
+            (
+                "yfinance_rs",
+                "https://query1.finance.yahoo.com/v7/finance/quote",
+                "PRIVATE_SHADOW_DIAGNOSTIC_OBSERVATION",
+            )
+        };
         let quote = observe(
             repository,
             loaded,
             &slot,
-            "yfinance_rs",
-            "https://query1.finance.yahoo.com/v7/finance/quote",
-            "PRIVATE_SHADOW_DIAGNOSTIC_OBSERVATION",
+            provider,
+            endpoint,
+            rights,
             || {
+                if let Some((config, raw)) = &ibkr {
+                    let now = Utc::now();
+                    let mut quote = config.normalize(
+                        identity,
+                        &raw.response,
+                        now,
+                        loaded.config.eligibility.quote_max_age_seconds,
+                    )?;
+                    let session = trady_application::eur_shadow::session_from_catalog(
+                        identity,
+                        &loaded.config.session_deadlines,
+                        &exchanges.response,
+                        exchanges.received_at,
+                        now,
+                    )
+                    .ok();
+                    quote["market_state"] = json!(match &session {
+                        Some(s) if now >= s.opens_at && now < s.closes_at => "REGULAR",
+                        Some(_) => "CLOSED",
+                        None => "UNKNOWN",
+                    });
+                    quote["market_state_source"] = json!(exchanges.observation_id);
+                    quote["raw_capture_id"] = json!(raw.observation_id);
+                    return Ok(quote);
+                }
                 serde_json::to_value(
                     data.latest_snapshot(&identity.internal_instrument_id, Utc::now())?,
                 )
@@ -704,10 +838,11 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
             },
         )?;
         observations.push(quote.observation_id.clone());
+        let assessed_at = Utc::now();
         let mut candidate = assess_quote(
             identity,
             &quote,
-            Utc::now(),
+            assessed_at,
             loaded.config.eligibility.quote_max_age_seconds,
         )?;
         let rows = catalog_response.as_array();
@@ -729,7 +864,7 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
                 .push("CURRENT_CATALOG_IDENTITY_CHANGED".into());
             candidate.research_eligible = false;
         }
-        let session = session_blockers(loaded, identity, &exchanges.response, Utc::now());
+        let session = session_blockers(loaded, identity, &exchanges.response, assessed_at);
         if !session.is_empty() {
             candidate.research_eligible = false;
             candidate.blockers.extend(session);
@@ -778,6 +913,7 @@ fn code_fingerprint() -> String {
         include_str!("eur_shadow.rs"),
         include_str!("../../trady-application/src/eur_shadow.rs"),
         include_str!("../../trady-adapters/src/yfinance.rs"),
+        include_str!("../../trady-adapters/src/ibkr_smart.rs"),
         include_str!("../../trady-adapters/src/alpha_vantage.rs"),
         include_str!("../../trady-adapters/src/trading212/mod.rs"),
         include_str!("../../trady-storage/src/target.rs")
@@ -861,54 +997,17 @@ fn session_blockers(
     response: &Value,
     now: DateTime<Utc>,
 ) -> Vec<String> {
-    let mut reasons = Vec::new();
-    let venue = response.as_array().into_iter().flatten().find(|venue| {
-        venue["id"].as_i64() == Some(identity.broker_exchange_id)
-            && venue["name"].as_str() == Some(&identity.exchange)
-    });
-    let schedule = venue
-        .and_then(|v| v["workingSchedules"].as_array())
-        .into_iter()
-        .flatten()
-        .find(|s| s["id"].as_i64() == Some(identity.working_schedule_id));
-    let date = now.format("%Y-%m-%d").to_string();
-    let mut opens = Vec::new();
-    let mut closes = Vec::new();
-    for event in schedule
-        .and_then(|s| s["timeEvents"].as_array())
-        .into_iter()
-        .flatten()
-    {
-        if let Some(time) = event["date"]
-            .as_str()
-            .filter(|time| time.starts_with(&date))
-            .and_then(|time| DateTime::parse_from_rfc3339(time).ok())
-            .map(|time| time.with_timezone(&Utc))
-        {
-            match event["type"].as_str() {
-                Some("OPEN") => opens.push(time),
-                Some("CLOSE") => closes.push(time),
-                _ => (),
-            }
-        }
+    match trady_application::eur_shadow::session_from_catalog(
+        identity,
+        &loaded.config.session_deadlines,
+        response,
+        now,
+        now,
+    ) {
+        Ok(window) if now >= window.opens_at && now < window.flatten_at => vec![],
+        Ok(_) => vec!["SESSION_CLOSED_OR_FLATTEN_DEADLINE_REACHED".into()],
+        Err(_) => vec!["SESSION_CALENDAR_UNAVAILABLE".into()],
     }
-    if opens.len() != 1 || closes.len() != 1 {
-        reasons.push("SESSION_CALENDAR_UNAVAILABLE".into());
-        return reasons;
-    }
-    let deadline = loaded
-        .config
-        .session_deadlines
-        .iter()
-        .find(|d| {
-            d.exchange_mic == identity.exchange_mic && d.timezone == identity.session_timezone
-        })
-        .and_then(|d| d.flatten_at(closes[0]).ok());
-    match deadline {
-        Some(deadline) if now >= opens[0] && now < deadline => (),
-        _ => reasons.push("SESSION_CLOSED_OR_FLATTEN_DEADLINE_REACHED".into()),
-    }
-    reasons
 }
 
 fn chats() -> Result<Vec<i64>> {
@@ -1006,4 +1105,224 @@ fn report(loaded: &Loaded) -> Result<Value> {
         "telegram_deliveries":repository.telegram_delivery_summary(&loaded.settings.deployment_id)?,
         "entry_authorized":false}),
     )
+}
+
+/// Export an immutable, private capsule. A manifest is written last, after all
+/// files are synced. Existing directories are never overwritten.
+pub fn export_bundle(path: &str, root: &Path) -> Result<Value> {
+    use std::collections::{BTreeMap, BTreeSet};
+    let loaded = load(path)?;
+    let mut repository = store(&loaded, "trady_analyst", "TRADY_ANALYST_DSN")?;
+    let result = repository
+        .read_document("shadow_result", &loaded.cycle_id)?
+        .ok_or_else(|| Error("no completed EUR shadow decision to export".into()))?;
+    require(
+        result["configuration_hash"].as_str() == Some(&loaded.config_hash),
+        "capture configuration differs from completed decision",
+    )?;
+    private_dir(root)?;
+    private_dir(&root.join("provider-snapshots"))?;
+    let mut inputs = BTreeMap::<String, Value>::new();
+    let mut index = BTreeMap::<String, String>::new();
+    let mut groups = BTreeMap::<String, Vec<String>>::new();
+    let mut queue: Vec<String> = result["provider_observation_ids"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect();
+    queue.push(observation_id(&loaded, "start"));
+    let mut seen = BTreeSet::new();
+    while let Some(id) = queue.pop() {
+        if !seen.insert(id.clone()) {
+            continue;
+        }
+        require(
+            seen.len() <= 256,
+            "capture has too many observation records",
+        )?;
+        let value = repository
+            .read_document("provider_snapshot", &id)?
+            .ok_or_else(|| Error("recorded provider snapshot is missing".into()))?;
+        if value.get("observation_id").is_some() {
+            let observation: ProviderObservation = serde_json::from_value(value.clone())
+                .map_err(|_| Error("recorded observation schema differs".into()))?;
+            observation.validate()?;
+            if observation.response["encoding"] == "JSON_ARRAY_CHUNKS_V1" {
+                queue.extend(
+                    observation.response["parts"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(Value::as_str)
+                        .map(str::to_owned),
+                );
+                materialize(&mut repository, &observation)?;
+            }
+            let source = observation.source_id.as_str();
+            let group = if source.starts_with("yf_") {
+                Some("yfinance")
+            } else if source.starts_with("alpha_") {
+                Some("alpha_vantage")
+            } else if source.contains("rss") {
+                Some("rss")
+            } else if source.starts_with("research_x_") {
+                Some("x")
+            } else if source == "broker_catalog" {
+                Some("broker_catalog")
+            } else if source == "broker_sessions" {
+                Some("session_calendar")
+            } else if source.starts_with("quote_") {
+                Some("quote_observations")
+            } else {
+                None
+            };
+            if let Some(group) = group {
+                groups.entry(group.into()).or_default().push(id.clone());
+            }
+        } else {
+            require(
+                value["response_hash"].as_str() == Some(&hash(&value["response"])?),
+                "catalog payload chunk hash differs",
+            )?;
+        }
+        let key = format!("snapshot_{:03}", index.len());
+        let file = format!("provider-snapshots/{key}.json");
+        write_capture_file(root, &key, &file, &value, &mut inputs)?;
+        index.insert(id, key);
+    }
+    for group in [
+        "yfinance",
+        "alpha_vantage",
+        "rss",
+        "x",
+        "broker_catalog",
+        "session_calendar",
+        "quote_observations",
+    ] {
+        let ids = groups.remove(group).unwrap_or_default();
+        write_capture_file(
+            root,
+            group,
+            &format!("provider-snapshots/{group}-index.json"),
+            &json!({"observation_ids":ids,"status":if ids.is_empty(){"UNAVAILABLE"}else{"RECORDED"}}),
+            &mut inputs,
+        )?;
+    }
+    let mut provider_configs = BTreeMap::new();
+    for (name, reference) in [
+        ("yfinance", loaded.config.yfinance_config.as_deref()),
+        ("research", loaded.config.research_config.as_deref()),
+        ("broker", loaded.config.trading212_config.as_deref()),
+        ("opencode", loaded.config.opencode_config.as_deref()),
+    ] {
+        let reference =
+            reference.ok_or_else(|| Error("provider configuration unavailable".into()))?;
+        let value: Value = read_json(&resolve(&loaded.config_path, reference))?;
+        reject_configuration_secrets(&value)?;
+        provider_configs.insert(name, value);
+    }
+    if let Some(reference) = &loaded.settings.ibkr_config {
+        let value: Value = read_json(&resolve(&loaded.config_path, reference))?;
+        reject_configuration_secrets(&value)?;
+        provider_configs.insert("ibkr", value);
+    }
+    let crosswalk: Value = read_json(&resolve(
+        &loaded.config_path,
+        &loaded.settings.crosswalk_config,
+    ))?;
+    let deliveries = repository.telegram_delivery_summary(&loaded.settings.deployment_id)?;
+    write_capture_file(
+        root,
+        "capture_context",
+        "capture-context.json",
+        &json!({"schema_version":1,
+        "runtime":loaded.config,"crosswalk":crosswalk,"provider_configurations":provider_configs,
+        "result":result,"observation_index":index,"telegram_deliveries":deliveries}),
+        &mut inputs,
+    )?;
+    write_capture_file(
+        root,
+        "cost_fx",
+        "provider-snapshots/cost-fx.json",
+        &json!({"status":"UNAVAILABLE",
+        "reason":"NO_REVIEWED_TRANSACTION_COST_OBSERVATION_IN_SHADOW_RUN","same_currency_fx":"EUR_TO_EUR_IDENTITY",
+        "fees_assumed_zero":false}),
+        &mut inputs,
+    )?;
+    write_capture_file(root, "selection", "selection.json", &result, &mut inputs)?;
+    write_capture_file(
+        root,
+        "strategy_snapshots",
+        "strategy-snapshots.json",
+        &json!({"status":result["strategy_status"],
+        "model_run":result["model_run"],"risk_plan_status":result["risk_plan_status"]}),
+        &mut inputs,
+    )?;
+    let manifest = json!({"schema_version":1,"run_id":loaded.cycle_id,"inputs":inputs});
+    private_json(&root.join("manifest.json"), &manifest)?;
+    Ok(
+        json!({"status":"EUR_CAPTURE_EXPORTED","manifest":root.join("manifest.json"),"snapshots":index.len(),
+        "manifest_hash":hash(&manifest)?,"paper_day_passed":false,"broker_mutations":0,"entry_authorized":false}),
+    )
+}
+fn reject_configuration_secrets(value: &Value) -> Result<()> {
+    if let Some(object) = value.as_object() {
+        for (key, value) in object {
+            require(
+                !["password", "secret", "token", "api_key", "dsn"]
+                    .contains(&key.to_ascii_lowercase().as_str())
+                    || value.is_null(),
+                "a provider configuration contains an inline credential",
+            )?;
+            reject_configuration_secrets(value)?;
+        }
+    } else if let Some(array) = value.as_array() {
+        for value in array {
+            reject_configuration_secrets(value)?;
+        }
+    }
+    Ok(())
+}
+fn write_capture_file(
+    root: &Path,
+    key: &str,
+    name: &str,
+    value: &Value,
+    inputs: &mut std::collections::BTreeMap<String, Value>,
+) -> Result<()> {
+    let digest = private_json(&root.join(name), value)?;
+    inputs.insert(key.into(), json!({"path":name,"sha256":digest}));
+    Ok(())
+}
+pub(super) fn private_dir(path: &Path) -> Result<()> {
+    let mut builder = fs::DirBuilder::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder.create(path).map_err(|_| {
+        Error("cannot create new private artifact directory; existing paths are preserved".into())
+    })
+}
+pub(super) fn private_json(path: &Path, value: &Value) -> Result<String> {
+    use std::io::Write;
+    let bytes = serde_json::to_string_pretty(value)
+        .map_err(|_| Error("artifact encoding failed".into()))?;
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options
+        .open(path)
+        .map_err(|_| Error("artifact already exists or cannot be created".into()))?;
+    file.write_all(bytes.as_bytes())
+        .and_then(|_| file.sync_all())
+        .map_err(|_| Error("artifact could not be synced".into()))?;
+    Ok(content_hash(&bytes))
 }

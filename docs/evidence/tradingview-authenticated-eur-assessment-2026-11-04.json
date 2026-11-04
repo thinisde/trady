@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "assessment_id": "tradingview_authenticated_eur_20261104",
+  "review_status": "SELF_REVIEW_NOT_INDEPENDENT_RELEASE_APPROVAL",
+  "repository": "https://github.com/drager/tradingview",
+  "source_commit": "1f7ca4b63d85df1ccb23b500a8e0419939e5edd0",
+  "crate_version": "0.3.0",
+  "build_feature": "native-tls",
+  "authentication": "PASSWORD_LOGIN_SUCCEEDED",
+  "credentials_source": "Ignored private local credential file; values omitted",
+  "local_diagnostic_patches": [
+    "Expose websocket module to observe raw provider packets",
+    "Treat empty, null or false login error fields as no error",
+    "Return TWO_FACTOR_REQUIRED instead of panicking when a second factor is missing"
+  ],
+  "started_at": "2026-11-04T16:56:24.576456576Z",
+  "received_at": "2026-11-04T16:56:41.411749869Z",
+  "frame_count": 10,
+  "instruments": [
+    {
+      "symbol": "EURONEXT:AIR",
+      "original_symbol": "EURONEXT_DLY:AIR",
+      "isin": "NL0000235190",
+      "broker_ticker": "AIRp_EQ",
+      "exchange": "Euronext Paris",
+      "currency": "EUR",
+      "update_mode": "delayed_streaming_900",
+      "current_session": "out_of_session",
+      "last": "200.1",
+      "last_trade_timestamp_seconds": 1793810274,
+      "bid": null,
+      "ask": null,
+      "bid_size": null,
+      "ask_size": null,
+      "usable_two_sided_book": false
+    },
+    {
+      "symbol": "EURONEXT:ASML",
+      "original_symbol": "EURONEXT_DLY:ASML",
+      "isin": "NL0010273215",
+      "broker_ticker": "ASMLa_EQ",
+      "exchange": "Euronext Amsterdam",
+      "currency": "EUR",
+      "update_mode": "delayed_streaming_900",
+      "current_session": "out_of_session",
+      "last": "1337.6",
+      "last_trade_timestamp_seconds": 1793810366,
+      "bid": null,
+      "ask": null,
+      "bid_size": null,
+      "ask_size": null,
+      "usable_two_sided_book": false
+    }
+  ],
+  "interpretation": {
+    "delay_evidence": "Provider explicitly reported delayed_streaming_900 for both listings",
+    "last_trade_age_is_not_an_independent_latency_measure": true,
+    "market_was_closed": true,
+    "scope": "This authenticated session and the two observed EUR listings only",
+    "library_supports_streaming": true,
+    "other_accounts_or_exchange_entitlements_not_tested": true
+  },
+  "artifacts": [
+    {
+      "path": "var/eur-first-run-checks/tradingview-authenticated-eur-wire.json",
+      "sha256": "ae68375735781e0dfb850adefa834e8a6f3ed06ae4db9499a092c80ed46ffb6b"
+    },
+    {
+      "path": "var/eur-first-run-checks/tradingview-authenticated-eur-summary.json",
+      "sha256": "e88709ec1b18f226fb612c9e705bad0b0890fb7889507c1c5301c8cb02dab37e"
+    }
+  ],
+  "executable_quote_capability": "UNSUPPORTED_BY_OBSERVED_AUTHENTICATED_FEED",
+  "runtime_automation_rights": "NOT_APPROVED",
+  "runtime_provider_added": false,
+  "entry_authorized": false,
+  "broker_mutations": 0,
+  "live_enabled": false
+}

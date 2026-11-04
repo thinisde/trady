@@ -7,6 +7,7 @@ pub mod autonomous;
 pub mod credentials;
 pub mod financial;
 pub mod finbert;
+pub mod ibkr_smart;
 pub mod inputs_service;
 pub mod intelligence;
 pub mod news;

@@ -1,0 +1,12 @@
+[Unit]
+Description=Trady EUR pre-session daily workflow
+
+[Timer]
+# Initial reviewed XPAR/XAMS deployment. Render overrides from eur-schedule.json.
+OnCalendar=Mon..Fri *-*-* 07:30:00 Europe/Berlin
+Persistent=yes
+AccuracySec=1min
+Unit=trady-daily.service
+
+[Install]
+WantedBy=timers.target
