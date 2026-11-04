@@ -119,7 +119,7 @@ fn oversized_files_and_invalid_lookup_names_are_rejected() {
 fn group_or_other_file_access_is_rejected() {
     use std::os::unix::fs::PermissionsExt;
     let fixture = Fixture::new(r#"{"config_version":1,"credentials":{}}"#);
-    for mode in [0o640, 0o604, 0o666] {
+    for mode in [0o440, 0o640, 0o604, 0o666] {
         fs::set_permissions(&fixture.0, fs::Permissions::from_mode(mode)).unwrap();
         assert!(
             CredentialStore::from_path(&fixture.0)

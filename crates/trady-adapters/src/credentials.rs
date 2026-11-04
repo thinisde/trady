@@ -173,7 +173,8 @@ impl CredentialStore {
         {
             use std::os::unix::fs::PermissionsExt;
             require(
-                metadata.permissions().mode() & 0o077 == 0,
+                metadata.permissions().mode() & 0o077 == 0
+                    || managed_systemd_credential(path, &metadata),
                 "credential file must have owner-only permissions; use chmod 600",
             )?;
         }
@@ -257,6 +258,42 @@ impl CredentialStore {
             })
             .collect()
     }
+}
+
+/// systemd may grant the service access with a POSIX ACL. Its ACL mask is
+/// reflected as group-read (0440), while the root-owned credential directory
+/// remains private and read-only. This exception applies only to the manager's
+/// exact credential path, never to a generally group-readable JSON file.
+#[cfg(unix)]
+fn managed_systemd_credential(path: &Path, opened: &std::fs::Metadata) -> bool {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    let Some(directory) = env::var_os("CREDENTIALS_DIRECTORY").map(PathBuf::from) else {
+        return false;
+    };
+    if opened.uid() != 0
+        || opened.permissions().mode() & 0o777 != 0o440
+        || directory.parent() != Some(Path::new("/run/credentials"))
+        || !directory
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().ends_with(".service"))
+        || path.parent() != Some(directory.as_path())
+        || path.file_name() != Some(std::ffi::OsStr::new("credentials.json"))
+    {
+        return false;
+    }
+    let trusted_directory = |candidate: &Path, private: bool| {
+        std::fs::symlink_metadata(candidate).is_ok_and(|metadata| {
+            metadata.is_dir()
+                && metadata.uid() == 0
+                && metadata.permissions().mode() & 0o022 == 0
+                && (!private || metadata.permissions().mode() & 0o007 == 0)
+        })
+    };
+    trusted_directory(Path::new("/run/credentials"), false)
+        && trusted_directory(&directory, true)
+        && std::fs::symlink_metadata(path).is_ok_and(|metadata| {
+            metadata.is_file() && metadata.dev() == opened.dev() && metadata.ino() == opened.ino()
+        })
 }
 
 fn validate_name(name: &str) -> Result<()> {
