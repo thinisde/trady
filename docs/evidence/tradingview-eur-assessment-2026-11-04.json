@@ -51,6 +51,7 @@
     {"path": "var/eur-first-run-checks/tradingview-eur-sdk-summary.json", "sha256": "010a00d822aad45b25f9ba81385fa87f455e1b182d1dd800b8296d4d4325e135"}
   ],
   "technical_result": "EUR_IDENTITIES_AND_DELAYED_STREAM_CONFIRMED",
+  "scope_limit": "Only public unauthenticated mode was tested; authenticated real-time entitlements remain untested",
   "executable_quote_capability": "UNSUPPORTED_BY_OBSERVED_ANONYMOUS_FEED",
   "runtime_provider_added": false,
   "broker_mutations": 0,

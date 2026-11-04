@@ -10,6 +10,11 @@ services are installed and running. The broker was reconciled flat and no
 broker order was submitted. No complete paper-day replay or demo release has
 passed.
 
+The [current run evidence](./evidence/eur-real-input-shadow-2026-11-04.json)
+binds implementation `f521286` to its deployed binary, configuration, policy,
+15 provider observations and acknowledged Telegram event. The result is an
+operationally completed SHADOW cycle with a blocked selection.
+
 A restart test caused the loss of the pre-existing tmpfs PostgreSQL database.
 Only archived records could be recovered; prior unarchived history is lost.
 The [incident record](./incident-2026-11-04-volatile-postgres.md) describes the
@@ -74,6 +79,8 @@ existing output files.
   [TradingView assessment](./evidence/tradingview-eur-assessment-2026-11-04.json)
   records these limits and the standard terms' restriction on automated
   non-display use. TradingView was not added as a runtime provider.
+  This tested the public unauthenticated mode. It does not establish what an
+  authenticated account with real-time Euronext entitlement can receive.
 - `gate explain --snapshot FILE` calls the same application gate as the target
   execution cycle. It checks exact universe-member equality, quote/session
   identity, spread, price/quantity precision, fractional support, buying power,
