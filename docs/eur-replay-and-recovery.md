@@ -50,6 +50,11 @@ The EUR weekly worker derives coverage from captured calendars, reports missing
 economic metrics explicitly and writes `PENDING_REVIEW`. Its credential file
 contains only `TRADY_ANALYST_DSN`; it has no broker or Telegram credentials.
 
+Weekly coverage requires an unchanged universe binding and explicit complete
+calendar facts. Missing calendar days are not silently classified as holidays.
+Pending Telegram messages remain deliverable after entry evidence expires or
+entry is disabled; `telegram_enabled` controls notification shutdown separately.
+
 Render calendar overrides for the exact approved exchanges with
 `scripts/prepare-eur-schedule.py`. Rendering does not install or enable timers.
 Verify service units before installation. Keep the legacy sealed weekly research

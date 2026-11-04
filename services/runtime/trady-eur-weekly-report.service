@@ -25,6 +25,7 @@ IPAddressAllow=localhost
 CapabilityBoundingSet=
 AmbientCapabilities=
 ReadOnlyPaths=/opt/trady /etc/trady/runtime
+InaccessiblePaths=-/var/lib/trady/sealed -/etc/trady/evaluator -/var/lib/trady-evaluator /etc/trady/secrets
 StateDirectory=trady-analyst
 UMask=0077
 TimeoutStartSec=120

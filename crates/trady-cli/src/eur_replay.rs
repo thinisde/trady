@@ -335,7 +335,10 @@ pub fn paper_day(
     let passed = blockers.is_empty();
     let summary = json!({"schema_version":1,"run_id":manifest.run_id,"status":if passed{"PAPER_DAY_PASSED"}else{"PAPER_DAY_BLOCKED"},
         "source_manifest_hash":digest(manifest)?,"configuration_hash":recorded["configuration_hash"],"policy_hash":recorded["policy_hash"],
-        "recorded_code_hash":recorded["code_hash"],"replay_engine_hash":content_hash(concat!(include_str!("eur_replay.rs"),include_str!("../../trady-application/src/eur_protocol.rs"),include_str!("../../trady-application/src/eur_protocol/scenarios.rs"))),
+        "recorded_code_hash":recorded["code_hash"],"replay_engine_hash":content_hash(concat!(include_str!("eur_replay.rs"),
+            include_str!("../../trady-application/src/eur_protocol.rs"),include_str!("../../trady-application/src/eur_protocol/scenarios.rs"),
+            include_str!("../../trady-adapters/src/ibkr_smart.rs"),include_str!("../../trady-application/src/eur_shadow.rs"),
+            include_str!("../../trady-application/src/eur_runtime.rs"),include_str!("../../trady-domain/src/market.rs"))),
         "selection_reproduced":true,"protocol_scenarios_passed":suite["scenarios"].as_array().map(Vec::len),
         "paper_day_passed":passed,"blockers":blockers,"provider_calls":0,"broker_mutations":0,"entry_authorized":false});
     // REPLAY still has a durable PostgreSQL boundary, under a distinct replay

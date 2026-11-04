@@ -46,7 +46,7 @@
   "shadow": {
     "deployment_id": "eur_shadow_v1",
     "crosswalk_config": "docs/evidence/eur-shadow-review-2026-11-04/crosswalk.json",
-    "state_directory": "/var/lib/trady-eur-shadow",
+    "state_directory": "/var/lib/trady-executor/eur-shadow",
     "interval_seconds": 60
   },
   "notes": [

@@ -348,7 +348,9 @@ pub fn command(action: &str, args: &[String]) -> Result<Value> {
     )?;
     let once = args.len() == 3;
     match action {
-        "capture" => repeat(&args[1], once, capture),
+        "capture" => repeat(&args[1], once, load, capture, |l| {
+            l.settings.interval_seconds
+        }),
         "daily" => run_once(&load(&args[1])?),
         "diagnose-inputs" => {
             let mut loaded = load(&args[1])?;
@@ -359,19 +361,27 @@ pub fn command(action: &str, args: &[String]) -> Result<Value> {
             result["diagnostic_only"] = json!(true);
             Ok(result)
         }
-        "gateway" => repeat(&args[1], once, gateway),
+        "gateway" => repeat(&args[1], once, load_gateway, gateway, |s| {
+            s.interval_seconds
+        }),
         "report" => report(&load(&args[1])?),
         _ => Err(Error("unknown EUR shadow command".into())),
     }
 }
 
-fn repeat(path: &str, once: bool, action: fn(&Loaded) -> Result<Value>) -> Result<Value> {
+fn repeat<T>(
+    path: &str,
+    once: bool,
+    loader: fn(&str) -> Result<T>,
+    action: fn(&T) -> Result<Value>,
+    interval: fn(&T) -> u32,
+) -> Result<Value> {
     let stopped = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let stop = stopped.clone();
     ctrlc::set_handler(move || stop.store(true, std::sync::atomic::Ordering::Relaxed))
         .map_err(|_| Error("cannot install EUR service stop handler".into()))?;
     loop {
-        let loaded = load(path)?;
+        let loaded = loader(path)?;
         let result = action(&loaded);
         if once {
             return result;
@@ -382,7 +392,7 @@ fn repeat(path: &str, once: bool, action: fn(&Loaded) -> Result<Value>) -> Resul
                 json!({"status":"EUR_SERVICE_DEGRADED","error":error.to_string(),"entry_authorized":false}),
             )?,
         }
-        for _ in 0..loaded.settings.interval_seconds * 10 {
+        for _ in 0..interval(&loaded) * 10 {
             if stopped.load(std::sync::atomic::Ordering::Relaxed) {
                 return Ok(json!({"status":"STOPPED"}));
             }
@@ -615,7 +625,9 @@ pub fn autonomous(action: &str, args: &[String], path: &str) -> Result<Value> {
         action == "run" && (args.len() == 3 || (args.len() == 4 && args[3] == "--once")),
         "unsupported EUR shadow autonomous arguments",
     )?;
-    repeat(path, args.len() == 4, run_once)
+    repeat(path, args.len() == 4, load, run_once, |l| {
+        l.settings.interval_seconds
+    })
 }
 
 fn broker(loaded: &Loaded) -> Result<Trading212Reader> {
@@ -1065,11 +1077,31 @@ fn publish_result(loaded: &Loaded, repository: &mut PgTargetStore, result: &Valu
     )
 }
 
-fn gateway(loaded: &Loaded) -> Result<Value> {
-    require(loaded.config.enabled, "EUR gateway deployment is disabled")?;
+fn gateway_settings(config: EurRuntimeConfig) -> Result<ShadowSettings> {
+    config.validate(Utc::now())?;
+    require(
+        config.telegram_enabled
+            && matches!(
+                config.execution_stage,
+                ExecutionStage::Shadow | ExecutionStage::Demo
+            ),
+        "EUR notifications disabled or invalid gateway environment",
+    )?;
+    let settings = config
+        .shadow
+        .ok_or_else(|| Error("EUR gateway deployment scope missing".into()))?;
+    settings.validate()?;
+    Ok(settings)
+}
+fn load_gateway(path: &str) -> Result<ShadowSettings> {
+    // Delivery of already-journaled events must not depend on current entry
+    // review expiry, provider files or the entry enabled flag.
+    gateway_settings(read_json(Path::new(path))?)
+}
+fn gateway(settings: &ShadowSettings) -> Result<Value> {
     let mut outbox = PgTargetOutbox::connect(
         &super::secret("TRADY_GATEWAY_DSN")?,
-        loaded.settings.deployment_id.clone(),
+        settings.deployment_id.clone(),
         chats()?,
     )?;
     let token = BotToken::new(super::secret("TRADY_TELEGRAM_BOT_TOKEN")?)?;
@@ -1325,4 +1357,25 @@ pub(super) fn private_json(path: &Path, value: &Value) -> Result<String> {
         .and_then(|_| file.sync_all())
         .map_err(|_| Error("artifact could not be synced".into()))?;
     Ok(content_hash(&bytes))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn pending_delivery_survives_disabled_entry_and_missing_review_files() {
+        let mut config: EurRuntimeConfig =
+            serde_json::from_str(include_str!("../../../config/eur-shadow.example.json")).unwrap();
+        config.enabled = false;
+        config.shadow.as_mut().unwrap().crosswalk_config =
+            "/entry-evidence-no-longer-available.json".into();
+        config.shadow.as_mut().unwrap().ibkr_config =
+            Some("/quote-provider-no-longer-available.json".into());
+        assert!(gateway_settings(config.clone()).is_ok());
+        config.telegram_enabled = false;
+        assert!(gateway_settings(config.clone()).is_err());
+        config.telegram_enabled = true;
+        config.live_enabled = true;
+        assert!(gateway_settings(config).is_err());
+    }
 }

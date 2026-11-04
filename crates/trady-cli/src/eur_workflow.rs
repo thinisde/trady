@@ -117,15 +117,21 @@ pub fn run(action: &str, args: &[String]) -> Result<Value> {
         .is_some_and(|record| record["unarchived_history_restored"] == false);
     let mut expected_days = None;
     if let Some(settings) = config.shadow.as_ref() {
-        let crosswalk: trady_application::eur_shadow::ShadowCrosswalk = super::eur::read_json(
-            &super::eur_shadow::resolve(Path::new(&args[1]), &settings.crosswalk_config),
-        )?;
-        if let Some(id) = latest["provider_observation_ids"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-            .find(|id| id.ends_with("_broker_sessions"))
+        let crosswalk_value: Value = super::eur::read_json(&super::eur_shadow::resolve(
+            Path::new(&args[1]),
+            &settings.crosswalk_config,
+        ))?;
+        let crosswalk: trady_application::eur_shadow::ShadowCrosswalk =
+            serde_json::from_value(crosswalk_value.clone())
+                .map_err(|_| Error("review universe reference invalid".into()))?;
+        if content_hash(&crosswalk_value.to_string())
+            == latest["crosswalk_hash"].as_str().unwrap_or_default()
+            && let Some(id) = latest["provider_observation_ids"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .find(|id| id.ends_with("_broker_sessions"))
             && let Some(value) = store.read_document("provider_snapshot", id)?
         {
             let observation: trady_application::eur_shadow::ProviderObservation =
@@ -147,6 +153,9 @@ pub fn run(action: &str, args: &[String]) -> Result<Value> {
                         .flatten()
                         .find(|s| s["id"].as_i64() == Some(identity.working_schedule_id));
                     if let Some(schedule) = schedule {
+                        // Absence of an OPEN event is not evidence of a holiday
+                        // or of full-week calendar coverage.
+                        verified &= full_week_calendar_covered(schedule, monday);
                         for event in schedule["timeEvents"]
                             .as_array()
                             .into_iter()
@@ -169,6 +178,7 @@ pub fn run(action: &str, args: &[String]) -> Result<Value> {
                 if verified {
                     expected_days = Some(days);
                     hashes.insert("session_calendar".into(), json!(observation.response_hash));
+                    hashes.insert("universe".into(), latest["crosswalk_hash"].clone());
                 }
             }
         }
@@ -249,6 +259,31 @@ pub fn run(action: &str, args: &[String]) -> Result<Value> {
         "reports":by_day.len(),"activation_authority":false,"broker_mutations":0}),
     )
 }
+fn full_week_calendar_covered(schedule: &Value, monday: chrono::NaiveDate) -> bool {
+    let mut events = BTreeMap::<_, (Vec<_>, Vec<_>)>::new();
+    for event in schedule["timeEvents"].as_array().into_iter().flatten() {
+        if let Some(at) = event["date"]
+            .as_str()
+            .and_then(|v| v.parse::<chrono::DateTime<Utc>>().ok())
+            && at.date_naive() >= monday
+            && at.date_naive() < monday + Duration::days(5)
+        {
+            let row = events.entry(at.date_naive()).or_default();
+            match event["type"].as_str() {
+                Some("OPEN") => row.0.push(at),
+                Some("CLOSE") => row.1.push(at),
+                _ => {}
+            }
+        }
+    }
+    (0..5).all(|n| {
+        events
+            .get(&(monday + Duration::days(n)))
+            .is_some_and(|(opens, closes)| {
+                opens.len() == 1 && closes.len() == 1 && opens[0] < closes[0]
+            })
+    })
+}
 pub fn validate_handoff(value: &Value) -> Result<()> {
     let allowed = [
         "schema_version",
@@ -299,5 +334,31 @@ mod tests {
         bundle["status"] = json!("PENDING_REVIEW");
         bundle["mutation_tools"] = json!(["broker.submit"]);
         assert!(validate_handoff(&bundle).is_err());
+    }
+    #[test]
+    fn missing_calendar_days_cannot_be_invented_as_verified_holidays() {
+        let monday = "2026-11-02".parse::<chrono::NaiveDate>().unwrap();
+        let mut events = Vec::new();
+        for n in 0..5 {
+            let day = monday + Duration::days(n);
+            events.push(json!({"type":"OPEN","date":format!("{day}T08:00:00Z")}));
+            events.push(json!({"type":"CLOSE","date":format!("{day}T16:30:00Z")}));
+        }
+        assert!(full_week_calendar_covered(
+            &json!({"timeEvents":events}),
+            monday
+        ));
+        let mut missing = events.clone();
+        missing.drain(0..2);
+        assert!(!full_week_calendar_covered(
+            &json!({"timeEvents":missing}),
+            monday
+        ));
+        let mut ambiguous = events.clone();
+        ambiguous.push(events[0].clone());
+        assert!(!full_week_calendar_covered(
+            &json!({"timeEvents":ambiguous}),
+            monday
+        ));
     }
 }

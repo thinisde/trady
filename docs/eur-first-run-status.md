@@ -145,6 +145,10 @@ existing output files.
   economic reconciliation remains unavailable rather than becoming zero P&L.
   Neither worker can approve or activate its own changes. The existing sealed
   weekly research worker is retained separately.
+- Pending Telegram delivery is independent of entry enablement and provider
+  review expiry. Disabling notifications still stops the gateway. The executor
+  uses `/var/lib/trady-executor/eur-shadow` for IBKR captures, matching its own
+  systemd state directory rather than the root-owned evidence archive.
 
 ## Verification
 
@@ -154,7 +158,7 @@ implementation commit to archived log hashes.
 | Check | Result |
 | --- | --- |
 | Formatting and strict workspace Clippy | Passed |
-| Workspace tests, all targets | IBKR/protocol build: 648 passed, zero failed; 38 integration tests ignored by this command |
+| Workspace tests, all targets | IBKR/protocol build: 650 passed, zero failed; 38 integration tests ignored by this command |
 | `python3 scripts/test-postgres.py` | All 38 ignored tests passed against disposable PostgreSQL 18.3, including migrations 18–19 |
 | New EUR PostgreSQL boundary test | Passed: fencing, role isolation, restart acknowledgements, outbox idempotency and ambiguous delivery |
 | OpenCode/autonomous/Telegram ignored CLI suites | Passed |

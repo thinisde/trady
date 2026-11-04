@@ -18,6 +18,8 @@ probe to `/opt/trady/scripts/probe-ibkr-smart.py` before using the source.
 The bridge inherits no executor environment or credentials. Its outgoing
 message allowlist permits connection setup, contract discovery, quote requests,
 server time and cancellation of its own data subscriptions.
+Capture files use `/var/lib/trady-executor/eur-shadow`, owned by the executor's
+systemd state directory. Root-owned deployment/recovery archives are separate.
 
 For a reviewed SHADOW deployment, set `shadow.ibkr_config` to the installed
 source configuration. Include that file in the configuration hash and use a
