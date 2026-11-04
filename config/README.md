@@ -2,11 +2,10 @@
 
 ## Overview
 
-The focused deployment uses only `autonomous.iex30.demo.json`,
-`alpaca-iex30.paper.example.json`, `trading212.iex30.demo.example.json`,
-`iex30.universe.json`, `watchdog.iex30.json` and `research.json`. The other
-files are compatibility fixtures for shared offline tests and are not loaded by
-the IEX30 runtime.
+The target deployment uses `eur-demo.example.json`, the reviewed EUR
+crosswalk in `yfinance.euronext.example.json`, `research.eur.json`, and the
+Trading 212 demo profile. The IEX30/Alpaca files remain migration fixtures for
+replay and parity tests; they are not loaded by the EUR runtime.
 
 Secret values use the [central credentials store](../docs/credentials.md), separate
 from provider configuration. `credentials init` creates the ignored private
@@ -14,10 +13,14 @@ from provider configuration. `credentials init` creates the ignored private
 
 ## Interface
 
-- [IEX30 Trading 212 demo](./autonomous.iex30.demo.json): focused runtime
-  template with Trading 212 demo execution, Alpaca IEX market data and the
-  exact 30-symbol owner allowlist. The focused deployment audit is
-  [IEX30 audit](../docs/iex30-audit.md).
+- [EUR Trading 212 demo](./eur-demo.example.json): target runtime template
+  with one open position, 15-minute pre-close flattening, bounded rotation,
+  and the DeepSeek OpenCode Go analyst.
+- [Reviewed EUR universe](./eur_equity_universe.example.json): exact ISIN/MIC,
+  Yahoo symbol, and Trading 212 demo crosswalk with liquidity and volatility
+  thresholds.
+- [Trading 212 EUR demo](./trading212.eur-demo.example.json): account-scoped
+  demo transport profile used by the target runtime.
 
 - [Cold-start demo setup](./cold-start.demo.json): provider-owned account
   discovery, independent OHLCV integrity checks for the fixed IEX30 list,
@@ -63,10 +66,9 @@ from provider configuration. `credentials init` creates the ignored private
   read-only `yfinance-rs` quote configuration with explicit EUR instrument
   mappings. The adapter is separate from the offline financial-history import
   source and never grants entry authority.
-- [research.json](./research.json): the focused IEX30 X registry consumed by
-  `[../crates/trady-application/src/research.rs:ResearchConfig]`. All seven
-  sources remain disabled until stable identities, ownership/coverage rights and
-  the total $1.90 budget evidence are present. See the [IEX30 guide](../docs/iex30.md).
+- [research.eur.json](./research.eur.json): target EUR registry with active
+  Alpha Vantage news sentiment and allowlisted Google/publisher RSS. X,
+  browser, and owner-submitted URLs enter the same rights-aware evidence store.
 
 - [IEX30 Trading 212 demo account](./trading212.iex30.demo.example.json): the
   provider-shape example. The focused runtime is bound to the discovered demo

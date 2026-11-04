@@ -6,6 +6,7 @@ pub mod intelligence;
 pub mod research;
 pub mod research_jobs;
 pub mod sessions;
+pub mod target;
 pub mod trading_research;
 pub mod transport;
 pub mod weekly;
@@ -38,6 +39,8 @@ pub const FIRST_ORDER_DISPATCH_SQL: &str =
 pub const DAILY_ORDER_LIMITS_SQL: &str =
     include_str!("../../../migrations/0013_daily_order_limits.sql");
 pub const IEX_WATCHDOG_SQL: &str = include_str!("../../../migrations/0014_iex_watchdog.sql");
+pub const TARGET_AUTHORITY_SQL: &str =
+    include_str!("../../../migrations/0015_target_authority.sql");
 
 fn db(error: postgres::Error) -> Error {
     // Deliberately exclude connection strings and provider error detail from service output.
@@ -78,6 +81,7 @@ pub fn migrate(dsn: &str) -> Result<()> {
         (12, FIRST_ORDER_DISPATCH_SQL),
         (13, DAILY_ORDER_LIMITS_SQL),
         (14, IEX_WATCHDOG_SQL),
+        (15, TARGET_AUTHORITY_SQL),
     ] {
         if let Some(row) = tx
             .query_opt(

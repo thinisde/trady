@@ -1,56 +1,59 @@
 # Trady
 
-Trady is a Rust trading bot configured for one deployment scope: the fixed
-30-symbol IEX30 US-equity universe. Alpaca supplies read-only IEX market data;
-Trading 212 demo is the execution account. The order path rejects symbols,
-venues and currencies outside that scope before it can reach the broker.
+Trady is a Rust trading bot for one reviewed EUR day-trading authority. The
+first operational target is the Trading 212 demo account; yfinance-rs supplies
+read-only venue-bound quotes and completed bars, while Alpha Vantage, yfinance
+news, X, RSS, browser readers, and owner URLs supply timestamped research.
+Trading 212 is the only broker mutation path. The runtime permits one open
+position, same-day flattening 15 minutes before the verified exchange close,
+and a fully checked rotation only after the current position is closed.
 
-The focused operator guide is [docs/iex30.md](./docs/iex30.md). The complete
-implemented, wired, configured and blocked-feature review is
-[docs/iex30-audit.md](./docs/iex30-audit.md).
+The target operator profile is [config/eur-demo.example.json](./config/eur-demo.example.json).
+The migration plan and authority boundary are documented in
+[docs/trady-bot-implementation-plan.md](./docs/trady-bot-implementation-plan.md).
+The old IEX30/Alpaca files remain replay fixtures during migration and are not
+the target runtime authority.
 
 ## Focused configuration
 
-- [IEX30 symbol registry](./config/iex30.universe.json)
-- [Autonomous Trading 212 demo profile](./config/autonomous.iex30.demo.json)
-- [Alpaca IEX data profile](./config/alpaca-iex30.paper.example.json)
-- [30-symbol watchdog profile](./config/watchdog.iex30.json)
-- [Long Donchian/ATR v1 formula baseline](./docs/formulas/long-donchian-atr-v1.md)
-- [IEX30 X/research registry and $1.90 total budget](./config/research.json)
-- [Trading 212 demo account example](./config/trading212.iex30.demo.example.json)
+- [EUR Trading 212 demo profile](./config/eur-demo.example.json)
+- [EUR yfinance-rs crosswalk](./config/yfinance.euronext.example.json)
+- [EUR/Alpha Vantage research registry](./config/research.eur.json)
+- [Trading 212 EUR demo account example](./config/trading212.eur-demo.example.json)
+- [Intraday Donchian/ATR formula baseline](./docs/formulas/long-donchian-atr-v1.md)
 
-The X registry names seven candidate accounts (NVIDIA, AMD, Meta, Tesla,
-Reuters, DeItaone and KobeissiLetter), but all sources ship disabled until stable
-numeric IDs, ownership/coverage rights and operator approval are recorded. The
-ledger reserves before each request and stops at the configured total ceiling.
+The target research registry keeps Alpha Vantage active for EUR news sentiment
+and requires rights/freshness checks before its items reach ranking or holding
+review. X accounts, RSS, browser pages, and owner URLs remain bounded and
+untrusted until their own provenance checks pass.
 
 ## Operator commands
 
 ```sh
-cargo run --locked --bin trady -- autonomous check \
-  --config config/autonomous.iex30.demo.json
-cargo run --locked --bin trady -- alpaca stream-plan \
-  --config config/alpaca-iex30.paper.example.json
-cargo run --locked --bin trady -- watchdog check \
-  --config config/watchdog.iex30.json
-cargo run --locked --bin trady -- watchdog schedule \
-  --config config/watchdog.iex30.json
-cargo run --locked --bin trady -- news status
+cargo run --locked --bin trady -- eur config \
+  --config config/eur-demo.example.json
+cargo run --locked --bin trady -- eur gate-explain \
+  --config config/eur-demo.example.json
+cargo run --locked --bin trady -- yfinance quote \
+  --config config/yfinance.euronext.example.json --instrument AIR_PA_EQ
+cargo run --locked --bin trady -- t212 snapshot \
+  --config config/trading212.demo.example.json
 ```
 
-`autonomous run` starts the authenticated IEX WebSocket up to 30 minutes before
-the verified session open, reconnects with bounded backoff, and stops it after a
-confirmed zero-holding reconciliation. During a holding it persists watchdog
-health once per configured bucket. `alpaca stream-plan` and `watchdog schedule`
-remain offline inspection commands.
+`eur gate-explain` uses the same application-owned order-readiness gate as the
+executor. `eur select` replays mandatory candidate selection without network
+or broker access. `yfinance quote` remains read-only. The runtime keeps live
+submission disabled until exact quote, protection, and restart-recovery
+evidence is approved.
 
 ## Account and release gates
 
-Use `t212 snapshot` for a read-only Trading 212 demo account check. Use
-`account cold-start` for the supervised first-order workflow; it remains blocked
-until the account identity, input/universe authority, model and formula evidence,
-broker capabilities and owner release artifacts are present. No shipped file
-authorizes live trading.
+Use `t212 snapshot` for a read-only Trading 212 demo account check. An enabled
+EUR executor must be constructed with an append-only target journal and, when
+Telegram is enabled, a lifecycle outbox before the order gate can mutate the
+broker. Those sinks persist research, selection, strategy, order-intent, exit,
+and reconciliation records. A weekly Codex review can propose changes but
+cannot activate them.
 
 Credentials are loaded from the private credential store or the documented
 environment variables. Never place secrets in committed configuration.
@@ -65,6 +68,6 @@ cargo test --workspace --locked
 git diff --check
 ```
 
-The remaining shared adapters, policy modules and offline labs are retained only
-for compatibility tests and supervised research. They are not loaded by the
-focused IEX30 runtime.
+The legacy IEX30/Alpaca adapters and replay fixtures remain available only for
+compatibility tests and migration comparison. They are not the EUR runtime
+authority.

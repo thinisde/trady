@@ -119,6 +119,83 @@ pub struct BrokerScope {
     pub currency: Currency,
 }
 
+/// Coordinator lifecycle events are the only messages eligible for the target
+/// Telegram outbox. They contain references, not secrets or broker commands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum LifecycleEventKind {
+    ResearchStarted,
+    CandidatesRanked,
+    CandidateSelected,
+    EvidenceUpdated,
+    OrderIntent,
+    OrderAcknowledged,
+    FillObserved,
+    ExitUpdated,
+    PositionClosed,
+    RiskHalt,
+    ForcedFlatten,
+    Error,
+    DailyReport,
+    WeeklyReport,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LifecycleEvent {
+    pub event_id: String,
+    pub kind: LifecycleEventKind,
+    pub account_id: AccountId,
+    pub session_id: String,
+    pub instrument_id: Option<trady_domain::InstrumentId>,
+    pub evidence_ids: Vec<String>,
+    pub text: String,
+    pub occurred_at: DateTime<Utc>,
+}
+
+impl LifecycleEvent {
+    pub fn validate(&self, now: DateTime<Utc>) -> Result<()> {
+        require(
+            !self.event_id.is_empty()
+                && self.event_id.len() <= 160
+                && !self.session_id.is_empty()
+                && self.session_id.len() <= 160
+                && self.evidence_ids.len() <= 64
+                && self.evidence_ids.iter().all(|id| {
+                    !id.is_empty()
+                        && id.len() <= 160
+                        && id
+                            .bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || b"_.:-".contains(&b))
+                })
+                && !self.text.is_empty()
+                && self.text.chars().count() <= 3500
+                && !self.text.contains(['\0', '\r']),
+            "invalid Telegram lifecycle event",
+        )?;
+        require(
+            self.occurred_at <= now,
+            "Telegram lifecycle event is future-dated",
+        )
+    }
+
+    pub fn render(&self) -> String {
+        let mut text = format!(
+            "Trady {:?}\nAccount: {}\nSession: {}\n",
+            self.kind, self.account_id, self.session_id
+        );
+        if let Some(instrument) = &self.instrument_id {
+            text.push_str(&format!("Instrument: {instrument}\n"));
+        }
+        text.push_str(&self.text);
+        if !self.evidence_ids.is_empty() {
+            text.push_str("\nEvidence: ");
+            text.push_str(&self.evidence_ids.join(", "));
+        }
+        text
+    }
+}
+
 pub struct Monitor {
     access: OwnerAccess,
     foundation: FoundationConfig,

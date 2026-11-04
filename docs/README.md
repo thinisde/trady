@@ -2,10 +2,10 @@
 
 ## Overview
 
-This directory contains Trady's operator guides and focused IEX30 deployment
-evidence. Shared research, storage and legacy v1 modules remain available for
-offline tests, but the runtime path is the IEX30 universe, Alpaca IEX data and
-Trading 212 demo execution.
+This directory contains Trady's operator guides and the EUR day-trading target
+authority. Shared research, storage, and legacy IEX30/v1 modules remain
+available for offline replay; the target runtime uses a reviewed EUR universe,
+yfinance-rs observations, and Trading 212 demo execution.
 
 ## Subdirectories & Boundaries
 
@@ -18,8 +18,8 @@ Trading 212 demo execution.
 - [Autonomous runtime](./autonomous.md): automatic universe screening, mathematical
   limits, calibrated predictions, native advice, durable execution/protection,
   exact-ID recovery and deployment prerequisites.
-- [IEX30 deployment](./iex30.md): the fixed 30-symbol universe, Alpaca IEX
-  market-data path, Trading 212 demo execution and watchdog schedule.
+- [EUR migration plan](./trady-bot-implementation-plan.md): target contracts,
+  phased migration, and acceptance tests.
 - [IEX30 code audit](./iex30-audit.md): implemented, wired, configured and
   still-blocked features for the focused runtime.
 - [Cold-start account workflow](./cold-start.md): runtime account discovery,
@@ -42,10 +42,8 @@ Trading 212 demo execution.
 
 ## Interface
 
-The [IEX30 deployment guide](./iex30.md) is the focused operator entry point.
-The [code audit](./iex30-audit.md) distinguishes implemented, wired, configured
-and blocked behavior. Shared foundation, research, storage and broker documents
-remain reference material for offline and supervised workflows.
+The [EUR demo profile](../config/eur-demo.example.json) is the target operator
+entry point. The IEX30 guide and audit are retained as migration references.
 
 ## Invariants
 

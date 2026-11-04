@@ -4,6 +4,7 @@ mod api_health;
 mod autonomous;
 mod broker_read;
 mod entry_demo;
+mod eur;
 mod financial;
 mod finbert;
 mod inputs_service;
@@ -54,6 +55,7 @@ fn print_help() {
     print!("{}", account::HELP);
     print!("{}", watchdog::HELP);
     print!("{}", yfinance::HELP);
+    print!("{}", eur::HELP);
 }
 
 fn main() -> std::process::ExitCode {
@@ -115,12 +117,13 @@ fn run() -> Result<()> {
         "analyst" | "executor" | "gateway" => service(command, &args[1..]),
         "migrate" if args.len() == 1 => {
             trady_storage::migrate(&secret("TRADY_MIGRATOR_DSN")?)?;
-            output(json!({"migration":12,"status":"applied_or_verified"}))
+            output(json!({"migration":15,"status":"applied_or_verified"}))
         }
         "demo" if args.len() == 1 => demo_memory(),
         "demo-entry" => output(entry_demo::run(&args[1..])?),
         "watchdog" => output(watchdog::run(&args[1..])?),
         "yfinance" => output(yfinance::run(&args[1..])?),
+        "eur" => output(eur::run(&args[1..])?),
         "demo-postgres" if args.len() == 1 => demo_postgres(),
         "validate-json" if args.len() == 3 => {
             let contract = match args[1].as_str() {

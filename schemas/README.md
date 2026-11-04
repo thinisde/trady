@@ -10,6 +10,8 @@ Machine-readable copies of the canonical specification schemas and worked exampl
   `ToolResults` and `ApplicationProposalEnvelope`.
 - [Research contracts v1](./research-contracts.v1.json):
   `[research-contracts.v1.json:$defs.StoreArtifactArguments]`, result and calculator definitions.
+- [EUR runtime v1](./eur-runtime.v1.json): strict envelopes for reviewed EUR
+  quotes, selection runs, and cost-aware trade plans.
 - `fixtures/` contains nine worked JSON documents copied from the specification.
   No executable code or directory contract is inferred for those fixtures.
 - [Application validator](../crates/trady-application/src/README.md) compiles the

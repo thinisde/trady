@@ -9,5 +9,27 @@
     "ASML_AS_EQ": "ASML.AS",
     "ABI_BR_EQ": "ABI.BR",
     "EDP_LS_EQ": "EDP.LS"
+  },
+  "bindings": {
+    "AIR_PA_EQ": {
+      "broker_instrument_id": "demo_air_pa",
+      "isin": "FR0000120404",
+      "exchange_mic": "XPAR"
+    },
+    "ASML_AS_EQ": {
+      "broker_instrument_id": "demo_asml_as",
+      "isin": "NL0010273215",
+      "exchange_mic": "XAMS"
+    },
+    "ABI_BR_EQ": {
+      "broker_instrument_id": "demo_abi_br",
+      "isin": "BE0974293251",
+      "exchange_mic": "XBRU"
+    },
+    "EDP_LS_EQ": {
+      "broker_instrument_id": "demo_edp_ls",
+      "isin": "PTEDP0AM0009",
+      "exchange_mic": "XLIS"
+    }
   }
 }

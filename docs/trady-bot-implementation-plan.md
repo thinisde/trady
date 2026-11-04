@@ -9,6 +9,27 @@ LLM and executed only through Trading 212 after deterministic Rust validation.
 Trading 212 demo execution, and a pre-registered long Donchian/ATR policy. That
 scope is not the requested target and must be migrated deliberately.
 
+## Resolved target decisions
+
+- The first operational account is the Trading 212 demo account described by
+  `config/trading212.eur-demo.example.json`; live activation remains disabled
+  until exact quote, protection, and restart evidence is approved.
+- The initial venue set is the reviewed EUR Euronext crosswalk in
+  `config/eur_equity_universe.example.json`. Each exchange session uses a
+  conservative flatten deadline 15 minutes before its local close.
+- Only one position may be open at a time. After the current position is fully
+  closed and reconciled, one same-session rotation is allowed only when the
+  replacement has stronger verified evidence, a higher expected net return by
+  the approved improvement margin, and a fresh quote, liquidity, cost, risk,
+  and protection approval.
+- The hard maximum loss is 2%. Active stops are monotonic and may tighten only.
+  The net target envelope is approximately 1–3%. The ambiguous 4–5% loss rule
+  is disabled until a separately approved policy revision exists.
+- Alpha Vantage remains active in `config/research.eur.json`. Its normalized
+  news and sentiment records share the evidence ledger, candidate ranker,
+  strategy/holding review, and daily/weekly reconciliation with yfinance, X,
+  RSS, browser, and owner-submitted URL evidence.
+
 ## 1. Product contract
 
 The bot runs one research and trading cycle per configured European session day.

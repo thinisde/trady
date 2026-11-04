@@ -2,7 +2,7 @@
 
 ## Overview
 
-Administrator role provisioning and fourteen transactionally applied Trady migrations.
+Administrator role provisioning and fifteen transactionally applied Trady migrations.
 Use the [disposable test runner](../scripts/test-postgres.py) for local verification.
 
 Subsequent migrations add model-session state, research-source persistence and
@@ -23,6 +23,10 @@ a separate autonomous execution/research ledger.
 
 - [0014_iex_watchdog.sql](./0014_iex_watchdog.sql): fenced IEX stream-health
   observations and deduplicated watchdog notifications for active holdings.
+
+- [0015_target_authority.sql](./0015_target_authority.sql): append-only EUR
+  universe, quote, evidence, selection, strategy, order, exit, Telegram, daily
+  reconciliation, and weekly report records.
 
 - [0011_fail_closed_storage.sql](./0011_fail_closed_storage.sql): null-rejecting
   weekly/release entry points, renewable runtime readiness checks, bounded and

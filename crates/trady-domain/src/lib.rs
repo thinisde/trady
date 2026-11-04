@@ -1,13 +1,33 @@
 //! Provider-neutral, validated identifiers and execution observations.
 
+pub mod coordinator;
+pub mod eur;
+pub mod evidence;
 pub mod financial;
 pub mod iex;
 pub mod intelligence;
+pub mod market;
 pub mod perpetual;
 pub mod prediction;
+pub mod reports;
 pub mod research;
 pub mod screening;
+pub mod selection;
 pub mod sentiment;
+pub mod strategy;
+
+pub use coordinator::{
+    CoordinatorEvent, CoordinatorEventKind, CoordinatorSnapshot, CoordinatorState,
+};
+pub use eur::{EurEligibilityPolicy, EurInstrumentBinding, EurUniverseSnapshot};
+pub use evidence::{EvidenceItem, EvidenceLineage, EvidenceSourceKind, RightsStatus};
+pub use market::{BarSnapshot, CompletedBar, MarketState, QuoteQuality, SessionWindow, VenueQuote};
+pub use reports::{DailyReconciliation, WeeklyPerformanceReport};
+pub use selection::{
+    FallbackAttempt, RankedCandidate, SelectionAttemptStatus, SelectionFailure, SelectionProposal,
+    SelectionRun,
+};
+pub use strategy::{PriceZone, SignalDirection, SignalSnapshot, Strategy, StrategyRegistry};
 
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;

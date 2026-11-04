@@ -11,7 +11,7 @@ use std::{
     thread,
 };
 use trady_application::broker::{BrokerFailureKind, TimeInForce};
-use trady_domain::{OrderStatus, Side};
+use trady_domain::{EurInstrumentBinding, OrderStatus, Side};
 
 #[derive(Clone)]
 enum Reply {
@@ -168,6 +168,9 @@ fn summary() -> Reply {
 fn metadata() -> Reply {
     ok(json!([{"ticker":"AAPL_US_EQ","currencyCode":"USD","isin":"US0378331005","type":"STOCK"}]))
 }
+fn euro_metadata() -> Reply {
+    ok(json!([{"ticker":"demo_air_pa","currencyCode":"EUR","isin":"FR0000120404","type":"STOCK"}]))
+}
 fn request(kind: OrderKind, side: Side) -> BrokerOrderRequest {
     BrokerOrderRequest {
         intent_id: IntentId::new("durable_local_intent").unwrap(),
@@ -177,6 +180,48 @@ fn request(kind: OrderKind, side: Side) -> BrokerOrderRequest {
         side,
         quantity: Decimal::from_str_exact("0.1234567890123456789012345678").unwrap(),
         kind,
+    }
+}
+fn euro_request() -> BrokerOrderRequest {
+    BrokerOrderRequest {
+        intent_id: IntentId::new("eur_local_intent").unwrap(),
+        account_id: config().account_id,
+        instrument_id: InstrumentId::new("demo_air_pa").unwrap(),
+        instrument_currency: Currency::new("EUR").unwrap(),
+        side: Side::Buy,
+        quantity: Decimal::ONE,
+        kind: limit(),
+    }
+}
+fn euro_binding() -> EurInstrumentBinding {
+    EurInstrumentBinding {
+        instrument_id: InstrumentId::new("AIR_PA_EQ").unwrap(),
+        broker_instrument_id: "demo_air_pa".into(),
+        isin: "FR0000120404".into(),
+        legal_name: "Airbus SE".into(),
+        ticker: "AIR".into(),
+        exchange_mic: "XPAR".into(),
+        country: "FR".into(),
+        currency: Currency::new("EUR").unwrap(),
+        session_timezone: "Europe/Paris".into(),
+        yahoo_symbol: "AIR.PA".into(),
+        minimum_quantity: Decimal::ONE,
+        price_tick: Decimal::new(1, 2),
+        quantity_step: Decimal::ONE,
+        fractional_orders: false,
+        effective_from: now() - chrono::Duration::days(1),
+        expires_at: Some(now() + chrono::Duration::days(1)),
+        liquidity_threshold: trady_domain::eur::LiquidityThreshold {
+            minimum_average_daily_notional: Decimal::from(1_000_000u32),
+            maximum_order_participation_bps: Decimal::from(10u32),
+            maximum_spread_bps: Decimal::from(20u32),
+        },
+        volatility_threshold: trady_domain::eur::VolatilityThreshold {
+            minimum_fraction: Decimal::new(1, 3),
+            maximum_fraction: Decimal::new(12, 2),
+        },
+        provenance_ids: vec!["review_1".into()],
+        review_owner: "owner".into(),
     }
 }
 fn order() -> Value {
@@ -207,6 +252,13 @@ fn response_for(request: &BrokerOrderRequest) -> String {
         serde_json::from_str(&dto::order_body(request).unwrap()).unwrap();
     fields.insert("quantity".into(), wire["quantity"].clone());
     serde_json::to_string(&fields).unwrap()
+}
+
+fn euro_response_for(request: &BrokerOrderRequest) -> String {
+    let mut response: Value = serde_json::from_str(&response_for(request)).unwrap();
+    response["ticker"] = json!("demo_air_pa");
+    response["instrument"] = json!({"ticker":"demo_air_pa","currency":"EUR"});
+    response.to_string()
 }
 fn limit() -> OrderKind {
     OrderKind::Limit {
@@ -257,6 +309,47 @@ fn explicit_environments_and_redacted_credentials() {
     assert!(!debug.contains("private"));
     assert!(Credentials::new("bad:key".into(), "secret".into()).is_err());
     assert!(Credentials::new("key".into(), "secret\n".into()).is_err());
+}
+
+#[test]
+fn exact_eur_crosswalk_can_submit_without_iex_ticker_inference() {
+    let server = Server::new(vec![
+        summary(),
+        euro_metadata(),
+        ok(serde_json::from_str(&euro_response_for(&euro_request())).unwrap()),
+    ]);
+    let request = euro_request();
+    let binding = euro_binding();
+    let result = server.executor().submit_eur_bound_before(
+        &request,
+        &binding,
+        Some(now() + chrono::Duration::minutes(5)),
+    );
+    let order = result.expect("EUR crosswalk order");
+    assert_eq!(order.instrument_id.as_str(), "demo_air_pa");
+    let requests = server.requests();
+    assert_eq!(requests.len(), 3);
+    assert!(requests[0].line.starts_with("GET "));
+    assert!(requests[1].line.starts_with("GET "));
+    assert!(requests[2].line.starts_with("POST "));
+    assert!(requests[2].body.contains("demo_air_pa"));
+}
+
+#[test]
+fn eur_crosswalk_rejects_internal_or_currency_identity_mismatch_before_post() {
+    let server = Server::new(vec![]);
+    let mut request = euro_request();
+    request.instrument_id = InstrumentId::new("AIR_PA_EQ").unwrap();
+    let error = server
+        .executor()
+        .submit_eur_bound_before(
+            &request,
+            &euro_binding(),
+            Some(now() + chrono::Duration::minutes(5)),
+        )
+        .expect_err("mismatched EUR identity");
+    assert_eq!(error.kind, BrokerFailureKind::Unsupported);
+    assert!(server.requests().is_empty());
 }
 
 #[test]

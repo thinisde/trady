@@ -6,13 +6,18 @@
 
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
     thread,
     time::Duration,
 };
-use trady_domain::{Currency, Error, InstrumentId, Quote, Result, require};
-use yfinance_rs::{Ticker, YfClient};
+use trady_application::market_tools::{DecimalFx, EurMarketReadPort};
+use trady_domain::{
+    BarSnapshot, CompletedBar, Currency, Error, EvidenceItem, EvidenceLineage, EvidenceSourceKind,
+    InstrumentId, MarketState, Quote, QuoteQuality, Result, RightsStatus, VenueQuote, require,
+};
+use yfinance_rs::{Interval, Range, Ticker, YfClient};
 
 const MAX_SYMBOLS: usize = 512;
 const MAX_YAHOO_SYMBOL_BYTES: usize = 64;
@@ -40,6 +45,18 @@ pub struct YfinanceDataConfig {
     /// Internal Trady instrument ID to Yahoo Finance ticker, for example
     /// `AIR_PA_EQ` to `AIR.PA`.
     pub symbols: BTreeMap<InstrumentId, String>,
+    /// Optional exact broker/venue crosswalk. A symbol without this record is
+    /// useful for research only and cannot authorize a Trading 212 order.
+    #[serde(default)]
+    pub bindings: BTreeMap<InstrumentId, YfinanceInstrumentBinding>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct YfinanceInstrumentBinding {
+    pub broker_instrument_id: String,
+    pub isin: String,
+    pub exchange_mic: String,
 }
 
 impl YfinanceDataConfig {
@@ -78,6 +95,29 @@ impl YfinanceDataConfig {
                 "invalid or duplicate yfinance Euronext symbol mapping",
             )?;
         }
+        let mut broker_ids = BTreeSet::new();
+        let mut isins = BTreeSet::new();
+        for (instrument, binding) in &self.bindings {
+            require(
+                self.symbols.contains_key(instrument)
+                    && !binding.broker_instrument_id.is_empty()
+                    && binding.broker_instrument_id.len() <= 128
+                    && binding
+                        .broker_instrument_id
+                        .bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || b"_.:-".contains(&b))
+                    && binding.isin.len() == 12
+                    && binding.isin.bytes().all(|b| b.is_ascii_alphanumeric())
+                    && binding.exchange_mic.len() == 4
+                    && binding
+                        .exchange_mic
+                        .bytes()
+                        .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
+                    && broker_ids.insert(&binding.broker_instrument_id)
+                    && isins.insert(&binding.isin),
+                "invalid yfinance instrument crosswalk",
+            )?;
+        }
         Ok(())
     }
 }
@@ -106,6 +146,66 @@ pub struct YfinanceMarketData {
     client: YfClient,
 }
 
+/// Application-owned read port for the target analyst. It keeps session and
+/// FX observations explicit; Yahoo is only responsible for the exact EUR
+/// quote and completed bars.
+pub struct YfinanceEurMarketPort {
+    pub data: YfinanceMarketData,
+    pub sessions: BTreeMap<String, trady_domain::SessionWindow>,
+    pub fx: BTreeMap<(String, String), DecimalFx>,
+}
+
+impl YfinanceEurMarketPort {
+    pub fn new(
+        data: YfinanceMarketData,
+        sessions: BTreeMap<String, trady_domain::SessionWindow>,
+        fx: BTreeMap<(String, String), DecimalFx>,
+    ) -> Self {
+        Self { data, sessions, fx }
+    }
+}
+
+impl EurMarketReadPort for YfinanceEurMarketPort {
+    fn quote(&mut self, instrument_id: &InstrumentId) -> Result<VenueQuote> {
+        self.data.latest_venue_quote(instrument_id, Utc::now())
+    }
+
+    fn bars(&mut self, instrument_id: &InstrumentId, interval_seconds: u32) -> Result<BarSnapshot> {
+        self.data
+            .completed_bars(instrument_id, interval_seconds, Utc::now())
+    }
+
+    fn session(
+        &mut self,
+        exchange_mic: &str,
+        now: DateTime<Utc>,
+    ) -> Result<trady_domain::SessionWindow> {
+        let session = self
+            .sessions
+            .get(exchange_mic)
+            .ok_or_else(|| Error("reviewed EUR exchange session is unavailable".into()))?
+            .clone();
+        session.validate(now)?;
+        Ok(session)
+    }
+
+    fn fx(
+        &mut self,
+        from: &Currency,
+        to: &Currency,
+        now: DateTime<Utc>,
+    ) -> Result<Option<DecimalFx>> {
+        let value = self
+            .fx
+            .get(&(from.as_str().to_owned(), to.as_str().to_owned()))
+            .cloned();
+        if let Some(value) = &value {
+            value.validate(now)?;
+        }
+        Ok(value)
+    }
+}
+
 /// Provider snapshot returned by the read-only CLI and diagnostics path.
 ///
 /// Yahoo frequently omits a two-sided book for delayed or closed European
@@ -126,6 +226,195 @@ pub struct YfinanceQuoteSnapshot {
     pub market_state: Option<String>,
     pub fresh: bool,
     pub tradable: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct YfinancePollConfig {
+    pub interval_seconds: u64,
+    pub jitter_seconds: u64,
+    pub max_concurrency: usize,
+    pub max_attempts: u8,
+    pub retry_backoff_seconds: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct YfinancePollScheduler {
+    config: YfinancePollConfig,
+    due_at: BTreeMap<InstrumentId, DateTime<Utc>>,
+    failures: BTreeMap<InstrumentId, u8>,
+}
+
+impl YfinancePollScheduler {
+    pub fn new(config: YfinancePollConfig) -> Result<Self> {
+        config.validate()?;
+        Ok(Self {
+            config,
+            due_at: BTreeMap::new(),
+            failures: BTreeMap::new(),
+        })
+    }
+
+    /// Return at most the configured concurrency worth of due instruments. The
+    /// stable map order makes a replay deterministic; callers add network I/O
+    /// around this bounded batch.
+    pub fn due(&mut self, instruments: &[InstrumentId], now: DateTime<Utc>) -> Vec<InstrumentId> {
+        let mut due = Vec::new();
+        for instrument in instruments {
+            let entry = self.due_at.entry(instrument.clone()).or_insert(now);
+            if *entry <= now && due.len() < self.config.max_concurrency {
+                due.push(instrument.clone());
+            }
+        }
+        due
+    }
+
+    pub fn record_success(
+        &mut self,
+        instrument: &InstrumentId,
+        observed_at: DateTime<Utc>,
+    ) -> Result<()> {
+        require(
+            observed_at <= Utc::now() + ChronoDuration::seconds(300),
+            "poll observation is too far in the future",
+        )?;
+        self.failures.remove(instrument);
+        let jitter = deterministic_jitter(instrument.as_str(), self.config.jitter_seconds);
+        self.due_at.insert(
+            instrument.clone(),
+            observed_at
+                + ChronoDuration::seconds(
+                    i64::try_from(self.config.interval_seconds + jitter).unwrap_or(i64::MAX),
+                ),
+        );
+        Ok(())
+    }
+
+    pub fn record_failure(&mut self, instrument: &InstrumentId, now: DateTime<Utc>) -> Result<()> {
+        let failure = self.failures.entry(instrument.clone()).or_insert(0);
+        *failure = failure.saturating_add(1).min(self.config.max_attempts);
+        let exponent = u32::from((*failure).saturating_sub(1));
+        let backoff = self
+            .config
+            .retry_backoff_seconds
+            .saturating_mul(2_u64.saturating_pow(exponent));
+        self.due_at.insert(
+            instrument.clone(),
+            now + ChronoDuration::seconds(i64::try_from(backoff).unwrap_or(i64::MAX)),
+        );
+        Ok(())
+    }
+
+    pub fn attempts(&self, instrument: &InstrumentId) -> u8 {
+        self.failures.get(instrument).copied().unwrap_or(0)
+    }
+
+    pub fn config(&self) -> &YfinancePollConfig {
+        &self.config
+    }
+}
+
+fn deterministic_jitter(instrument: &str, maximum: u64) -> u64 {
+    if maximum == 0 {
+        return 0;
+    }
+    instrument.bytes().fold(0_u64, |hash, byte| {
+        hash.wrapping_mul(33).wrapping_add(u64::from(byte))
+    }) % (maximum + 1)
+}
+
+impl Default for YfinancePollConfig {
+    fn default() -> Self {
+        Self {
+            interval_seconds: 5,
+            jitter_seconds: 2,
+            max_concurrency: 8,
+            max_attempts: 3,
+            retry_backoff_seconds: 2,
+        }
+    }
+}
+
+impl YfinancePollConfig {
+    pub fn validate(&self) -> Result<()> {
+        require(
+            (1..=300).contains(&self.interval_seconds)
+                && self.jitter_seconds <= self.interval_seconds
+                && (1..=64).contains(&self.max_concurrency)
+                && (1..=3).contains(&self.max_attempts)
+                && (1..=60).contains(&self.retry_backoff_seconds),
+            "invalid yfinance polling configuration",
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct YfinanceNewsItem {
+    pub id: String,
+    pub instrument_id: InstrumentId,
+    pub title: String,
+    pub publisher: Option<String>,
+    pub canonical_url: Option<String>,
+    pub published_at: DateTime<Utc>,
+    pub fetched_at: DateTime<Utc>,
+}
+
+/// Normalize Yahoo article metadata into the shared evidence contract. A
+/// missing provider link is counted by the caller rather than replaced with a
+/// fabricated URL.
+pub fn normalize_news_evidence(
+    items: &[YfinanceNewsItem],
+    now: DateTime<Utc>,
+) -> Result<(Vec<EvidenceItem>, usize)> {
+    let mut evidence = Vec::new();
+    let mut without_link = 0usize;
+    for item in items {
+        let Some(url) = &item.canonical_url else {
+            without_link += 1;
+            continue;
+        };
+        if !url.starts_with("https://")
+            || item.published_at > item.fetched_at
+            || item.fetched_at > now
+        {
+            return Err(Error("invalid yfinance news provenance".into()));
+        }
+        let mut hash = Sha256::new();
+        hash.update(item.id.as_bytes());
+        hash.update(b"\n");
+        hash.update(item.title.as_bytes());
+        hash.update(b"\n");
+        hash.update(url.as_bytes());
+        let content_hash = hash
+            .finalize()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        let normalized = EvidenceItem {
+            schema_version: 1,
+            id: item.id.clone(),
+            canonical_url: url.clone(),
+            source_kind: EvidenceSourceKind::YfinanceNews,
+            publisher: item.publisher.clone(),
+            author: None,
+            title: Some(item.title.clone()),
+            body_or_excerpt: None,
+            symbol_mentions: vec![],
+            entity_ids: vec![item.instrument_id.to_string()],
+            published_at: Some(item.published_at),
+            fetched_at: item.fetched_at,
+            content_hash,
+            rights_status: RightsStatus::MetadataOnly,
+            primary_or_secondary: EvidenceLineage::Secondary,
+            contradictions: vec![],
+            raw_ref: None,
+            untrusted_input: false,
+        };
+        normalized.validate(now)?;
+        evidence.push(normalized);
+    }
+    Ok((evidence, without_link))
 }
 
 impl YfinanceMarketData {
@@ -184,6 +473,201 @@ impl YfinanceMarketData {
             Utc::now().max(now),
             self.config.quote_max_age_seconds,
         )
+    }
+
+    /// Convert a provider observation into the target quote contract only
+    /// when an exact broker/ISIN/venue crosswalk is configured.
+    pub fn latest_venue_quote(
+        &self,
+        instrument: &InstrumentId,
+        now: DateTime<Utc>,
+    ) -> Result<VenueQuote> {
+        let binding = self
+            .config
+            .bindings
+            .get(instrument)
+            .ok_or_else(|| Error("yfinance quote lacks an exact broker crosswalk".into()))?;
+        let symbol = self.symbol_for(instrument)?.to_owned();
+        let provider = self.fetch_quote(symbol.clone())?;
+        let snapshot = normalize_snapshot(
+            instrument,
+            &symbol,
+            &self.config.base_currency,
+            provider,
+            now,
+            self.config.quote_max_age_seconds,
+        )?;
+        let market_state = snapshot
+            .market_state
+            .as_deref()
+            .map(MarketState::parse)
+            .unwrap_or(MarketState::Unknown);
+        let quality = if snapshot.tradable {
+            QuoteQuality::Executable
+        } else if snapshot.bid.is_some() && snapshot.ask.is_some() && snapshot.fresh {
+            QuoteQuality::Delayed
+        } else if snapshot.last.is_some() {
+            QuoteQuality::LastTradeOnly
+        } else {
+            QuoteQuality::Missing
+        };
+        let quote = VenueQuote {
+            quote_id: format!(
+                "yf_{}_{}",
+                instrument,
+                snapshot.observed_at.timestamp_millis()
+            ),
+            instrument_id: instrument.clone(),
+            broker_instrument_id: binding.broker_instrument_id.clone(),
+            isin: binding.isin.clone(),
+            exchange_mic: binding.exchange_mic.clone(),
+            currency: snapshot.currency,
+            yahoo_symbol: symbol,
+            bid: snapshot.bid,
+            ask: snapshot.ask,
+            last: snapshot.last,
+            bid_size: None,
+            ask_size: None,
+            volume: None,
+            observed_at: snapshot.observed_at,
+            received_at: snapshot.received_at,
+            market_state,
+            source: "yfinance_rs".into(),
+            quality,
+        };
+        quote.validate(
+            now,
+            i64::try_from(self.config.quote_max_age_seconds).unwrap_or(i64::MAX),
+        )?;
+        Ok(quote)
+    }
+
+    /// Retrieve completed daily or intraday OHLCV bars. The requested interval
+    /// is deliberately bounded; incomplete/future bars are never returned.
+    pub fn completed_bars(
+        &self,
+        instrument: &InstrumentId,
+        interval_seconds: u32,
+        now: DateTime<Utc>,
+    ) -> Result<BarSnapshot> {
+        require(
+            matches!(interval_seconds, 60 | 300 | 900 | 1800 | 3600 | 86_400),
+            "unsupported yfinance bar interval",
+        )?;
+        let symbol = self.symbol_for(instrument)?.to_owned();
+        let client = self.client.clone();
+        let thread = thread::Builder::new()
+            .name("trady-yfinance-history".into())
+            .spawn(move || {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|_| Error("cannot start yfinance history runtime".into()))?;
+                runtime.block_on(async move {
+                    let interval = match interval_seconds {
+                        60 => Interval::I1m,
+                        300 => Interval::I5m,
+                        900 => Interval::I15m,
+                        1800 => Interval::I30m,
+                        3600 => Interval::I1h,
+                        _ => Interval::D1,
+                    };
+                    Ticker::new(&client, symbol)
+                        .history(Some(Range::M6), Some(interval), false)
+                        .await
+                        .map_err(|_| Error("yfinance history request failed".into()))
+                })
+            })
+            .map_err(|_| Error("cannot start yfinance history worker".into()))?;
+        let candles = thread
+            .join()
+            .map_err(|_| Error("yfinance history worker stopped unexpectedly".into()))??;
+        let mut bars = Vec::new();
+        for candle in candles {
+            let closes_at = candle.ts + ChronoDuration::seconds(i64::from(interval_seconds));
+            if closes_at > now {
+                continue;
+            }
+            let currency = candle.currency.code().to_owned();
+            require(
+                currency == self.config.base_currency.as_str(),
+                "yfinance bar currency differs from EUR",
+            )?;
+            bars.push(CompletedBar {
+                bar_id: format!("{}_{}", instrument, candle.ts.timestamp_millis()),
+                instrument_id: instrument.clone(),
+                interval_seconds,
+                opens_at: candle.ts,
+                closes_at,
+                open: *candle.ohlc.open.as_decimal(),
+                high: *candle.ohlc.high.as_decimal(),
+                low: *candle.ohlc.low.as_decimal(),
+                close: *candle.ohlc.close.as_decimal(),
+                volume: candle.volume.as_ref().map(|volume| *volume.as_decimal()),
+                provider: "yfinance_rs".into(),
+                received_at: now,
+                completed: true,
+            });
+        }
+        let observed_at = bars
+            .last()
+            .map(|bar| bar.closes_at)
+            .ok_or_else(|| Error("yfinance returned no completed bars".into()))?;
+        let snapshot = BarSnapshot {
+            snapshot_id: format!("yf_bars_{}_{}", instrument, now.timestamp_millis()),
+            instrument_id: instrument.clone(),
+            provider: "yfinance_rs".into(),
+            interval_seconds,
+            observed_at,
+            received_at: now,
+            bars,
+        };
+        snapshot.validate(now)?;
+        Ok(snapshot)
+    }
+
+    /// Normalize Yahoo's latest news into a bounded, source-linked research
+    /// observation. Missing links remain metadata-only; no empty success is
+    /// manufactured on provider failure.
+    pub fn latest_news(
+        &self,
+        instrument: &InstrumentId,
+        now: DateTime<Utc>,
+    ) -> Result<Vec<YfinanceNewsItem>> {
+        let symbol = self.symbol_for(instrument)?.to_owned();
+        let client = self.client.clone();
+        let thread = thread::Builder::new()
+            .name("trady-yfinance-news".into())
+            .spawn(move || {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|_| Error("cannot start yfinance news runtime".into()))?;
+                runtime.block_on(async move {
+                    Ticker::new(&client, symbol)
+                        .news()
+                        .await
+                        .map_err(|_| Error("yfinance news request failed".into()))
+                })
+            })
+            .map_err(|_| Error("cannot start yfinance news worker".into()))?;
+        let articles = thread
+            .join()
+            .map_err(|_| Error("yfinance news worker stopped unexpectedly".into()))??;
+        let mut result = Vec::with_capacity(articles.len().min(64));
+        for article in articles.into_iter().take(64) {
+            require(article.published_at <= now, "yfinance news is future-dated")?;
+            result.push(YfinanceNewsItem {
+                id: format!("yf_news_{}", article.uuid),
+                instrument_id: instrument.clone(),
+                title: article.title,
+                publisher: article.publisher,
+                canonical_url: article.link,
+                published_at: article.published_at,
+                fetched_at: now,
+            });
+        }
+        Ok(result)
     }
 
     fn fetch_quote(&self, symbol: String) -> Result<ProviderQuote> {
@@ -308,31 +792,19 @@ fn normalize_snapshot(
 }
 
 fn market_state_is_tradable(state: &str) -> bool {
-    let state = market_state_label(state);
-    state.contains("PRE")
-        || state.contains("REGULAR")
-        || state.contains("POST")
-        || state.contains("AUCTION")
+    MarketState::parse(state).entry_allowed()
 }
 
 fn market_state_label(state: &str) -> String {
-    let state = state.to_ascii_uppercase();
-    for label in [
-        "PRE",
-        "PREMARKET",
-        "REGULAR",
-        "POST",
-        "POSTMARKET",
-        "CLOSED",
-        "HALTED",
-        "SUSPENDED",
-        "AUCTION",
-    ] {
-        if state == format!("{label}{label}") {
-            return label.into();
-        }
+    match MarketState::parse(state) {
+        MarketState::Regular => "REGULAR".into(),
+        MarketState::PreMarket => "PREMARKET".into(),
+        MarketState::PostMarket => "POSTMARKET".into(),
+        MarketState::Auction => "AUCTION".into(),
+        MarketState::Closed => "CLOSED".into(),
+        MarketState::Halted => "HALTED".into(),
+        MarketState::Unknown => state.trim().to_ascii_uppercase(),
     }
-    state
 }
 
 #[cfg(test)]
@@ -352,6 +824,7 @@ mod tests {
                 InstrumentId::new("AIR_PA_EQ").expect("instrument"),
                 "AIR.PA".into(),
             )]),
+            bindings: BTreeMap::new(),
         }
     }
 
@@ -462,5 +935,66 @@ mod tests {
         assert_eq!(snapshot.last, Some(Decimal::new(19332, 2)));
         assert!(snapshot.fresh);
         assert!(!snapshot.tradable);
+    }
+
+    #[test]
+    fn news_normalization_never_invents_missing_provider_links() {
+        let now = DateTime::parse_from_rfc3339("2026-11-03T10:00:10Z")
+            .expect("time")
+            .to_utc();
+        let instrument = InstrumentId::new("AIR_PA_EQ").expect("instrument");
+        let (rows, skipped) = normalize_news_evidence(
+            &[
+                YfinanceNewsItem {
+                    id: "yf_news_1".into(),
+                    instrument_id: instrument.clone(),
+                    title: "Headline".into(),
+                    publisher: Some("Publisher".into()),
+                    canonical_url: Some("https://example.com/article".into()),
+                    published_at: now,
+                    fetched_at: now,
+                },
+                YfinanceNewsItem {
+                    id: "yf_news_2".into(),
+                    instrument_id: instrument,
+                    title: "No link".into(),
+                    publisher: None,
+                    canonical_url: None,
+                    published_at: now,
+                    fetched_at: now,
+                },
+            ],
+            now,
+        )
+        .expect("evidence");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(skipped, 1);
+        assert_eq!(rows[0].source_kind, EvidenceSourceKind::YfinanceNews);
+    }
+
+    #[test]
+    fn polling_scheduler_bounds_batches_and_backs_off_failures() {
+        let mut scheduler = YfinancePollScheduler::new(YfinancePollConfig {
+            interval_seconds: 5,
+            jitter_seconds: 0,
+            max_concurrency: 1,
+            max_attempts: 3,
+            retry_backoff_seconds: 2,
+        })
+        .expect("scheduler");
+        let first = InstrumentId::new("AIR_PA_EQ").expect("id");
+        let second = InstrumentId::new("ASML_AS_EQ").expect("id");
+        let now = DateTime::parse_from_rfc3339("2026-11-03T10:00:00Z")
+            .expect("time")
+            .to_utc();
+        assert_eq!(
+            scheduler.due(&[first.clone(), second.clone()], now).len(),
+            1
+        );
+        scheduler.record_failure(&first, now).expect("failure");
+        assert!(scheduler.due(std::slice::from_ref(&first), now).is_empty());
+        assert_eq!(scheduler.attempts(&first), 1);
+        scheduler.record_success(&first, now).expect("success");
+        assert!(scheduler.due(&[first], now).is_empty());
     }
 }

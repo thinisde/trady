@@ -1,8 +1,11 @@
 //! Pending and terminal observations for the durable executor; correlation uses exact IDs.
 
 use super::*;
-use trady_application::autonomous::{ExecutionBroker, ExecutionObservation, TrackedOrder};
-use trady_domain::{Money, require};
+use trady_application::{
+    autonomous::{ExecutionBroker, ExecutionObservation, TrackedOrder},
+    eur_execution::EurExecutionPort,
+};
+use trady_domain::{EurInstrumentBinding, Money, require};
 
 /// Runtime pacing is separate from low-level nonblocking transport. Every POST
 /// still has exactly one send and every mutation checks actual account identity.
@@ -16,6 +19,35 @@ impl AutonomousTrading212 {
             executor: Trading212Executor::new(config, credentials)?,
             binding_consumed: true,
         })
+    }
+
+    /// Target-authority EUR mutation with an exact reviewed broker crosswalk.
+    pub fn submit_eur_order_before(
+        &mut self,
+        request: &BrokerOrderRequest,
+        binding: &EurInstrumentBinding,
+        expires_at: chrono::DateTime<chrono::Utc>,
+    ) -> BrokerResult<BrokerOrder> {
+        let bucket = match request.kind {
+            OrderKind::Market { .. } => Bucket::Market,
+            OrderKind::Limit { .. } => Bucket::Limit,
+            OrderKind::Stop { .. } => Bucket::Stop,
+            OrderKind::StopLimit { .. } => Bucket::StopLimit,
+        };
+        self.executor.reader.http.pace(bucket)?;
+        if self.binding_consumed
+            || self
+                .executor
+                .reader
+                .bound_at
+                .is_none_or(|at| at.elapsed() > Duration::from_secs(5))
+        {
+            self.executor.reader.http.pace(Bucket::Summary)?;
+            self.executor.reader.spendable_cash()?;
+        }
+        self.binding_consumed = true;
+        self.executor
+            .submit_eur_bound_before(request, binding, Some(expires_at))
     }
 }
 impl BrokerExecutionPort for AutonomousTrading212 {
@@ -84,6 +116,30 @@ impl ExecutionBroker for AutonomousTrading212 {
         let observation = self.executor.observe(account, tracked)?;
         self.binding_consumed = false;
         Ok(observation)
+    }
+}
+
+impl EurExecutionPort for AutonomousTrading212 {
+    fn observe_account(&mut self, account_id: &AccountId) -> Result<AccountSnapshot> {
+        self.observe(account_id, &[])
+            .map(|observation| observation.snapshot)
+    }
+
+    fn submit_eur_order_before(
+        &mut self,
+        request: &BrokerOrderRequest,
+        binding: &EurInstrumentBinding,
+        expires_at: chrono::DateTime<chrono::Utc>,
+    ) -> BrokerResult<BrokerOrder> {
+        AutonomousTrading212::submit_eur_order_before(self, request, binding, expires_at)
+    }
+
+    fn cancel_order(
+        &mut self,
+        account: &AccountId,
+        broker_order_id: &str,
+    ) -> BrokerResult<CancellationReceipt> {
+        BrokerExecutionPort::cancel_order(self, account, broker_order_id)
     }
 }
 

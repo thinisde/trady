@@ -31,8 +31,8 @@ use trady_application::{
     },
 };
 use trady_domain::{
-    AccountId, AccountSnapshot, BrokerOrder, Capabilities, Currency, Error, InstrumentId, IntentId,
-    Mode, Money, Result,
+    AccountId, AccountSnapshot, BrokerOrder, Capabilities, Currency, Error, EurInstrumentBinding,
+    InstrumentId, IntentId, Mode, Money, Result,
 };
 
 const API: &str = "/api/v0/equity";
@@ -624,6 +624,69 @@ impl<C: Clock> Trading212Executor<C> {
             e.broker_order_id = (order.id > 0).then(|| order.id.to_string());
             e
         })
+    }
+
+    /// Target-authority mutation path for reviewed EUR instruments. The legacy
+    /// IEX symbol guard remains on `submit_bound`; this method requires the
+    /// exact EUR broker crosswalk and therefore cannot fall back to ticker
+    /// prefix inference.
+    pub fn submit_eur_bound_before(
+        &mut self,
+        request: &BrokerOrderRequest,
+        binding: &EurInstrumentBinding,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> BrokerResult<BrokerOrder> {
+        request.validate()?;
+        binding
+            .validate(self.reader.clock.now())
+            .map_err(|_| BrokerFailure::new(BrokerFailureKind::InvalidRequest))?;
+        let broker_instrument_id = InstrumentId::new(binding.broker_instrument_id.clone())
+            .map_err(|_| BrokerFailure::new(BrokerFailureKind::InvalidRequest))?;
+        if request.instrument_id != broker_instrument_id
+            || request.instrument_currency != binding.currency
+            || binding.currency.as_str() != "EUR"
+        {
+            return Err(BrokerFailure::new(BrokerFailureKind::Unsupported));
+        }
+        self.reader.check_account(&request.account_id)?;
+        if expires_at.is_some_and(|expiry| self.reader.clock.now() >= expiry) {
+            return Err(BrokerFailure::new(BrokerFailureKind::InvalidRequest));
+        }
+        let instrument = self
+            .reader
+            .instruments()?
+            .into_iter()
+            .find(|instrument| instrument.instrument_id == broker_instrument_id)
+            .ok_or_else(|| BrokerFailure::new(BrokerFailureKind::Unsupported))?;
+        if instrument.currency != binding.currency || instrument.kind != "STOCK" {
+            return Err(BrokerFailure::new(BrokerFailureKind::Unsupported));
+        }
+        let (bucket, endpoint) = match request.kind {
+            OrderKind::Market { .. } => (Bucket::Market, "market"),
+            OrderKind::Limit { .. } => (Bucket::Limit, "limit"),
+            OrderKind::Stop { .. } => (Bucket::Stop, "stop"),
+            OrderKind::StopLimit { .. } => (Bucket::StopLimit, "stop_limit"),
+        };
+        let order: Order = self.reader.http.json(
+            bucket,
+            Method::POST,
+            &format!("{API}/orders/{endpoint}"),
+            Some(dto::order_body(request)?),
+        )?;
+        order
+            .normalize()
+            .and_then(|normalized| {
+                if order.matches(request, &normalized) {
+                    Ok(normalized)
+                } else {
+                    Err(invalid())
+                }
+            })
+            .map_err(|mut error| {
+                error.outcome_unknown = true;
+                error.broker_order_id = (order.id > 0).then(|| order.id.to_string());
+                error
+            })
     }
 }
 impl<C: Clock> BrokerExecutionPort for Trading212Executor<C> {

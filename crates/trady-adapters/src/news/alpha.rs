@@ -14,6 +14,25 @@ struct Article {
     time_published: String,
     summary: String,
     source: String,
+    #[serde(default)]
+    overall_sentiment_score: Option<serde_json::Value>,
+    #[serde(default)]
+    ticker_sentiment: Vec<TickerSentiment>,
+}
+
+#[derive(Deserialize)]
+struct TickerSentiment {
+    ticker: String,
+}
+
+fn eur_entity(ticker: &str) -> Option<&'static str> {
+    match ticker.trim().to_ascii_uppercase().as_str() {
+        "AIR" => Some("AIR_PA_EQ"),
+        "ASML" => Some("ASML_AS_EQ"),
+        "ABI" | "BUD" => Some("ABI_BR_EQ"),
+        "EDP" => Some("EDP_LS_EQ"),
+        _ => None,
+    }
 }
 
 pub(super) fn fetch<T: HttpTransport>(
@@ -87,6 +106,21 @@ pub(super) fn fetch<T: HttpTransport>(
         let at = NaiveDateTime::parse_from_str(&article.time_published, "%Y%m%dT%H%M%S")
             .map_err(|_| SourceFailure::unavailable("news_article_date_invalid"))?
             .and_utc();
+        let entity_ids = article
+            .ticker_sentiment
+            .iter()
+            .filter_map(|ticker| eur_entity(&ticker.ticker))
+            .map(str::to_owned)
+            .collect::<Vec<_>>();
+        let summary = article.overall_sentiment_score.as_ref().map_or_else(
+            || article.summary.clone(),
+            |score| {
+                format!(
+                    "{} [alpha_vantage_sentiment_score={score}]",
+                    article.summary
+                )
+            },
+        );
         items.push(
             item(
                 source,
@@ -97,13 +131,13 @@ pub(super) fn fetch<T: HttpTransport>(
                     publisher: article.source,
                     feed_title: None,
                     title: Some(article.title),
-                    summary: Some(article.summary),
+                    summary: Some(summary),
                     text: None,
                     published_at: Some(at),
                     language: Some("en".into()),
                     status: ContentStatus::Snippet,
                     social: None,
-                    related_urls: vec![],
+                    related_urls: entity_ids,
                     gaps: vec!["primary_source_not_verified".into()],
                 },
                 now,

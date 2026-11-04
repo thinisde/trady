@@ -8,7 +8,10 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
-use trady_application::telegram::{CommandReply, MonitorCommand};
+use trady_application::{
+    eur_execution::EurLifecycleSink,
+    telegram::{CommandReply, LifecycleEvent, MonitorCommand},
+};
 use trady_domain::{Error, Result, require};
 
 use super::split_message;
@@ -50,6 +53,44 @@ pub struct StateStore {
     directory: PathBuf,
     state: MonitorState,
     _lock: File,
+}
+
+/// Owned lifecycle sink for the EUR executor. It shares the durable Telegram
+/// state/outbox format used by the gateway and never accepts inbound commands.
+pub struct TelegramLifecycleOutbox {
+    state: StateStore,
+    chats: Vec<i64>,
+}
+
+impl TelegramLifecycleOutbox {
+    pub fn open(directory: &Path, bot_id: i64, chats: Vec<i64>) -> Result<Self> {
+        require(
+            !chats.is_empty()
+                && chats.len() <= 32
+                && chats.iter().all(|chat| *chat > 0)
+                && chats
+                    .iter()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len()
+                    == chats.len(),
+            "invalid Telegram lifecycle chat scope",
+        )?;
+        Ok(Self {
+            state: StateStore::open(directory, bot_id)?,
+            chats,
+        })
+    }
+
+    pub fn state(&self) -> &MonitorState {
+        self.state.state()
+    }
+}
+
+impl EurLifecycleSink for TelegramLifecycleOutbox {
+    fn emit(&mut self, event: &LifecycleEvent) -> Result<()> {
+        self.state
+            .enqueue_lifecycle_event(&self.chats, event, Utc::now())
+    }
 }
 
 impl StateStore {
@@ -169,6 +210,22 @@ impl StateStore {
         self.commit(next)
     }
 
+    /// Queue a validated coordinator event atomically with its event ID. The
+    /// event body is rendered here; inbound commands never enter this path.
+    pub fn enqueue_lifecycle_event(
+        &mut self,
+        chats: &[i64],
+        event: &LifecycleEvent,
+        now: DateTime<Utc>,
+    ) -> Result<()> {
+        event.validate(now)?;
+        let mut next = self.state.clone();
+        for chat in chats {
+            append(&mut next, *chat, &event.event_id, &event.render())?;
+        }
+        self.commit(next)
+    }
+
     pub fn acknowledge_front(&mut self) -> Result<()> {
         require(!self.state.outbox.is_empty(), "Telegram outbox is empty")?;
         let mut next = self.state.clone();
@@ -201,6 +258,14 @@ impl StateStore {
 
 fn append(state: &mut MonitorState, chat: i64, event: &str, text: &str) -> Result<()> {
     require(chat > 0 && !text.is_empty(), "invalid Telegram delivery")?;
+    let event_prefix = format!("tg:{}:{event}:", state.bot_id);
+    if state
+        .outbox
+        .iter()
+        .any(|delivery| delivery.chat_id == chat && delivery.event_id.starts_with(&event_prefix))
+    {
+        return Ok(());
+    }
     for (part, text) in split_message(text).into_iter().enumerate() {
         require(
             state.outbox.len() < MAX_OUTBOX,

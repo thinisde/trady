@@ -1,0 +1,54 @@
+{
+  "config_version": 1,
+  "enabled": false,
+  "execution_stage": "SUPERVISED_DEMO",
+  "account_id": "paper_t212_eur_demo",
+  "base_currency": "EUR",
+  "owner_id": "configured_owner",
+  "approved_universe_snapshot_id": "eur_universe_reviewed_v1",
+  "universe_config": "config/eur_equity_universe.example.json",
+  "opencode_model": "deepseek-v4.1-flash",
+  "trading212_only": true,
+  "telegram_enabled": true,
+  "policy": {
+    "revision": "eur_intraday_v1",
+    "desired_target_min_fraction": "0.01",
+    "desired_target_max_fraction": "0.03",
+    "max_initial_loss_fraction": "0.02",
+    "min_reward_to_risk": "1.50",
+    "max_hold_seconds": 28800,
+    "minimum_seconds_to_flatten": 900,
+    "max_daily_entries": 2,
+    "max_daily_exits": 2,
+    "max_open_positions": 1,
+    "rotation_enabled": true,
+    "minimum_rotation_net_improvement_fraction": "0.002",
+    "no_overnight": true,
+    "sentiment_may_widen_stop": false
+  },
+  "eligibility": {
+    "quote_max_age_seconds": 10,
+    "minimum_seconds_to_flatten": 900,
+    "minimum_price": "1",
+    "maximum_price": "10000",
+    "maximum_volatility_fraction": "0.12"
+  },
+  "session_deadlines": [
+    {"exchange_mic": "XPAR", "timezone": "Europe/Paris", "flatten_minutes_before_close": 15},
+    {"exchange_mic": "XAMS", "timezone": "Europe/Amsterdam", "flatten_minutes_before_close": 15},
+    {"exchange_mic": "XBRU", "timezone": "Europe/Brussels", "flatten_minutes_before_close": 15},
+    {"exchange_mic": "XLIS", "timezone": "Europe/Lisbon", "flatten_minutes_before_close": 15},
+    {"exchange_mic": "XMIL", "timezone": "Europe/Rome", "flatten_minutes_before_close": 15},
+    {"exchange_mic": "XOSL", "timezone": "Europe/Oslo", "flatten_minutes_before_close": 15},
+    {"exchange_mic": "XETR", "timezone": "Europe/Berlin", "flatten_minutes_before_close": 15}
+  ],
+  "yfinance_config": "config/yfinance.euronext.example.json",
+  "research_config": "config/research.eur.json",
+  "trading212_config": "config/trading212.eur-demo.example.json",
+  "opencode_config": "config/opencode/llm.json",
+  "notes": [
+    "Trading 212 demo is the first operational target.",
+    "Live execution remains disabled until exact venue quote and protection evidence is approved.",
+    "One open position is allowed; rotation requires a verified close and stronger replacement economics."
+  ]
+}

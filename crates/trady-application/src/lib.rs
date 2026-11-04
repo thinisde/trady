@@ -1,14 +1,20 @@
 //! Use cases and ports. Analyst and gateway deliberately receive no broker mutation port.
 
+pub mod analyst;
 pub mod autonomous;
 pub mod broker;
 pub mod contracts;
+pub mod eur_execution;
+pub mod eur_runtime;
+pub mod evidence;
 pub mod financial;
 pub mod harness;
 pub mod intelligence;
+pub mod market_tools;
 pub mod model_lab;
 pub mod optimization;
 pub mod perpetual;
+pub mod reconciliation;
 pub mod research;
 pub mod research_jobs;
 pub mod screening;

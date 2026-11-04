@@ -1,0 +1,63 @@
+{
+  "config_version": 1,
+  "max_pages": 2,
+  "page_size": 20,
+  "lookback_seconds": 86400,
+  "overlap_seconds": 120,
+  "sources": [
+    {
+      "id": "alpha_eur_news_sentiment",
+      "kind": "ALPHA_VANTAGE",
+      "enabled": true,
+      "url": "https://www.alphavantage.co/query",
+      "allowed_hosts": ["www.alphavantage.co"],
+      "credential_env": "TRADY_ALPHA_VANTAGE_KEY",
+      "interval_seconds": 900,
+      "daily_request_limit": 100,
+      "query": "AIR,ASML,ABI,EDP",
+      "x_account": null,
+      "rights": {
+        "store_content": true,
+        "llm_processing": true,
+        "retention_hours": 168,
+        "terms_reference": "owner_review_alpha_vantage_eur_2026-11-03"
+      }
+    },
+    {
+      "id": "google_eur_news_rss",
+      "kind": "GOOGLE_NEWS_RSS",
+      "enabled": true,
+      "url": "https://news.google.com/rss/search",
+      "allowed_hosts": ["news.google.com"],
+      "credential_env": null,
+      "interval_seconds": 900,
+      "daily_request_limit": 96,
+      "query": "Euronext EUR equities",
+      "x_account": null,
+      "rights": {
+        "store_content": true,
+        "llm_processing": true,
+        "retention_hours": 72,
+        "terms_reference": "owner_review_google_news_rss_eur_2026-11-03"
+      }
+    },
+    {
+      "id": "publisher_eur_rss",
+      "kind": "PUBLISHER_RSS",
+      "enabled": true,
+      "url": "https://feeds.reuters.com/reuters/businessNews",
+      "allowed_hosts": ["feeds.reuters.com"],
+      "credential_env": null,
+      "interval_seconds": 900,
+      "daily_request_limit": 96,
+      "query": null,
+      "x_account": null,
+      "rights": {
+        "store_content": true,
+        "llm_processing": true,
+        "retention_hours": 72,
+        "terms_reference": "owner_review_publisher_rss_registry_eur_2026-11-03"
+      }
+    }
+  ]
+}

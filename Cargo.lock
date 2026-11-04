@@ -2696,6 +2696,7 @@ name = "trady-adapters"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "jsonschema",
  "perpetual",
  "quick-xml",
  "reqwest",
