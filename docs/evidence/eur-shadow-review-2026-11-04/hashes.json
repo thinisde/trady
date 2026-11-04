@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "review_reference": "eur-shadow-identity-source-review-2026-11-04",
+  "sealed_at": "2026-11-04T13:12:19.519751Z",
+  "source_base_commit": "a9db44a5f55a5a762691799913fd00bcaf5b7cca",
+  "code_binding": "Base commit plus the exact file hashes below; not a release candidate.",
+  "entry_authorized": false,
+  "live_enabled": false,
+  "files": [
+    {
+      "path": "config/eur-demo.example.json",
+      "sha256": "36c61d61ab6fe09dc5bfdfccaba923fc9fd06b8731e76ffb8b818f013dd9f601"
+    },
+    {
+      "path": "config/eur_equity_universe.example.json",
+      "sha256": "2873c22e1a7d9b7b7f46ceda32de274da3437d1a979141bec8a3c8382142dbfa"
+    },
+    {
+      "path": "config/research.eur.json",
+      "sha256": "afe97e06091f4a11a11886550a9f425a4ba0cf7a9c47cfe6ea46d091ff7e2a4c"
+    },
+    {
+      "path": "config/research.json",
+      "sha256": "9044cd6595633987dfb3e56f1a7c752c9ece81e5e85dcc63a8d87fe78d73c76d"
+    },
+    {
+      "path": "config/yfinance.eur-shadow.reviewed.json",
+      "sha256": "045b535e3115f5a7e62d5e9c55539bea3daaeee3276d924764c44500b82ad35d"
+    },
+    {
+      "path": "config/yfinance.euronext.example.json",
+      "sha256": "8890268365e28d4aa6b66ed952971463a907813aa307c30c321e52489e43e7b4"
+    },
+    {
+      "path": "docs/evidence/eur-shadow-review-2026-11-04/README.md",
+      "sha256": "084676e442fc0e1e76207640dfafb15089e9ae006ebaa82a6bf5b7ce2b27f8be"
+    },
+    {
+      "path": "docs/evidence/eur-shadow-review-2026-11-04/crosswalk.json",
+      "sha256": "0e612adb407f648d49d0462cee192276fbda7906b6ad3a27fe1bb81291158e90"
+    },
+    {
+      "path": "docs/evidence/eur-shadow-review-2026-11-04/review.json",
+      "sha256": "607f091bb19a839f10baf45c233a21f01fb899e2219858fd5b749e42f706364e"
+    },
+    {
+      "path": "scripts/capture-eur-review.py",
+      "sha256": "5a4f3179f76a15d63a8b5e783d94a9dd578a3d621b314770ce9faf52cfb32da0"
+    },
+    {
+      "path": "scripts/verify-eur-shadow-review.py",
+      "sha256": "3d275a2920829608c64a307014fa9562a5a8bfabdb8c012b772cd2e711048643"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/airbus-collection.json",
+      "sha256": "8ddb032d952d80e805a68ade9ecf862f90c4f13b99bc1b3c5885abcb2dd37e8d"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/airbus-model-read.json",
+      "sha256": "e7cf9d5ef66aeabb441bf46aa20eb1ade4e3b93288952f5f42fa4ac8f1a85656"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/cli-tests.log",
+      "sha256": "2059eeeb872e4893a53613f65c91c438a5beaf62d66ba55d0b3fda3850d4e169"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/ecb-collection.json",
+      "sha256": "3093e4c0ed5d4f0fdded90e350e847edaac5596372a0cce7ef11f89a23a09d85"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/ecb-model-read.json",
+      "sha256": "a67e659b135d17030e46e781f7ba4182b430ca9122fc6527cebb8514bae9c8a9"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/account-binding.json",
+      "sha256": "f8c555681be55cbfd8f6dd5cf1931b2af2f034c210b380566b96c55c2ee80275"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/airbus_press_rss.json",
+      "sha256": "ef542398a150e6db14ca5a508c8a36a168de45d6a60e570cb7b6a212094275f2"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/airbus_press_rss_canonical.json",
+      "sha256": "bd9860e608d53e13e3a2322859e9ba0f5b70fdf6d0ae856c04317fd758041a98"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/airbus_shares.json",
+      "sha256": "9d568df88554f14ec54f7bc78b52f035270efb88b613a3c942c0a93bfd90b0ff"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/airbus_terms.json",
+      "sha256": "f77c6a3d6f8fedd432dce452857a9a37ccae512e918741b29cd26f58b126dc43"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/alpha_airbus.json",
+      "sha256": "ea9c27b8a8fbea73e1dd6d65cf8bc5e4b74b93d1be469d0f6e3e3ec212895754"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/alpha_asml.json",
+      "sha256": "bd86d10b84b647bf5b2fa5105ed97ede7f4550760a8099c0b61f8e0e80b8f557"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/alpha_limits.json",
+      "sha256": "3a1aef3aa4212df5d74ef0f2e3d2446ae6ed23ae0c0dfe0e7350cc74f0abc5f5"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/alpha_terms.json",
+      "sha256": "205e0675a591db881e197928955c2dfb6fa0cd9d1c7ad52be26249fe268c67c6"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/alpha_terms_pdf.json",
+      "sha256": "e871ffb220e11efe8e1d10c1d409b15957cbdd0b43ac242d9f5fa9fc5d138541"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/asml_shares.json",
+      "sha256": "03a18a1bfd2cbf730c4e199dbf093ce5db716e9c8c9ee081bb2538f49fc59d8a"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/asml_shares_canonical.json",
+      "sha256": "7d0619f89c55f53f064faac8c5ef697715e9707797f96526a7598cffcbee29ef"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/ecb_disclaimer.json",
+      "sha256": "11d84c8f34677154a3c4b3df19d69ba13f97ae7003d9888945c860854a74ffdb"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/ecb_disclaimer_canonical.json",
+      "sha256": "1e70ece845cc3c2efd5d9788dc4c6a48978d92851d0026b9dceba5da6b3a8dd4"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/ecb_press_rss.json",
+      "sha256": "11de53a8e9ed65654d1096a7e3d0e3a9a34241d5a690c01993fb9c696d769a93"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/ecb_social.json",
+      "sha256": "aca518eba2a5d3f3dfc44ea3040e19dfe522e2a9c82f49f34a8af5b53573c05b"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/exchanges.json",
+      "sha256": "38a37be65492c71b2f10df48bc2787360eff4c9380988d6a24c5c5c1de783338"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/instruments.json",
+      "sha256": "9e388fbf9e3077177b1acc971494866b3209f5f0a759bf847613445cb54c33f0"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/x-resolution-config-airbus.json",
+      "sha256": "09f36871f9ab9542b5439d5072890c2740b35dba70b4bf34fe406ff135cf3aca"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/x-resolution-config-ecb.json",
+      "sha256": "be5eb4fc559ba11de86cf401c960e38014cf211f956dbbc8844ff52ad021f948"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/x_airbus.json",
+      "sha256": "9d7fe06071e89ba2ff821f8663846da6b9b0cecc6d3ae033cb9286c43d34b4cd"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/x_developer_guidelines.json",
+      "sha256": "04b1992066878cf33eb584bb233f7a5811f7d15087f079ae5d720fabe4045daa"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/x_ecb.json",
+      "sha256": "6abc449d7d24d117d05ae34e1d28053a3bb9bd6e85c6b12d9063adf270b8de05"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/x_license.json",
+      "sha256": "24670662a192211608f2702b9415a81d3e4a8efce2d3eafd2c910f8cb765eaf3"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/yahoo_airbus_listing.json",
+      "sha256": "0f7ca8bd5fe5c183880755cf5fa85bcb37670559fed61f7ea6c00882b8c1a947"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/provider-snapshots/yahoo_asml_listing.json",
+      "sha256": "b4e275ba5ce3616a28484e3898ddb4e4098079a33a18c83e275cfa47a355758b"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/python-tests.log",
+      "sha256": "3872f5a85da677f909ec5c55a5821758c34e2394460567a29f8043b480cc1105"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/rust-tests.log",
+      "sha256": "12da2c52dcf1877d2d654c8da0ddee77694c2f2fa3e9338563bf0702fd03508c"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/source-status-final.json",
+      "sha256": "09159f56a72597cf2f71711b1e4f3ee613a234a6fe9f281f9c9583d8de4120d7"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/source-status.json",
+      "sha256": "611ac4c1a2d7a89ba8343585574a5c1018288caca2c3201f5181e1d725542058"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/x-budget-after.json",
+      "sha256": "985047b513886f69ee0d9caa9cd0320be3fbeb291e1dc3557e6fc1eb4f9520e6"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/yfinance-airbus-cli.json",
+      "sha256": "ed30002759c2c3de346566179110751f4b1cebb0734da6c65330d7a771646b9f"
+    },
+    {
+      "path": "var/eur-shadow-review/2026-11-04/yfinance-asml-cli.json",
+      "sha256": "790148a5abce00a1a3e00d8995305f0a120a61a0a0fa2d95a00a8ac03cda1a76"
+    }
+  ]
+}

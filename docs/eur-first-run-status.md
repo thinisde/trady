@@ -88,12 +88,21 @@ release evidence; the check record preserves their SHA-256 hashes.
 
 ## Remaining dependency-ordered work
 
-1. Replace illustrative broker IDs with a separately reviewed catalog/provider
-   crosswalk. The EUR source registry also lacks reviewed X accounts and API
-   access. No review or approval was invented.
+1. Complete the orderable registry from the
+   [identity/source self-review](./evidence/eur-shadow-review-2026-11-04/README.md).
+   Real catalog reads now establish Airbus `AIRp_EQ` and ASML `ASMLa_EQ`, their
+   EUR ISINs, listing schedules, Yahoo mappings and Alpha Vantage search symbols.
+   Official Airbus/ECB X ownership and stable API IDs are verified through the
+   shared PostgreSQL budget. The crosswalk leaves order precision null and
+   remains research-only; it is not an independent or owner release approval.
 2. Wire real-input capture for Yahoo quotes/bars/news, Alpha Vantage,
    allowlisted RSS and reviewed X through separately metered source roles.
    Persist complete response provenance, typed failures and replay references.
+   The dated review records stale Yahoo observations without bid/ask, two
+   successful Alpha symbol searches, and 15 ECB RSS items persisted and read
+   back from PostgreSQL. Airbus RSS parser failure is recorded as UNAVAILABLE.
+   X post access/activity, processing rights and collection coverage are still
+   unverified; these sources remain disabled in the EUR registry.
 3. Connect the tested target lease/journal/outbox primitives to long-running
    EUR executor and Telegram services. Persist every coordinator transition,
    selection, strategy, holding and recovery state with configuration hashes

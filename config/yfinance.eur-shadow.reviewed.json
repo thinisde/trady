@@ -1,0 +1,23 @@
+{
+  "config_version": 1,
+  "enabled": true,
+  "base_currency": "EUR",
+  "timeout_seconds": 15,
+  "quote_max_age_seconds": 10,
+  "symbols": {
+    "AIR_PA_EQ": "AIR.PA",
+    "ASML_AS_EQ": "ASML.AS"
+  },
+  "bindings": {
+    "AIR_PA_EQ": {
+      "broker_instrument_id": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "exchange_mic": "XPAR"
+    },
+    "ASML_AS_EQ": {
+      "broker_instrument_id": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "exchange_mic": "XAMS"
+    }
+  }
+}

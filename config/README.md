@@ -2,10 +2,11 @@
 
 ## Overview
 
-The disabled target template is `eur-demo.example.json`. The illustrative
-crosswalk in `yfinance.euronext.example.json`, source registry in
-`research.eur.json`, and Trading 212 demo profile require review before
-they can form an operational deployment. The
+The disabled target template is `eur-demo.example.json`. The
+[dated SHADOW review](../docs/evidence/eur-shadow-review-2026-11-04/README.md)
+binds real catalog identities and source decisions. The full universe example
+still uses illustrative broker IDs and unverified order precision; the review
+does not make it an operational deployment. The
 IEX30/Alpaca paths remain until EUR replay and database parity evidence pass.
 
 Secret values use the [central credentials store](../docs/credentials.md), separate
@@ -19,7 +20,11 @@ from provider configuration. `credentials init` creates the ignored private
   rotation disabled. LIVE is structurally blocked.
 - [Illustrative EUR universe](./eur_equity_universe.example.json): example
   ISIN/MIC and Yahoo mappings with placeholder broker IDs. Replace these through
-  independent catalog review before the real-input milestone.
+  a complete reviewed registry before the real-input milestone. The Airbus ISIN
+  is corrected; quantity and tick values remain illustrative.
+- [Reviewed identity crosswalk](../docs/evidence/eur-shadow-review-2026-11-04/crosswalk.json):
+  exact Airbus/ASML demo catalog identities with explicitly unknown order rules.
+  This research-only document cannot be imported as an orderable universe.
 - [Trading 212 EUR demo](./trading212.eur-demo.example.json): account-scoped
   demo transport profile used by the target runtime.
 
@@ -64,12 +69,18 @@ from provider configuration. `credentials init` creates the ignored private
   up to 1,800 seconds before the verified session open and stops after holding
   closure.
 - [Yahoo Finance Euronext market data](./yfinance.euronext.example.json):
-  read-only `yfinance-rs` quote configuration with explicit EUR instrument
-  mappings. The adapter is separate from the offline financial-history import
-  source and never grants entry authority.
-- [research.eur.json](./research.eur.json): target EUR registry with active
-  Alpha Vantage news sentiment and allowlisted Google/publisher RSS. X,
-  browser, and owner-submitted URLs enter the same rights-aware evidence store.
+  illustrative `yfinance-rs` configuration with placeholder broker IDs.
+- [Reviewed Yahoo SHADOW bindings](./yfinance.eur-shadow.reviewed.json): exact
+  two-instrument demo ticker/ISIN mappings verified against catalog, issuer and
+  provider metadata. Reads are enabled; the observed quotes were stale and
+  lacked bid/ask, so no executable-quote capability is accepted.
+- [research.eur.json](./research.eur.json): enabled official ECB RSS with
+  attribution and bounded retention. Airbus RSS is disabled after a recorded
+  parser failure. Official Airbus/ECB X identities have stable API IDs; post
+  collection and content/model processing remain disabled. Alpha Vantage uses
+  the correct credential reference and a reduced budget, but its news source
+  is disabled because the intended historical role is not wired. The shared X
+  billing ledger is preserved. See the dated review for evidence and rights.
 
 - [IEX30 Trading 212 demo account](./trading212.iex30.demo.example.json): the
   provider-shape example. The focused runtime is bound to the discovered demo
