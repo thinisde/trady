@@ -534,6 +534,11 @@ pub fn collect_source(
             limit: config.page_size,
         };
         let requests = match source.kind {
+            SourceKind::XTimeline
+                if !source.rights.store_content && !source.rights.llm_processing =>
+            {
+                1
+            }
             SourceKind::XTimeline | SourceKind::XRecentSearch => 2,
             SourceKind::GoogleNewsRss | SourceKind::PublisherRss => 4,
             _ => 1,

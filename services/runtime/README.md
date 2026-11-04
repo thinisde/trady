@@ -40,8 +40,33 @@ changes a firewall, starts a listener, installs a timer or enables trading.
   output file. Validate the resulting complete files through the CLI.
   For the EUR target shape it instead produces only `eur-shadow.json`, forces
   `enabled=false` and `execution_stage=SHADOW`, and rejects mixed/live authority.
-  EUR service installation remains deferred until real-input orchestration and
-  paper-day parity are implemented. This helper grants no activation authority.
+  This helper grants no activation authority.
+
+The separate `scripts/prepare-eur-shadow.py` helper prepares the durable EUR
+SHADOW deployment. Its default output remains disabled. The reviewed
+`--activate-shadow --install-units` path uses the recorded owner delegation and
+installs `trady-eur-analyst`, `trady-eur-executor` and `trady-eur-gateway` units
+with separate role credentials. It does not enable demo order mutations.
+
+The analyst captures yfinance-rs WebSocket last trades separately from REST
+quote observations. Event timestamps remain provider timestamps, including any
+delay. `QuoteUpdate` has no bid/ask fields and cannot authorize an order. Alpha
+Vantage is a metered historical cross-check, with per-process request pacing;
+its shared PostgreSQL allowance remains authoritative across processes. The
+reviewed X sources collect bounded metadata without post text or model access.
+Provider failures are preserved, including a quota notice received as HTTP 200.
+
+An operator can capture fresh diagnostic inputs without replacing a completed
+daily decision or sending another daily summary:
+
+```sh
+trady eur diagnose-inputs --config /etc/trady/runtime/eur-shadow.json
+```
+
+The [current status](../../docs/eur-first-run-status.md) records outstanding
+quote/protection/replay gates and the earlier database-loss incident. The
+`trady-postgres-backup.timer` keeps private database and role backups; the backup
+script refuses a tmpfs database and supports isolated restore verification.
 
 | Identity | Required secret set | Allowed routes |
 | --- | --- | --- |

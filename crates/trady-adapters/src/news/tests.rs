@@ -387,6 +387,31 @@ fn x_preserves_outgoing_actions_actor_context_and_current_api_fields() {
 }
 
 #[test]
+fn metadata_only_x_uses_verified_actor_without_purchasing_user_or_context_expansions() {
+    let mut source = source(SourceKind::XTimeline);
+    source.rights.store_content = false;
+    let mut c = client(vec![response(
+        json!({"data":[post("501",json!([]))],"meta":{"result_count":1}}),
+    )]);
+    let page = c.fetch(&source, &window(), now()).unwrap();
+    assert_eq!(c.transport.requests.len(), 1);
+    assert!(
+        c.transport.requests[0]
+            .url
+            .path()
+            .ends_with("/users/42/tweets")
+    );
+    assert!(
+        !c.transport.requests[0]
+            .url
+            .query_pairs()
+            .any(|(key, _)| key == "expansions")
+    );
+    assert_eq!(page.items[0].text, None);
+    assert_eq!(page.items[0].content_status, ContentStatus::MetadataOnly);
+}
+
+#[test]
 fn x_identity_mismatch_and_incoming_reactions_fail_closed() {
     let mut c = client(vec![user("43")]);
     assert_eq!(

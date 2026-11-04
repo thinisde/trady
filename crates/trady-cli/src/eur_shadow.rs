@@ -103,8 +103,23 @@ fn load(path: &str) -> Result<Loaded> {
     let crosswalk: ShadowCrosswalk = serde_json::from_value(crosswalk_value.clone())
         .map_err(|_| Error("invalid shadow crosswalk".into()))?;
     crosswalk.validate(Utc::now())?;
-    let config_hash = hash(&config)?;
     let crosswalk_hash = hash(&crosswalk_value)?;
+    // Configuration authority includes referenced file contents, so changing a
+    // provider binding or source registry cannot reuse an old daily decision.
+    let mut provider_hashes = std::collections::BTreeMap::new();
+    for (name, reference) in [
+        ("yfinance", config.yfinance_config.as_deref()),
+        ("research", config.research_config.as_deref()),
+        ("broker", config.trading212_config.as_deref()),
+        ("opencode", config.opencode_config.as_deref()),
+    ] {
+        let reference =
+            reference.ok_or_else(|| Error("required EUR provider configuration missing".into()))?;
+        let document: Value = read_json(&resolve(&config_path, reference))?;
+        provider_hashes.insert(name, hash(&document)?);
+    }
+    let config_hash = hash(&json!({"runtime":config,"crosswalk_hash":crosswalk_hash,
+        "provider_configuration_hashes":provider_hashes}))?;
     let cycle_id = format!(
         "eur_{}_{}_{}",
         settings.deployment_id,
@@ -160,6 +175,26 @@ where
     }
     let requested_at = Utc::now();
     let (response, status, error_code) = match fetch() {
+        Ok(response)
+            if response.get("provider_status").and_then(Value::as_str) == Some("UNAVAILABLE") =>
+        {
+            let code = response
+                .get("error_code")
+                .and_then(Value::as_str)
+                .unwrap_or("PROVIDER_UNAVAILABLE")
+                .to_owned();
+            (response, ObservationStatus::Unavailable, Some(code))
+        }
+        Ok(response)
+            if response.get("provider_status").and_then(Value::as_str) == Some("STALE") =>
+        {
+            let code = response
+                .get("error_code")
+                .and_then(Value::as_str)
+                .unwrap_or("PROVIDER_STALE")
+                .to_owned();
+            (response, ObservationStatus::Stale, Some(code))
+        }
         Ok(response) if response.get("fresh").and_then(Value::as_bool) == Some(false) => (
             response,
             ObservationStatus::Stale,
@@ -299,11 +334,20 @@ fn provider_path(loaded: &Loaded, value: Option<&str>, name: &str) -> Result<Pat
 pub fn command(action: &str, args: &[String]) -> Result<Value> {
     require(
         (args.len() == 2 || (args.len() == 3 && args[2] == "--once")) && args[0] == "--config",
-        "usage: trady eur capture|gateway|report --config FILE [--once]",
+        "usage: trady eur capture|diagnose-inputs|gateway|report --config FILE [--once]",
     )?;
     let once = args.len() == 3;
     match action {
         "capture" => repeat(&args[1], once, capture),
+        "diagnose-inputs" => {
+            let mut loaded = load(&args[1])?;
+            // Operator diagnostics capture new evidence without replacing an
+            // immutable daily decision or enqueueing another daily summary.
+            loaded.cycle_id = new_id("eur_input_probe");
+            let mut result = capture(&loaded)?;
+            result["diagnostic_only"] = json!(true);
+            Ok(result)
+        }
         "gateway" => repeat(&args[1], once, gateway),
         "report" => report(&load(&args[1])?),
         _ => Err(Error("unknown EUR shadow command".into())),
@@ -357,6 +401,19 @@ fn capture(loaded: &Loaded) -> Result<Value> {
     }
     let data = YfinanceMarketData::new(data_config)?;
     let mut observations = Vec::new();
+    let stream = observe(
+        &mut repository,
+        loaded,
+        "yf_stream",
+        "yfinance_rs",
+        "wss://streamer.finance.yahoo.com/",
+        "PRIVATE_SHADOW_LAST_TRADE_RESEARCH_ONLY",
+        || data.capture_stream(10),
+    )?;
+    observations.push(stream.observation_id);
+    let mut budget = trady_storage::research::PgResearchRepository::connect(&super::secret(
+        "TRADY_ANALYST_DSN",
+    )?)?;
     for identity in &loaded.crosswalk.members {
         let id = identity.internal_instrument_id.as_str();
         for kind in ["bars", "news"] {
@@ -390,6 +447,52 @@ fn capture(loaded: &Loaded) -> Result<Value> {
             )?;
             observations.push(observation.observation_id);
         }
+        let slot = format!("alpha_history_{id}");
+        let source = trady_application::research::SourceConfig {
+            id: slot.clone(),
+            kind: trady_domain::research::SourceKind::AlphaVantage,
+            enabled: true,
+            url: "https://www.alphavantage.co/query".into(),
+            allowed_hosts: vec!["www.alphavantage.co".into()],
+            credential_env: Some("TRADY_ALPHA_VANTAGE_API_KEY".into()),
+            interval_seconds: 86400,
+            daily_request_limit: 20,
+            query: None,
+            x_account: None,
+            x_rule: None,
+            rights: trady_domain::research::SourceRights {
+                store_content: false,
+                llm_processing: false,
+                retention_hours: 24,
+                terms_reference: "ALPHA_PRIVATE_HISTORICAL_CROSSCHECK_SHARED_BUDGET".into(),
+            },
+        };
+        let observation = observe(
+            &mut repository,
+            loaded,
+            &slot,
+            "alpha_vantage",
+            &source.url,
+            &source.rights.terms_reference,
+            || {
+                use trady_application::research::ResearchRepository;
+                let state =
+                    trady_application::research::prepare_state(&source, budget.state(&source.id)?)?;
+                let (_, allowed) = trady_application::research::reserve_source_requests(
+                    &source,
+                    &mut budget,
+                    state,
+                    Utc::now(),
+                    1,
+                )?;
+                require(allowed, "shared Alpha Vantage request budget exhausted")?;
+                trady_adapters::alpha_vantage::daily_history(
+                    &identity.alpha_vantage_symbol,
+                    &super::secret("TRADY_ALPHA_VANTAGE_API_KEY")?,
+                )
+            },
+        )?;
+        observations.push(observation.observation_id);
     }
     let research_path =
         provider_path(loaded, loaded.config.research_config.as_deref(), "research")?;
@@ -426,16 +529,20 @@ fn capture(loaded: &Loaded) -> Result<Value> {
                     matches!(status, Some("COMPLETE" | "PARTIAL" | "DEFERRED")),
                     "research collection unavailable",
                 )?;
-                let evidence = super::news::run(&[
-                    "read".into(),
-                    "--source".into(),
-                    source.id.clone(),
-                    "--config".into(),
-                    path,
-                    "--limit".into(),
-                    "20".into(),
-                    "--for-model".into(),
-                ])?;
+                let evidence = if source.rights.llm_processing {
+                    super::news::run(&[
+                        "read".into(),
+                        "--source".into(),
+                        source.id.clone(),
+                        "--config".into(),
+                        path,
+                        "--limit".into(),
+                        "20".into(),
+                        "--for-model".into(),
+                    ])?
+                } else {
+                    json!({"items":[],"processing_blocked":"SOURCE_LLM_RIGHTS_NOT_APPROVED"})
+                };
                 Ok(json!({"collection":collection,"model_permitted_evidence":evidence}))
             },
         )?;
@@ -646,6 +753,7 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
     }
     let completed_at = Utc::now();
     let result = json!({"schema_version":1,"cycle_id":loaded.cycle_id,"account_id":loaded.config.account_id,
+        "code_hash":code_fingerprint(),
         "broker_account_id":52211463,"runtime_mode":"SHADOW","configuration_hash":loaded.config_hash,
         "crosswalk_hash":loaded.crosswalk_hash,"policy_hash":hash(&loaded.config.policy)?,
         "started_at":started.requested_at,"completed_at":completed_at,"candidates":candidates,
@@ -663,6 +771,17 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
         json!({"status":"EUR_SHADOW_COMPLETED_WITH_BLOCKED_SELECTION","cycle_id":loaded.cycle_id,
         "new_selection":true,"broker_mutations":0,"entry_authorized":false,"result":result}),
     )
+}
+
+fn code_fingerprint() -> String {
+    content_hash(concat!(
+        include_str!("eur_shadow.rs"),
+        include_str!("../../trady-application/src/eur_shadow.rs"),
+        include_str!("../../trady-adapters/src/yfinance.rs"),
+        include_str!("../../trady-adapters/src/alpha_vantage.rs"),
+        include_str!("../../trady-adapters/src/trading212/mod.rs"),
+        include_str!("../../trady-storage/src/target.rs")
+    ))
 }
 
 fn finalize_result(loaded: &Loaded, repository: &mut PgTargetStore, result: &Value) -> Result<()> {

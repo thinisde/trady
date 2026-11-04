@@ -167,7 +167,19 @@ pub(super) fn timeline<T: HttpTransport>(
         .x_account
         .as_ref()
         .ok_or_else(|| SourceFailure::unavailable("x_account_missing"))?;
-    let user = resolve(client, source, &account.handle, now)?;
+    let metadata_only = !source.rights.store_content && !source.rights.llm_processing;
+    let user = if metadata_only && source.activation_gap(now).is_none() {
+        XUser {
+            id: account
+                .user_id
+                .clone()
+                .ok_or_else(|| SourceFailure::unavailable("x_identity_unverified"))?,
+            username: account.handle.clone(),
+            name: account.person.clone(),
+        }
+    } else {
+        resolve(client, source, &account.handle, now)?
+    };
     if account.user_id.as_ref() != Some(&user.id) {
         return Err(SourceFailure::unavailable("x_stable_identity_mismatch"));
     }
@@ -188,7 +200,13 @@ pub(super) fn timeline<T: HttpTransport>(
                 .end_at
                 .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         );
-    post_fields(&mut url);
+    if metadata_only {
+        // The reviewed stable actor ID and author_id field suffice for identity.
+        // Do not purchase quoted/edit/user expansions whose content cannot be retained.
+        url.query_pairs_mut().append_pair("tweet.fields", FIELDS);
+    } else {
+        post_fields(&mut url);
+    }
     if let Some(cursor) = &window.next_token {
         url.query_pairs_mut()
             .append_pair("pagination_token", cursor);

@@ -47,7 +47,9 @@ pub fn run(args: &[String]) -> Result<Value> {
         "gate-explain" => gate_command(&[vec!["explain".into()], args[1..].to_vec()].concat()),
         "universe-check" => universe_command(&[vec!["check".into()], args[1..].to_vec()].concat()),
         "select" => select(&args[1..]),
-        "capture" | "gateway" | "report" => super::eur_shadow::command(command, &args[1..]),
+        "capture" | "diagnose-inputs" | "gateway" | "report" => {
+            super::eur_shadow::command(command, &args[1..])
+        }
         _ => Err(Error(HELP.into())),
     }
 }

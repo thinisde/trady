@@ -16,7 +16,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_FILES = [
-    "config/yfinance.eur-shadow.reviewed.json", "config/research.eur.json",
+    "config/yfinance.eur-shadow.reviewed.json", "config/research.eur-shadow.metadata.json",
     "config/trading212.eur-demo.example.json", "config/opencode/llm.json",
     "docs/evidence/eur-shadow-review-2026-11-04/crosswalk.json",
     "docs/evidence/eur-shadow-review-2026-11-04/review.json",

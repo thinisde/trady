@@ -40,7 +40,7 @@
     {"exchange_mic": "XAMS", "timezone": "Europe/Amsterdam", "flatten_minutes_before_close": 15}
   ],
   "yfinance_config": "config/yfinance.eur-shadow.reviewed.json",
-  "research_config": "config/research.eur.json",
+  "research_config": "config/research.eur-shadow.metadata.json",
   "trading212_config": "config/trading212.eur-demo.example.json",
   "opencode_config": "config/opencode/llm.json",
   "shadow": {

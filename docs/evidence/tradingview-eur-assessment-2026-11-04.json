@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "assessment_id": "tradingview_eur_20261104",
+  "review_status": "SELF_REVIEW_NOT_INDEPENDENT_RELEASE_APPROVAL",
+  "repository": "https://github.com/drager/tradingview",
+  "source_commit": "1f7ca4b63d85df1ccb23b500a8e0419939e5edd0",
+  "crate_version": "0.3.0",
+  "build_feature": "native-tls",
+  "local_diagnostic_patch": "Expose the websocket module; leave transport and parsing unchanged",
+  "authentication": "PUBLIC_UNAUTHENTICATED_MODE",
+  "started_at": "2026-11-04T15:18:20.316614862Z",
+  "received_at": "2026-11-04T15:18:36.597297651Z",
+  "packet_counts": {"qsd": 36, "quote_completed": 2},
+  "instruments": [
+    {
+      "symbol": "EURONEXT:AIR", "original_symbol": "EURONEXT_DLY:AIR",
+      "name": "Airbus SE", "currency": "EUR", "exchange": "Euronext Paris",
+      "isin": "NL0000235190", "broker_ticker": "AIRp_EQ",
+      "timezone": "Europe/Paris", "update_mode": "delayed_streaming_900",
+      "last": "199.88", "last_trade_timestamp_seconds": 1793804615,
+      "bid_field_present": false, "ask_field_present": false, "usable_two_sided_book": false
+    },
+    {
+      "symbol": "EURONEXT:ASML", "original_symbol": "EURONEXT_DLY:ASML",
+      "name": "ASML Holding NV", "currency": "EUR", "exchange": "Euronext Amsterdam",
+      "isin": "NL0010273215", "broker_ticker": "ASMLa_EQ",
+      "timezone": "Europe/Amsterdam", "update_mode": "delayed_streaming_900",
+      "last": "1348.0", "last_trade_timestamp_seconds": 1793804615,
+      "bid": null, "ask": null, "bid_size": null, "ask_size": null,
+      "bid_field_present": true, "ask_field_present": true, "usable_two_sided_book": false
+    }
+  ],
+  "library_projection_limits": {
+    "high_level_last_price_exposes_bid_ask": false,
+    "missing_lp_time_falls_back_to_local_current_time": true,
+    "diagnostic_used_raw_packets_instead_of_fallback_time": true
+  },
+  "references": {
+    "coverage": "https://www.tradingview.com/data-coverage/",
+    "data_usage_terms": "https://www.tradingview.com/policies/",
+    "automatic_collection_policy": "https://www.tradingview.com/support/solutions/43000674726-why-is-my-account-banned-due-to-suspicious-activity/"
+  },
+  "rights_assessment": {
+    "runtime_automation_rights": "NOT_APPROVED",
+    "standard_terms_restrict_non_display_automated_trading": true,
+    "chart_subscription_is_not_automation_permission": true,
+    "source_code_license_does_not_grant_market_data_rights": true
+  },
+  "artifacts": [
+    {"path": "var/eur-first-run-checks/tradingview-eur-sdk-wire.json", "sha256": "a77c99c2641f808b3581ce675c793bb173985307c302b08cd524322a259194a0"},
+    {"path": "var/eur-first-run-checks/tradingview-eur-sdk-summary.json", "sha256": "010a00d822aad45b25f9ba81385fa87f455e1b182d1dd800b8296d4d4325e135"}
+  ],
+  "technical_result": "EUR_IDENTITIES_AND_DELAYED_STREAM_CONFIRMED",
+  "executable_quote_capability": "UNSUPPORTED_BY_OBSERVED_ANONYMOUS_FEED",
+  "runtime_provider_added": false,
+  "broker_mutations": 0,
+  "entry_authorized": false,
+  "live_enabled": false
+}

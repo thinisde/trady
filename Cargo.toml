@@ -26,7 +26,7 @@ socket2 = "=0.6.5"
 nix = { version = "=0.31.3", features = ["socket", "user"] }
 quick-xml = "=0.38.4"
 tungstenite = { version = "=0.30.0", default-features = false, features = ["handshake", "native-tls"] }
-yfinance-rs = "=0.9.1"
+yfinance-rs = { version = "=0.9.1", features = ["stream"] }
 tokio = { version = "=1.48.0", features = ["rt", "time", "sync"] }
 trady-domain = { path = "crates/trady-domain" }
 trady-policy = { path = "crates/trady-policy" }

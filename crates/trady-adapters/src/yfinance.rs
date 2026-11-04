@@ -17,7 +17,7 @@ use trady_domain::{
     BarSnapshot, CompletedBar, Currency, Error, EvidenceItem, EvidenceLineage, EvidenceSourceKind,
     InstrumentId, MarketState, Quote, QuoteQuality, Result, RightsStatus, VenueQuote, require,
 };
-use yfinance_rs::{Interval, Range, Ticker, YfClient};
+use yfinance_rs::{Interval, Range, StreamBuilder, StreamMethod, Ticker, YfClient};
 
 const MAX_SYMBOLS: usize = 512;
 const MAX_YAHOO_SYMBOL_BYTES: usize = 64;
@@ -147,6 +147,8 @@ struct ProviderQuote {
     price: Option<rust_decimal::Decimal>,
     bid: Option<rust_decimal::Decimal>,
     ask: Option<rust_decimal::Decimal>,
+    bid_size: Option<rust_decimal::Decimal>,
+    ask_size: Option<rust_decimal::Decimal>,
     observed_at: Option<DateTime<Utc>>,
     market_state: Option<String>,
 }
@@ -548,8 +550,8 @@ impl YfinanceMarketData {
             bid: snapshot.bid,
             ask: snapshot.ask,
             last: snapshot.last,
-            bid_size: None,
-            ask_size: None,
+            bid_size: snapshot.bid_size,
+            ask_size: snapshot.ask_size,
             volume: None,
             observed_at: snapshot.observed_at,
             received_at: snapshot.received_at,
@@ -692,6 +694,82 @@ impl YfinanceMarketData {
         Ok(result)
     }
 
+    /// Bounded SDK WebSocket capture for SHADOW research. QuoteUpdate contains
+    /// last trades, without a two-sided book or a market-state assertion. This
+    /// response is deliberately separate from latest_venue_quote.
+    pub fn capture_stream(&self, seconds: u64) -> Result<serde_json::Value> {
+        require(
+            (1..=30).contains(&seconds),
+            "Yahoo stream capture duration is unbounded",
+        )?;
+        require(
+            self.config.enabled
+                && !self.config.bindings.is_empty()
+                && self.config.bindings.len() <= 8,
+            "Yahoo stream requires a small reviewed crosswalk",
+        )?;
+        let client = self.client.clone();
+        let config = self.config.clone();
+        let crosswalk_hash = self.crosswalk_hash()?;
+        let worker = thread::Builder::new().name("trady-yfinance-stream".into()).spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()
+                .map_err(|_| Error("cannot start Yahoo stream runtime".into()))?;
+            runtime.block_on(async move {
+                let symbols: Vec<_> = config.bindings.keys().map(|id| config.symbols[id].clone()).collect();
+                let (handle, mut receiver) = StreamBuilder::new(&client).symbols(symbols.clone())
+                    .method(StreamMethod::Websocket)
+                    .websocket_connect_timeout(Duration::from_secs(config.timeout_seconds.min(10)))
+                    .start().await.map_err(|_| Error("Yahoo SDK WebSocket unavailable".into()))?;
+                let deadline = tokio::time::Instant::now() + Duration::from_secs(seconds);
+                let mut samples = Vec::new();
+                let mut latest = BTreeMap::new();
+                let mut disconnected = false;
+                let mut invalid = false;
+                while samples.len() < 512 {
+                    match tokio::time::timeout_at(deadline, receiver.recv()).await {
+                        Ok(Some(update)) => {
+                            let received_at = Utc::now();
+                            let identity = config.symbols.iter().find(|(id, symbol)|
+                                config.bindings.contains_key(*id) && symbol.as_str() == update.instrument.symbol.as_str());
+                            let Some((id, symbol)) = identity else { invalid = true; break; };
+                            if update.currency.code() != config.base_currency.as_str()
+                                || update.price.as_ref().is_none_or(|price| *price.as_decimal() <= rust_decimal::Decimal::ZERO)
+                                || update.ts > received_at + ChronoDuration::seconds(5) {
+                                invalid = true; break;
+                            }
+                            latest.insert(symbol.clone(), update.ts);
+                            samples.push(serde_json::json!({"instrument_id":id,"provider_symbol":symbol,
+                                "broker_binding":config.bindings[id],"crosswalk_hash":crosswalk_hash,
+                                "observed_at":update.ts,"received_at":received_at,
+                                "age_seconds":(received_at-update.ts).num_seconds(),"sdk_projection":update}));
+                        }
+                        Ok(None) => { disconnected = true; break; }
+                        Err(_) => break,
+                    }
+                }
+                handle.abort();
+                let now = Utc::now();
+                let stale = latest.values().any(|at| (now-*at).num_seconds()
+                    > i64::try_from(config.quote_max_age_seconds).unwrap_or(60));
+                let missing: Vec<_> = symbols.iter().filter(|symbol| !latest.contains_key(*symbol)).collect();
+                let (status, error) = if invalid { ("UNAVAILABLE", Some("INVALID_STREAM_IDENTITY_OR_TIME")) }
+                    else if disconnected { ("UNAVAILABLE", Some("STREAM_DISCONNECTED")) }
+                    else if !missing.is_empty() { ("UNAVAILABLE", Some("STREAM_SYMBOLS_UNAVAILABLE")) }
+                    else if stale { ("STALE", Some("STREAM_TRADE_TIMESTAMP_STALE")) }
+                    else { ("OK", None) };
+                Ok(serde_json::json!({"provider_status":status,"error_code":error,
+                    "role":"LAST_TRADE_RESEARCH_ONLY","transport":"WEBSOCKET_ONLY",
+                    "capture_level":"YFINANCE_RS_QUOTE_UPDATE_PROJECTION",
+                    "requested_duration_seconds":seconds,"truncated":samples.len() == 512,
+                    "requested_symbols":symbols,"missing_symbols":missing,"samples":samples,
+                    "received_at":now,"book_fields_exposed":false,"entry_authorized":false}))
+            })
+        }).map_err(|_| Error("cannot start Yahoo stream worker".into()))?;
+        worker
+            .join()
+            .map_err(|_| Error("Yahoo stream worker stopped unexpectedly".into()))?
+    }
+
     fn fetch_quote(&self, symbol: String) -> Result<ProviderQuote> {
         let client = self.client.clone();
         let thread = thread::Builder::new()
@@ -712,6 +790,16 @@ impl YfinanceMarketData {
                     price: quote.price.as_ref().map(|price| *price.as_decimal()),
                     bid: quote.bid.as_ref().map(|level| *level.price.as_decimal()),
                     ask: quote.ask.as_ref().map(|level| *level.price.as_decimal()),
+                    bid_size: quote
+                        .bid
+                        .as_ref()
+                        .and_then(|level| level.size.as_ref())
+                        .map(|size| *size.as_decimal()),
+                    ask_size: quote
+                        .ask
+                        .as_ref()
+                        .and_then(|level| level.size.as_ref())
+                        .map(|size| *size.as_decimal()),
                     observed_at: quote.as_of,
                     market_state: quote
                         .market_state
@@ -825,8 +913,8 @@ fn normalize_snapshot(
         observed_at,
         received_at,
         market_state: provider.market_state,
-        bid_size: None,
-        ask_size: None,
+        bid_size: provider.bid_size,
+        ask_size: provider.ask_size,
         source: "yfinance_rs".into(),
         quote_quality,
         crosswalk_hash: None,
@@ -930,6 +1018,8 @@ mod tests {
                     price: Some(Decimal::TEN),
                     bid: Some(Decimal::TEN),
                     ask: Some(Decimal::new(1001, 2)),
+                    bid_size: None,
+                    ask_size: None,
                     observed_at: Some(now),
                     market_state: state.map(String::from),
                 },
@@ -962,17 +1052,31 @@ mod tests {
             .expect("time")
             .to_utc();
         let instrument = InstrumentId::new("AIR_PA_EQ").expect("instrument");
+        let provider = ProviderQuote {
+            currency: "EUR".into(),
+            price: Some(Decimal::new(18423, 2)),
+            bid: Some(Decimal::new(18420, 2)),
+            ask: Some(Decimal::new(18425, 2)),
+            bid_size: Some(Decimal::new(500, 0)),
+            ask_size: Some(Decimal::new(300, 0)),
+            observed_at: Some(now - ChronoDuration::seconds(2)),
+            market_state: Some("REGULAR".into()),
+        };
+        let snapshot = normalize_snapshot(
+            &instrument,
+            "AIR.PA",
+            &Currency::new("EUR").expect("currency"),
+            provider.clone(),
+            now,
+            10,
+        )
+        .expect("snapshot");
+        assert_eq!(snapshot.bid_size, Some(Decimal::new(500, 0)));
+        assert_eq!(snapshot.ask_size, Some(Decimal::new(300, 0)));
         let quote = normalize_quote(
             &instrument,
             &Currency::new("EUR").expect("currency"),
-            ProviderQuote {
-                currency: "EUR".into(),
-                price: Some(Decimal::new(18423, 2)),
-                bid: Some(Decimal::new(18420, 2)),
-                ask: Some(Decimal::new(18425, 2)),
-                observed_at: Some(now - ChronoDuration::seconds(2)),
-                market_state: Some("REGULAR".into()),
-            },
+            provider,
             now,
             10,
         )
@@ -996,6 +1100,8 @@ mod tests {
                 price: Some(Decimal::ONE),
                 bid: Some(Decimal::ONE),
                 ask: Some(Decimal::new(101, 2)),
+                bid_size: None,
+                ask_size: None,
                 observed_at: Some(now - ChronoDuration::seconds(11)),
                 market_state: Some("REGULAR".into()),
             },
@@ -1013,6 +1119,8 @@ mod tests {
                 price: Some(Decimal::ONE),
                 bid: Some(Decimal::ONE),
                 ask: Some(Decimal::new(101, 2)),
+                bid_size: None,
+                ask_size: None,
                 observed_at: Some(now),
                 market_state: Some("CLOSED".into()),
             },
@@ -1038,6 +1146,8 @@ mod tests {
                 price: Some(Decimal::new(19332, 2)),
                 bid: None,
                 ask: None,
+                bid_size: None,
+                ask_size: None,
                 observed_at: Some(now - ChronoDuration::seconds(2)),
                 market_state: Some("CLOSED".into()),
             },
