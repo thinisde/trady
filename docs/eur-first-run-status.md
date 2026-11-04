@@ -17,6 +17,12 @@ records the actual code commit, file/policy/source hashes, demo account
 `52211463`, EUR currency, model/prompt-source hashes, and missing reviews.
 It is an unreviewed baseline, not release evidence or owner approval.
 
+The owner subsequently [accepted the reviewed files and configuration](./evidence/eur-shadow-config-approval-2026-11-04.json)
+at commit `6fbb864` for continued SHADOW implementation. This separate record
+pins the sealed review manifest without changing its historical self-review
+status. It does not grant a demo release approval, extend evidence validity,
+or establish a provider entitlement.
+
 The [EUR example](../config/eur-demo.example.json) is disabled SHADOW with
 `live_enabled=false`, one entry slot, one open position, and rotation disabled.
 The target validator accepts only REPLAY, SHADOW, DEMO and LIVE vocabulary;

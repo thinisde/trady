@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "record_type": "OWNER_FILE_AND_CONFIGURATION_ACCEPTANCE",
+  "recorded_at": "2026-11-04T13:17:57Z",
+  "owner_reference": "Repository owner speaking in the current user conversation",
+  "approval_source": "Explicit user message",
+  "approval_statement": "Ok, the files and configuration seems fine, I approve them;",
+  "approved_commit": "6fbb864887c45300197ba65a8f7e1ec0940951ca",
+  "approved_review_reference": "eur-shadow-identity-source-review-2026-11-04",
+  "approved_review_manifest": "docs/evidence/eur-shadow-review-2026-11-04/hashes.json",
+  "approved_review_manifest_sha256": "30ab91c219ef9ff6447709b98cc497eaa2fb3be821d0705ad59658d03671d346",
+  "scope": "Acceptance of the checked-in review files and configuration for continued EUR SHADOW implementation.",
+  "intended_runtime_mode": "SHADOW",
+  "broker_mutations_authorized": false,
+  "demo_release_approval": false,
+  "independent_capability_review": false,
+  "source_license_or_entitlement_granted": false,
+  "evidence_validity_extended": false,
+  "activation_status": "NOT_ACTIVATED_IMPLEMENTATION_AND_EVIDENCE_PENDING",
+  "live_enabled": false
+}
