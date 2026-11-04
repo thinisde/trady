@@ -117,13 +117,16 @@ fn run() -> Result<()> {
         "analyst" | "executor" | "gateway" => service(command, &args[1..]),
         "migrate" if args.len() == 1 => {
             trady_storage::migrate(&secret("TRADY_MIGRATOR_DSN")?)?;
-            output(json!({"migration":15,"status":"applied_or_verified"}))
+            output(json!({"migration":16,"status":"applied_or_verified"}))
         }
         "demo" if args.len() == 1 => demo_memory(),
         "demo-entry" => output(entry_demo::run(&args[1..])?),
         "watchdog" => output(watchdog::run(&args[1..])?),
         "yfinance" => output(yfinance::run(&args[1..])?),
         "eur" => output(eur::run(&args[1..])?),
+        "universe" => output(eur::universe_command(&args[1..])?),
+        "gate" => output(eur::gate_command(&args[1..])?),
+        "replay" => output(eur::replay_command(&args[1..])?),
         "demo-postgres" if args.len() == 1 => demo_postgres(),
         "validate-json" if args.len() == 3 => {
             let contract = match args[1].as_str() {

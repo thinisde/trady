@@ -2,10 +2,11 @@
 
 ## Overview
 
-The target deployment uses `eur-demo.example.json`, the reviewed EUR
-crosswalk in `yfinance.euronext.example.json`, `research.eur.json`, and the
-Trading 212 demo profile. The IEX30/Alpaca files remain migration fixtures for
-replay and parity tests; they are not loaded by the EUR runtime.
+The disabled target template is `eur-demo.example.json`. The illustrative
+crosswalk in `yfinance.euronext.example.json`, source registry in
+`research.eur.json`, and Trading 212 demo profile require review before
+they can form an operational deployment. The
+IEX30/Alpaca paths remain until EUR replay and database parity evidence pass.
 
 Secret values use the [central credentials store](../docs/credentials.md), separate
 from provider configuration. `credentials init` creates the ignored private
@@ -13,12 +14,12 @@ from provider configuration. `credentials init` creates the ignored private
 
 ## Interface
 
-- [EUR Trading 212 demo](./eur-demo.example.json): target runtime template
-  with one open position, 15-minute pre-close flattening, bounded rotation,
-  and the DeepSeek OpenCode Go analyst.
-- [Reviewed EUR universe](./eur_equity_universe.example.json): exact ISIN/MIC,
-  Yahoo symbol, and Trading 212 demo crosswalk with liquidity and volatility
-  thresholds.
+- [EUR Trading 212 demo](./eur-demo.example.json): disabled SHADOW template
+  with one entry slot, one open position, 15-minute pre-close flattening, and
+  rotation disabled. LIVE is structurally blocked.
+- [Illustrative EUR universe](./eur_equity_universe.example.json): example
+  ISIN/MIC and Yahoo mappings with placeholder broker IDs. Replace these through
+  independent catalog review before the real-input milestone.
 - [Trading 212 EUR demo](./trading212.eur-demo.example.json): account-scoped
   demo transport profile used by the target runtime.
 
@@ -80,7 +81,8 @@ for shared offline tests; they are outside the focused runtime.
 
 ## Invariants
 
-The focused runtime is currently enabled only in record-only `SHADOW` mode. The
+The EUR template is disabled. The legacy IEX30 profile remains a separate
+record-only configuration. The
 checked-in native Perpetual artifact is approved only for bounded
 advisory/shadow use; the formula authority remains entry-paused and its
 prospective-shadow and paper gates remain open. Broker protection and quote

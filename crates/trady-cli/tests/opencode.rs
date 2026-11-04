@@ -38,10 +38,25 @@ fn cli_creates_reopens_inspects_and_closes_a_persistent_opencode_conversation() 
     let address = listener.local_addr().unwrap();
     let (tx, rx) = mpsc::channel();
     let worker = thread::spawn(move || {
+        // The provider verifies its exact model against the catalog before
+        // sending each process's first completion request.
         for final_value in [
             final_reply("NEEDS_INPUT", "Which issuer?"),
             final_reply("ANSWER", "The follow-up retained the first question."),
         ] {
+            let (mut catalog, _) = listener.accept().unwrap();
+            catalog
+                .set_read_timeout(Some(Duration::from_secs(10)))
+                .unwrap();
+            let mut header = Vec::new();
+            while !header.windows(4).any(|window| window == b"\r\n\r\n") {
+                let mut byte = [0_u8; 1];
+                catalog.read_exact(&mut byte).unwrap();
+                header.push(byte[0]);
+            }
+            assert!(String::from_utf8_lossy(&header).starts_with("GET /v1/models "));
+            let body = json!({"data":[{"id":"glm-5.2"}]}).to_string();
+            write!(catalog,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
             let (mut socket, _) = listener.accept().unwrap();
             socket
                 .set_read_timeout(Some(Duration::from_secs(10)))

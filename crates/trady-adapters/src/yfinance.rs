@@ -21,7 +21,7 @@ use yfinance_rs::{Interval, Range, Ticker, YfClient};
 
 const MAX_SYMBOLS: usize = 512;
 const MAX_YAHOO_SYMBOL_BYTES: usize = 64;
-const EURONEXT_SUFFIXES: [&str; 7] = [".AS", ".BR", ".IR", ".LS", ".MI", ".OL", ".PA"];
+const EURONEXT_SUFFIXES: [&str; 8] = [".AS", ".BR", ".DE", ".IR", ".LS", ".MI", ".OL", ".PA"];
 
 fn default_timeout_seconds() -> u64 {
     15
@@ -74,11 +74,13 @@ impl YfinanceDataConfig {
             "invalid yfinance timeout",
         )?;
         require(
-            (1..=300).contains(&self.quote_max_age_seconds),
+            (1..=60).contains(&self.quote_max_age_seconds),
             "invalid yfinance quote age",
         )?;
         require(
-            self.symbols.len() <= MAX_SYMBOLS && (!self.enabled || !self.symbols.is_empty()),
+            self.symbols.len() <= MAX_SYMBOLS
+                && (!self.enabled || !self.symbols.is_empty())
+                && (!self.enabled || self.bindings.len() == self.symbols.len()),
             "invalid yfinance symbol mapping size",
         )?;
         let mut yahoo_symbols = BTreeSet::new();
@@ -116,6 +118,15 @@ impl YfinanceDataConfig {
                     && broker_ids.insert(&binding.broker_instrument_id)
                     && isins.insert(&binding.isin),
                 "invalid yfinance instrument crosswalk",
+            )?;
+            require(
+                yahoo_symbol_matches_mic(
+                    self.symbols
+                        .get(instrument)
+                        .ok_or_else(|| Error("yfinance symbol binding disappeared".into()))?,
+                    &binding.exchange_mic,
+                ),
+                "yfinance symbol suffix does not match the reviewed exchange MIC",
             )?;
         }
         Ok(())
@@ -224,6 +235,12 @@ pub struct YfinanceQuoteSnapshot {
     pub observed_at: DateTime<Utc>,
     pub received_at: DateTime<Utc>,
     pub market_state: Option<String>,
+    pub bid_size: Option<rust_decimal::Decimal>,
+    pub ask_size: Option<rust_decimal::Decimal>,
+    pub source: String,
+    pub quote_quality: QuoteQuality,
+    /// Hash of the exact instrument-to-broker crosswalk used for this quote.
+    pub crosswalk_hash: Option<String>,
     pub fresh: bool,
     pub tradable: bool,
 }
@@ -433,6 +450,15 @@ impl YfinanceMarketData {
         &self.config
     }
 
+    pub fn crosswalk_hash(&self) -> Result<String> {
+        let canonical = serde_json::to_string(&self.config.bindings)
+            .map_err(|_| Error("yfinance crosswalk encoding failed".into()))?;
+        Ok(Sha256::digest(canonical.as_bytes())
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect())
+    }
+
     pub fn supports(&self, instrument: &InstrumentId) -> bool {
         self.config.enabled && self.config.symbols.contains_key(instrument)
     }
@@ -465,14 +491,16 @@ impl YfinanceMarketData {
     ) -> Result<YfinanceQuoteSnapshot> {
         let symbol = self.symbol_for(instrument)?.to_owned();
         let provider = self.fetch_quote(symbol.clone())?;
-        normalize_snapshot(
+        let mut snapshot = normalize_snapshot(
             instrument,
             &symbol,
             &self.config.base_currency,
             provider,
             Utc::now().max(now),
             self.config.quote_max_age_seconds,
-        )
+        )?;
+        snapshot.crosswalk_hash = Some(self.crosswalk_hash()?);
+        Ok(snapshot)
     }
 
     /// Convert a provider observation into the target quote contract only
@@ -489,28 +517,22 @@ impl YfinanceMarketData {
             .ok_or_else(|| Error("yfinance quote lacks an exact broker crosswalk".into()))?;
         let symbol = self.symbol_for(instrument)?.to_owned();
         let provider = self.fetch_quote(symbol.clone())?;
-        let snapshot = normalize_snapshot(
+        let received_at = Utc::now().max(now);
+        let mut snapshot = normalize_snapshot(
             instrument,
             &symbol,
             &self.config.base_currency,
             provider,
-            now,
+            received_at,
             self.config.quote_max_age_seconds,
         )?;
+        snapshot.crosswalk_hash = Some(self.crosswalk_hash()?);
         let market_state = snapshot
             .market_state
             .as_deref()
             .map(MarketState::parse)
             .unwrap_or(MarketState::Unknown);
-        let quality = if snapshot.tradable {
-            QuoteQuality::Executable
-        } else if snapshot.bid.is_some() && snapshot.ask.is_some() && snapshot.fresh {
-            QuoteQuality::Delayed
-        } else if snapshot.last.is_some() {
-            QuoteQuality::LastTradeOnly
-        } else {
-            QuoteQuality::Missing
-        };
+        let quality = snapshot.quote_quality;
         let quote = VenueQuote {
             quote_id: format!(
                 "yf_{}_{}",
@@ -536,7 +558,7 @@ impl YfinanceMarketData {
             quality,
         };
         quote.validate(
-            now,
+            received_at,
             i64::try_from(self.config.quote_max_age_seconds).unwrap_or(i64::MAX),
         )?;
         Ok(quote)
@@ -775,7 +797,24 @@ fn normalize_snapshot(
     let market_tradable = provider
         .market_state
         .as_deref()
-        .is_none_or(market_state_is_tradable);
+        .is_some_and(market_state_is_tradable);
+    let quote_quality = if !fresh {
+        QuoteQuality::Stale
+    } else if provider
+        .bid
+        .zip(provider.ask)
+        .is_some_and(|(bid, ask)| ask < bid)
+    {
+        QuoteQuality::Crossed
+    } else if fresh && book_valid && market_tradable {
+        QuoteQuality::Executable
+    } else if bid_ask_present(provider.bid, provider.ask) && fresh {
+        QuoteQuality::Delayed
+    } else if provider.price.is_some() {
+        QuoteQuality::LastTradeOnly
+    } else {
+        QuoteQuality::Missing
+    };
     Ok(YfinanceQuoteSnapshot {
         instrument_id: instrument.clone(),
         symbol: symbol.into(),
@@ -786,9 +825,32 @@ fn normalize_snapshot(
         observed_at,
         received_at,
         market_state: provider.market_state,
+        bid_size: None,
+        ask_size: None,
+        source: "yfinance_rs".into(),
+        quote_quality,
+        crosswalk_hash: None,
         fresh,
         tradable: fresh && book_valid && market_tradable,
     })
+}
+
+fn bid_ask_present(bid: Option<rust_decimal::Decimal>, ask: Option<rust_decimal::Decimal>) -> bool {
+    bid.is_some() && ask.is_some()
+}
+
+fn yahoo_symbol_matches_mic(symbol: &str, mic: &str) -> bool {
+    let suffix = match mic {
+        "XAMS" => ".AS",
+        "XBRU" => ".BR",
+        "XETR" => ".DE",
+        "XLIS" => ".LS",
+        "XMIL" => ".MI",
+        "XOSL" => ".OL",
+        "XPAR" => ".PA",
+        _ => return false,
+    };
+    symbol.to_ascii_uppercase().ends_with(suffix)
 }
 
 fn market_state_is_tradable(state: &str) -> bool {
@@ -814,17 +876,22 @@ mod tests {
     use std::collections::BTreeMap;
 
     fn config(enabled: bool) -> YfinanceDataConfig {
+        let instrument = InstrumentId::new("AIR_PA_EQ").expect("instrument");
         YfinanceDataConfig {
             config_version: 1,
             enabled,
             base_currency: Currency::new("EUR").expect("currency"),
             timeout_seconds: 10,
             quote_max_age_seconds: 10,
-            symbols: BTreeMap::from([(
-                InstrumentId::new("AIR_PA_EQ").expect("instrument"),
-                "AIR.PA".into(),
+            symbols: BTreeMap::from([(instrument.clone(), "AIR.PA".into())]),
+            bindings: BTreeMap::from([(
+                instrument,
+                YfinanceInstrumentBinding {
+                    broker_instrument_id: "demo_air_pa".into(),
+                    isin: "FR0000120404".into(),
+                    exchange_mic: "XPAR".into(),
+                },
             )]),
-            bindings: BTreeMap::new(),
         }
     }
 
@@ -841,6 +908,52 @@ mod tests {
             "AAPL".into(),
         );
         assert!(invalid.validate().is_err());
+    }
+
+    #[test]
+    fn unknown_missing_and_nonregular_market_states_cannot_authorize_a_quote() {
+        let now = Utc::now();
+        for state in [
+            None,
+            Some("UNKNOWN"),
+            Some("HALTED"),
+            Some("CLOSED"),
+            Some("PREMARKET"),
+            Some("POSTMARKET"),
+        ] {
+            let snapshot = normalize_snapshot(
+                &InstrumentId::new("AIR_PA_EQ").unwrap(),
+                "AIR.PA",
+                &Currency::new("EUR").unwrap(),
+                ProviderQuote {
+                    currency: "EUR".into(),
+                    price: Some(Decimal::TEN),
+                    bid: Some(Decimal::TEN),
+                    ask: Some(Decimal::new(1001, 2)),
+                    observed_at: Some(now),
+                    market_state: state.map(String::from),
+                },
+                now,
+                10,
+            )
+            .unwrap();
+            assert!(!snapshot.tradable, "{state:?}");
+            assert_ne!(snapshot.quote_quality, QuoteQuality::Executable);
+        }
+        let mut mismatched = config(true);
+        mismatched
+            .bindings
+            .values_mut()
+            .next()
+            .unwrap()
+            .exchange_mic = "XAMS".into();
+        assert!(mismatched.validate().is_err());
+        let mut no_binding = config(true);
+        no_binding.bindings.clear();
+        assert!(no_binding.validate().is_err());
+        let mut too_old = config(true);
+        too_old.quote_max_age_seconds = 61;
+        assert!(too_old.validate().is_err());
     }
 
     #[test]

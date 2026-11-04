@@ -2,7 +2,7 @@
 
 ## Overview
 
-Administrator role provisioning and fifteen transactionally applied Trady migrations.
+Administrator role provisioning and sixteen transactionally applied Trady migrations.
 Use the [disposable test runner](../scripts/test-postgres.py) for local verification.
 
 Subsequent migrations add model-session state, research-source persistence and
@@ -27,6 +27,15 @@ a separate autonomous execution/research ledger.
 - [0015_target_authority.sql](./0015_target_authority.sql): append-only EUR
   universe, quote, evidence, selection, strategy, order, exit, Telegram, daily
   reconciliation, and weekly report records.
+
+- [0016_eur_runtime_boundary.sql](./0016_eur_runtime_boundary.sql): target runtime
+  database-time leases with connection/generation fences; scoped immutable
+  records for catalog, provider, coordinator and recovery data; exact intent
+  readback; and a Telegram outbox keyed by deployment, event, kind and chat.
+  Migration 15's unscoped writer loses all runtime execute grants. The replacement
+  verifies canonical content hashes, owner/account scope, and the executor fence.
+  Acknowledged delivery is never reclaimed; interrupted delivery requires
+  operator review because Telegram has no client idempotency key.
 
 - [0011_fail_closed_storage.sql](./0011_fail_closed_storage.sql): null-rejecting
   weekly/release entry points, renewable runtime readiness checks, bounded and

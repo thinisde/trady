@@ -38,6 +38,10 @@ changes a firewall, starts a listener, installs a timer or enables trading.
   analyst/executor app configs with `enabled=false` and the private socket path.
   The destination directory may already exist; it refuses to overwrite either
   output file. Validate the resulting complete files through the CLI.
+  For the EUR target shape it instead produces only `eur-shadow.json`, forces
+  `enabled=false` and `execution_stage=SHADOW`, and rejects mixed/live authority.
+  EUR service installation remains deferred until real-input orchestration and
+  paper-day parity are implemented. This helper grants no activation authority.
 
 | Identity | Required secret set | Allowed routes |
 | --- | --- | --- |

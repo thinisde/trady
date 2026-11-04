@@ -145,6 +145,15 @@ pub struct InstrumentCatalog {
     /// These rows are excluded from the typed catalog and never become order
     /// candidates.
     pub rejected_count: usize,
+    #[serde(default)]
+    pub rejected_instruments: Vec<CatalogInstrumentRejection>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CatalogInstrumentRejection {
+    pub broker_ticker: String,
+    pub reason: String,
 }
 
 impl InstrumentCatalog {
@@ -216,7 +225,11 @@ pub struct Trading212Reader<C: Clock = SystemClock> {
     http: Http,
     clock: C,
     bound_at: Option<Instant>,
-    metadata: Option<(Instant, BTreeMap<InstrumentId, BrokerInstrument>, usize)>,
+    metadata: Option<(
+        Instant,
+        BTreeMap<InstrumentId, BrokerInstrument>,
+        Vec<CatalogInstrumentRejection>,
+    )>,
 }
 impl Trading212Reader<SystemClock> {
     pub fn new(config: Trading212Config, credentials: Credentials) -> BrokerResult<Self> {
@@ -362,12 +375,15 @@ impl<C: Clock> Trading212Reader<C> {
                 None,
             )?;
             let mut metadata = BTreeMap::new();
-            let mut rejected_count = 0;
+            let mut rejected_instruments = Vec::new();
             for row in rows {
-                let id = match InstrumentId::new(row.ticker) {
+                let id = match InstrumentId::new(row.ticker.clone()) {
                     Ok(id) => id,
                     Err(_) => {
-                        rejected_count += 1;
+                        rejected_instruments.push(CatalogInstrumentRejection {
+                            broker_ticker: row.ticker,
+                            reason: "UNREPRESENTABLE_BROKER_TICKER".into(),
+                        });
                         continue;
                     }
                 };
@@ -381,12 +397,14 @@ impl<C: Clock> Trading212Reader<C> {
                     return Err(invalid());
                 }
             }
-            self.metadata = Some((Instant::now(), metadata, rejected_count));
+            rejected_instruments.sort_by(|a, b| a.broker_ticker.cmp(&b.broker_ticker));
+            self.metadata = Some((Instant::now(), metadata, rejected_instruments));
         }
-        let (_, metadata, rejected_count) = self.metadata.as_ref().ok_or_else(invalid)?;
+        let (_, metadata, rejected_instruments) = self.metadata.as_ref().ok_or_else(invalid)?;
         Ok(InstrumentCatalog {
             instruments: metadata.values().cloned().collect(),
-            rejected_count: *rejected_count,
+            rejected_count: rejected_instruments.len(),
+            rejected_instruments: rejected_instruments.clone(),
         })
     }
 
@@ -658,8 +676,22 @@ impl<C: Clock> Trading212Executor<C> {
             .into_iter()
             .find(|instrument| instrument.instrument_id == broker_instrument_id)
             .ok_or_else(|| BrokerFailure::new(BrokerFailureKind::Unsupported))?;
-        if instrument.currency != binding.currency || instrument.kind != "STOCK" {
+        if instrument.currency != binding.currency
+            || instrument.kind != "STOCK"
+            || instrument.isin != binding.isin
+            || request.quantity < binding.minimum_quantity
+            || request.quantity.checked_rem(binding.quantity_step) != Some(Decimal::ZERO)
+            || (!binding.fractional_orders && request.quantity.fract() != Decimal::ZERO)
+        {
             return Err(BrokerFailure::new(BrokerFailureKind::Unsupported));
+        }
+        let aligned = |price: Decimal| price.checked_rem(binding.price_tick) == Some(Decimal::ZERO);
+        if !match request.kind {
+            OrderKind::Market { .. } => true,
+            OrderKind::Limit { price, .. } | OrderKind::Stop { price, .. } => aligned(price),
+            OrderKind::StopLimit { stop, limit, .. } => aligned(stop) && aligned(limit),
+        } {
+            return Err(BrokerFailure::new(BrokerFailureKind::InvalidRequest));
         }
         let (bucket, endpoint) = match request.kind {
             OrderKind::Market { .. } => (Bucket::Market, "market"),
@@ -667,6 +699,11 @@ impl<C: Clock> Trading212Executor<C> {
             OrderKind::Stop { .. } => (Bucket::Stop, "stop"),
             OrderKind::StopLimit { .. } => (Bucket::StopLimit, "stop_limit"),
         };
+        if self.reader.config.environment != Environment::Demo
+            || expires_at.is_some_and(|expiry| self.reader.clock.now() >= expiry)
+        {
+            return Err(BrokerFailure::new(BrokerFailureKind::InvalidRequest));
+        }
         let order: Order = self.reader.http.json(
             bucket,
             Method::POST,

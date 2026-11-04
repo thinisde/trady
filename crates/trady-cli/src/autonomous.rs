@@ -31,6 +31,7 @@ use trady_adapters::{
 use trady_application::{
     autonomous::*,
     contracts::parse_json_bounded,
+    eur_runtime::EurRuntimeConfig,
     optimization::{
         DonchianIntegrityManifest, DonchianIntegrityReport, DonchianReleaseState,
         verify_donchian_integrity,
@@ -98,11 +99,28 @@ impl RuntimeConfig {
             "invalid autonomous runtime configuration",
         )?;
         self.trading.validate_for_management()?;
+        require(
+            self.trading.mode != Mode::Live
+                && self.broker.environment != trady_adapters::trading212::Environment::Live,
+            "LIVE autonomous execution is blocked during the EUR migration",
+        )?;
         match self.execution_stage {
+            ExecutionStage::Replay => {
+                require(
+                    self.trading.mode != Mode::Live,
+                    "replay deployments cannot use a live broker mode",
+                )?;
+            }
             ExecutionStage::Shadow => {
                 require(
                     self.trading.mode != Mode::Live,
                     "live deployments require execution_stage LIVE",
+                )?;
+            }
+            ExecutionStage::Demo => {
+                require(
+                    self.trading.mode == Mode::Paper,
+                    "demo execution requires paper broker mode",
                 )?;
             }
             ExecutionStage::SupervisedDemo
@@ -484,6 +502,9 @@ pub fn run(args: &[String]) -> Result<Value> {
     )?;
     let action = args[0].as_str();
     let path = &args[2];
+    if is_eur_target_config(path) {
+        return run_eur_target(action, args, path);
+    }
     let config = load(path)?;
     if action == "analyst-service" {
         require(
@@ -723,6 +744,76 @@ pub fn run(args: &[String]) -> Result<Value> {
     let value = result?;
     released?;
     Ok(value)
+}
+
+fn is_eur_target_config(path: &str) -> bool {
+    fs::read_to_string(path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .and_then(|value| value.as_object().cloned())
+        .is_some_and(|object| object.contains_key("approved_universe_snapshot_id"))
+}
+
+/// Safe target-authority entrypoint used by deployment probes. The full
+/// provider/DB executor is intentionally still assembled only after the EUR
+/// gate is satisfied; a checked-in disabled SHADOW file therefore never opens
+/// a broker mutation path.
+fn run_eur_target(action: &str, args: &[String], path: &str) -> Result<Value> {
+    let text = fs::read_to_string(path)
+        .map_err(|_| Error("cannot read EUR runtime configuration".into()))?;
+    let config: EurRuntimeConfig = serde_json::from_str(&text)
+        .map_err(|_| Error("invalid EUR runtime configuration".into()))?;
+    let now = Utc::now();
+    let validation = config.validate(now);
+    if action == "check" {
+        let mut blockers = Vec::new();
+        if let Err(error) = validation {
+            blockers.push(error.to_string());
+        }
+        if !config.enabled {
+            blockers.push("runtime_disabled".into());
+        }
+        if config.execution_stage != ExecutionStage::Shadow {
+            blockers.push("first_real_input_run_requires_SHADOW".into());
+        }
+        blockers.extend(
+            [
+                "reviewed_catalog_crosswalk_required",
+                "real_input_shadow_orchestration_not_wired",
+                "durable_gateway_delivery_not_wired",
+            ]
+            .into_iter()
+            .map(String::from),
+        );
+        return Ok(json!({
+            "status": "EUR_SHADOW_BLOCKED",
+            "runtime_mode": config.execution_stage,
+            "account_id": config.account_id,
+            "broker_environment": config.broker.environment,
+            "real_market_inputs": config.requires_real_inputs(),
+            "postgresql_required": true,
+            "telegram_required": config.telegram_enabled,
+            "broker_mutations": 0,
+            "entry_authorized": false,
+            "blockers": blockers,
+            "config_path": path
+        }));
+    }
+    require(action == "run", "unsupported EUR autonomous action")?;
+    require(
+        args.len() == 3 || (args.len() == 4 && args[3] == "--once"),
+        "EUR autonomous run requires --once",
+    )?;
+    validation?;
+    require(
+        config.enabled,
+        "EUR runtime is disabled in deployment configuration",
+    )?;
+    require(
+        config.execution_stage == ExecutionStage::Shadow,
+        "EUR autonomous first run must remain in SHADOW mode",
+    )?;
+    Err(Error("EUR real-input shadow orchestration requires the reviewed catalog crosswalk, complete source capture, PostgreSQL and Telegram deployment bindings; no cycle has run".into()))
 }
 
 fn holding_advice(

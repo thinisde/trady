@@ -453,6 +453,10 @@ impl<B: EurExecutionPort> EurExecutionCycle<B> {
     ) -> Result<EurExitOutcome> {
         self.config.validate(now)?;
         require(
+            self.config.permits_broker_mutation(),
+            "EUR broker mutations are blocked until protection/recovery and release evidence are accepted",
+        )?;
+        require(
             matches!(
                 self.coordinator.snapshot().state,
                 CoordinatorState::Open | CoordinatorState::ExitManaging

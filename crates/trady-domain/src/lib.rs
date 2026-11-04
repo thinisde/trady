@@ -19,7 +19,10 @@ pub mod strategy;
 pub use coordinator::{
     CoordinatorEvent, CoordinatorEventKind, CoordinatorSnapshot, CoordinatorState,
 };
-pub use eur::{EurEligibilityPolicy, EurInstrumentBinding, EurUniverseSnapshot};
+pub use eur::{
+    EurEligibilityPolicy, EurInstrumentBinding, EurInstrumentRegistryEntry, EurOwnerApproval,
+    EurReleaseCandidate, EurUniverseSnapshot,
+};
 pub use evidence::{EvidenceItem, EvidenceLineage, EvidenceSourceKind, RightsStatus};
 pub use market::{BarSnapshot, CompletedBar, MarketState, QuoteQuality, SessionWindow, VenueQuote};
 pub use reports::{DailyReconciliation, WeeklyPerformanceReport};
@@ -142,32 +145,58 @@ pub enum Mode {
 }
 
 /// Execution lifecycle is separate from the account/environment mode.
-/// Trading 212 demo remains `Mode::Paper`; this value controls whether the
-/// deployment may only record, submit one approved test order, or run its
-/// unattended demo loop.
+///
+/// The four target runtime modes are `REPLAY`, `SHADOW`, `DEMO`, and `LIVE`.
+/// The legacy values are retained only so older IEX30 deployment documents can
+/// still be read and migrated; target EUR validation rejects them. Keeping the
+/// compatibility values here avoids an old configuration gaining mutation
+/// authority merely because a binary was upgraded.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ExecutionStage {
     #[default]
     Shadow,
-    SupervisedDemo,
-    AutonomousDemo,
-    Paused,
-    ManagementOnly,
+    Replay,
+    Demo,
     Live,
+    /// Legacy one-order stage. Rejected by the EUR target validator.
+    SupervisedDemo,
+    /// Legacy unattended stage. Rejected by the EUR target validator.
+    AutonomousDemo,
+    /// Legacy pause stage. Rejected by the EUR target validator.
+    Paused,
+    /// Legacy management stage. Rejected by the EUR target validator.
+    ManagementOnly,
 }
 
 impl ExecutionStage {
     pub fn permits_broker_mutation(self) -> bool {
-        matches!(self, Self::SupervisedDemo | Self::AutonomousDemo)
+        matches!(
+            self,
+            Self::Demo | Self::SupervisedDemo | Self::AutonomousDemo
+        )
     }
 
     pub fn permits_unattended_entry(self) -> bool {
-        matches!(self, Self::AutonomousDemo)
+        matches!(self, Self::Demo | Self::AutonomousDemo)
     }
 
     pub fn management_only(self) -> bool {
         matches!(self, Self::Paused | Self::ManagementOnly)
+    }
+
+    /// True only for the four target modes. Legacy values must never be
+    /// accepted by a target release validator.
+    pub fn is_target_mode(self) -> bool {
+        matches!(self, Self::Replay | Self::Shadow | Self::Demo | Self::Live)
+    }
+
+    pub fn uses_real_inputs(self) -> bool {
+        !matches!(self, Self::Replay)
+    }
+
+    pub fn permits_target_mutation(self) -> bool {
+        matches!(self, Self::Demo)
     }
 }
 

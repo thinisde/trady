@@ -138,6 +138,12 @@ impl Server {
             reader: self.reader(),
         }
     }
+    fn euro_executor(&self) -> Trading212Executor<FakeClock> {
+        let mut executor = self.executor();
+        executor.reader.config.environment = Environment::Demo;
+        executor.reader.config.account_id = AccountId::new("paper_t212_test").unwrap();
+        executor
+    }
 }
 impl Drop for Server {
     fn drop(&mut self) {
@@ -185,7 +191,7 @@ fn request(kind: OrderKind, side: Side) -> BrokerOrderRequest {
 fn euro_request() -> BrokerOrderRequest {
     BrokerOrderRequest {
         intent_id: IntentId::new("eur_local_intent").unwrap(),
-        account_id: config().account_id,
+        account_id: AccountId::new("paper_t212_test").unwrap(),
         instrument_id: InstrumentId::new("demo_air_pa").unwrap(),
         instrument_currency: Currency::new("EUR").unwrap(),
         side: Side::Buy,
@@ -320,7 +326,7 @@ fn exact_eur_crosswalk_can_submit_without_iex_ticker_inference() {
     ]);
     let request = euro_request();
     let binding = euro_binding();
-    let result = server.executor().submit_eur_bound_before(
+    let result = server.euro_executor().submit_eur_bound_before(
         &request,
         &binding,
         Some(now() + chrono::Duration::minutes(5)),
@@ -341,7 +347,7 @@ fn eur_crosswalk_rejects_internal_or_currency_identity_mismatch_before_post() {
     let mut request = euro_request();
     request.instrument_id = InstrumentId::new("AIR_PA_EQ").unwrap();
     let error = server
-        .executor()
+        .euro_executor()
         .submit_eur_bound_before(
             &request,
             &euro_binding(),
@@ -350,6 +356,41 @@ fn eur_crosswalk_rejects_internal_or_currency_identity_mismatch_before_post() {
         .expect_err("mismatched EUR identity");
     assert_eq!(error.kind, BrokerFailureKind::Unsupported);
     assert!(server.requests().is_empty());
+}
+
+#[test]
+fn eur_catalog_isin_fractional_and_tick_changes_never_reach_post() {
+    for variant in 0..3 {
+        let server = Server::new(vec![summary(), euro_metadata()]);
+        let mut binding = euro_binding();
+        let mut request = euro_request();
+        match variant {
+            0 => binding.isin = "NL0010273215".into(),
+            1 => request.quantity = Decimal::new(15, 1),
+            _ => {
+                request.kind = OrderKind::Limit {
+                    price: Decimal::new(123451, 3),
+                    time_in_force: TimeInForce::Day,
+                }
+            }
+        }
+        assert!(
+            server
+                .euro_executor()
+                .submit_eur_bound_before(
+                    &request,
+                    &binding,
+                    Some(now() + chrono::Duration::minutes(1))
+                )
+                .is_err()
+        );
+        assert!(
+            server
+                .requests()
+                .iter()
+                .all(|request| request.line.starts_with("GET "))
+        );
+    }
 }
 
 #[test]

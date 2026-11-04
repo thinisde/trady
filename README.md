@@ -1,18 +1,17 @@
 # Trady
 
-Trady is a Rust trading bot for one reviewed EUR day-trading authority. The
-first operational target is the Trading 212 demo account; yfinance-rs supplies
-read-only venue-bound quotes and completed bars, while Alpha Vantage, yfinance
-news, X, RSS, browser readers, and owner URLs supply timestamped research.
-Trading 212 is the only broker mutation path. The runtime permits one open
-position, same-day flattening 15 minutes before the verified exchange close,
-and a fully checked rotation only after the current position is closed.
+Trady is a Rust research and execution system migrating from IEX30/Alpaca to
+EUR equities. The first operational milestone is a real-input SHADOW run with
+PostgreSQL and Telegram. That end-to-end milestone is still incomplete.
+The checked-in EUR example is disabled, uses SHADOW, and cannot submit orders.
+LIVE is rejected; DEMO remains blocked pending independently accepted quote,
+protection/recovery, replay, and owner-release evidence.
 
 The target operator profile is [config/eur-demo.example.json](./config/eur-demo.example.json).
 The migration plan and authority boundary are documented in
 [docs/trady-bot-implementation-plan.md](./docs/trady-bot-implementation-plan.md).
-The old IEX30/Alpaca files remain replay fixtures during migration and are not
-the target runtime authority.
+The IEX30/Alpaca implementation remains in place for migration comparison; it
+has not been archived or replaced by a fully wired EUR executor.
 
 ## Focused configuration
 
@@ -22,17 +21,19 @@ the target runtime authority.
 - [Trading 212 EUR demo account example](./config/trading212.eur-demo.example.json)
 - [Intraday Donchian/ATR formula baseline](./docs/formulas/long-donchian-atr-v1.md)
 
-The target research registry keeps Alpha Vantage active for EUR news sentiment
-and requires rights/freshness checks before its items reach ranking or holding
-review. X accounts, RSS, browser pages, and owner URLs remain bounded and
-untrusted until their own provenance checks pass.
+The EUR crosswalk contains illustrative broker IDs and is not an approved
+catalog snapshot. The research registry lists example sources; it has no
+reviewed X account registry. Provider collection configuration does not establish
+quote compatibility, content rights, or release acceptance.
 
 ## Operator commands
 
 ```sh
 cargo run --locked --bin trady -- eur config \
   --config config/eur-demo.example.json
-cargo run --locked --bin trady -- eur gate-explain \
+cargo run --locked --bin trady -- gate explain \
+  --config config/eur-demo.example.json
+cargo run --locked --bin trady -- universe check \
   --config config/eur-demo.example.json
 cargo run --locked --bin trady -- yfinance quote \
   --config config/yfinance.euronext.example.json --instrument AIR_PA_EQ
@@ -40,20 +41,22 @@ cargo run --locked --bin trady -- t212 snapshot \
   --config config/trading212.demo.example.json
 ```
 
-`eur gate-explain` uses the same application-owned order-readiness gate as the
-executor. `eur select` replays mandatory candidate selection without network
-or broker access. `yfinance quote` remains read-only. The runtime keeps live
-submission disabled until exact quote, protection, and restart-recovery
-evidence is approved.
+`gate explain --snapshot FILE` evaluates the executor's application-owned gate
+against the supplied order inputs. Without a snapshot it returns configuration
+blockers and `SNAPSHOT_UNAVAILABLE`. The nested `eur gate-explain` spelling is
+an alias. `eur select` replays candidate selection; `replay manifest-check`
+checks recorded input hashes offline and does not certify a paper-day replay.
+`yfinance quote` remains read-only.
 
 ## Account and release gates
 
-Use `t212 snapshot` for a read-only Trading 212 demo account check. An enabled
-EUR executor must be constructed with an append-only target journal and, when
-Telegram is enabled, a lifecycle outbox before the order gate can mutate the
-broker. Those sinks persist research, selection, strategy, order-intent, exit,
-and reconciliation records. A weekly Codex review can propose changes but
-cannot activate them.
+Use `t212 snapshot` for a read-only Trading 212 account check. EUR journal
+writes use database leases and fencing; acknowledgements reload their exact
+reserved intent from PostgreSQL after restart. The target outbox atomically
+publishes lifecycle events and deliveries. Its gateway primitives are tested
+but are not yet connected to the long-running EUR services. Interrupted sends
+remain ambiguous instead of being retried blindly. A weekly Codex review may
+propose changes and cannot activate them.
 
 Credentials are loaded from the private credential store or the documented
 environment variables. Never place secrets in committed configuration.

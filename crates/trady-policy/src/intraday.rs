@@ -47,7 +47,9 @@ impl Default for IntradayRiskPolicy {
             min_reward_to_risk: Decimal::new(15, 1),
             max_hold_seconds: 28_800,
             minimum_seconds_to_flatten: 1_800,
-            max_daily_entries: 2,
+            // The first-run authority has one entry slot. A later release may
+            // explicitly raise this after rotation evidence is approved.
+            max_daily_entries: 1,
             max_daily_exits: 2,
             max_open_positions: 1,
             rotation_enabled: true,
@@ -73,7 +75,6 @@ impl IntradayRiskPolicy {
                 && (1..=2).contains(&self.max_daily_entries)
                 && (1..=2).contains(&self.max_daily_exits)
                 && self.max_open_positions == 1
-                && self.rotation_enabled
                 && self.minimum_rotation_net_improvement_fraction > Decimal::ZERO
                 && self.minimum_rotation_net_improvement_fraction <= Decimal::new(1, 2)
                 && self.no_overnight

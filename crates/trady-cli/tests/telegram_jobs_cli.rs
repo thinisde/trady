@@ -123,6 +123,19 @@ fn expanded_worker_runs_persistent_followup_dialogue_without_gateway_or_executor
     let server = thread::spawn(move || {
         let mut requests = vec![];
         for _ in 0..2 {
+            let (mut catalog, _) = listener.accept().unwrap();
+            catalog
+                .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                .unwrap();
+            let mut headers = Vec::new();
+            while !headers.windows(4).any(|bytes| bytes == b"\r\n\r\n") {
+                let mut byte = [0_u8; 1];
+                catalog.read_exact(&mut byte).unwrap();
+                headers.push(byte[0]);
+            }
+            assert!(String::from_utf8_lossy(&headers).starts_with("GET /v1/models "));
+            let body = json!({"data":[{"id":"deepseek-v4.1-flash"}]}).to_string();
+            write!(catalog,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
             let (mut stream, _) = listener.accept().unwrap();
             stream
                 .set_read_timeout(Some(std::time::Duration::from_secs(5)))
