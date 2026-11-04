@@ -111,6 +111,13 @@ existing output files.
   rejects delayed/frozen or untimed books, and uses provider time for freshness.
   SMART composite data has not yet been accepted as Trading 212 executable
   price authority. Yahoo remains a separate research/bar source.
+- A read-only [demo-history comparison](./evidence/trading212-ibkr-history-compatibility-2026-11-04.json)
+  found four OTC fills and one cancelled order. Both AAPL USD fills exactly
+  matched the side-appropriate historical SMART book one second earlier.
+  Nokia EUR history was unavailable with IBKR error 10187 for both SMART and
+  explicit Xetra requests. There were no Airbus/ASML fills. This establishes
+  limited historical USD price alignment; EUR quote compatibility remains
+  unverified and no entry gate changed.
 - `gate explain --snapshot FILE` calls the same application gate as the target
   execution cycle. It checks exact universe-member equality, quote/session
   identity, spread, price/quantity precision, fractional support, buying power,
