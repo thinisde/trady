@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "code_commit": "3219fb017a8032e6aeda33185c0914b1bb2411b1",
+  "release_evidence": false,
+  "checks": [
+    {
+      "command": "cargo clippy --workspace --all-targets --locked -- -D warnings",
+      "status": "PASSED",
+      "log_path": "var/eur-first-run-checks/clippy.log",
+      "log_sha256": "df88ebb6e276416fd84ab152d826ac47975b1be67e22c66b1457963fa091c2aa"
+    },
+    {
+      "command": "cargo test --workspace --locked --all-targets",
+      "status": "PASSED",
+      "log_path": "var/eur-first-run-checks/workspace-test.log",
+      "log_sha256": "a66ff2f6a1b68227bb9a1e28c43e53fdd2b64178f458c1cda7ffe01fe7893ae6"
+    },
+    {
+      "command": "python3 scripts/test-postgres.py",
+      "status": "PASSED",
+      "log_path": "var/eur-first-run-checks/postgres-test.log",
+      "log_sha256": "90b0b1203b1ab5f76eeca4ba1f4fd975f02bf7fdeb85d4676dea065b5dedb0e3"
+    },
+    {
+      "command": "systemd-analyze verify services/runtime/*.service services/runtime/*.timer",
+      "status": "BLOCKED_MISSING_DEPLOYMENT_BINARY",
+      "log_path": "var/eur-first-run-checks/systemd-verify.log",
+      "log_sha256": "07b4aacabda48cde770fc8ca7f577b7dea343dd76e07d8f434258172df1501dd"
+    }
+  ],
+  "workspace_test_counts": {
+    "passed": 632,
+    "failed": 0,
+    "ignored": 36
+  },
+  "postgres_runner_exit_code": 0,
+  "credential_rotation_and_post_rotation_logins": "PASSED",
+  "broker_mutations": 0,
+  "real_telegram_deliveries": 0
+}

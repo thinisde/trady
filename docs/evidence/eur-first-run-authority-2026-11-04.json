@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "status": "TARGET_BASELINE_UNREVIEWED",
+  "recorded_on": "2026-11-04",
+  "requested_base_commit": "6def5698c61151a9ce3cfe5a568db641031a3fe7",
+  "requested_base_available": false,
+  "actual_base_commit": "823acb998c9ba0c6901e3ed3a9a33b8c6752e786",
+  "code_commit": "3219fb017a8032e6aeda33185c0914b1bb2411b1",
+  "target_market_scope": "approved EUR-denominated equities",
+  "allowed_exchanges": [
+    "XPAR",
+    "XAMS",
+    "XBRU",
+    "XLIS",
+    "XMIL",
+    "XOSL",
+    "XETR"
+  ],
+  "session_calendar_rules": [
+    {
+      "exchange_mic": "XPAR",
+      "timezone": "Europe/Paris",
+      "flatten_minutes_before_close": 15
+    },
+    {
+      "exchange_mic": "XAMS",
+      "timezone": "Europe/Amsterdam",
+      "flatten_minutes_before_close": 15
+    },
+    {
+      "exchange_mic": "XBRU",
+      "timezone": "Europe/Brussels",
+      "flatten_minutes_before_close": 15
+    },
+    {
+      "exchange_mic": "XLIS",
+      "timezone": "Europe/Lisbon",
+      "flatten_minutes_before_close": 15
+    },
+    {
+      "exchange_mic": "XMIL",
+      "timezone": "Europe/Rome",
+      "flatten_minutes_before_close": 15
+    },
+    {
+      "exchange_mic": "XOSL",
+      "timezone": "Europe/Oslo",
+      "flatten_minutes_before_close": 15
+    },
+    {
+      "exchange_mic": "XETR",
+      "timezone": "Europe/Berlin",
+      "flatten_minutes_before_close": 15
+    }
+  ],
+  "session_calendar_rules_hash": "83bb83f8cd99dc735a0e4d82c87978f8847cd86e41990d2e6658133f01e2fd64",
+  "session_calendar_hash": null,
+  "session_calendar_status": "REVIEWED_SESSION_CAPTURE_REQUIRED",
+  "broker_account_id": 52211463,
+  "broker_environment": "demo",
+  "base_currency": "EUR",
+  "target_runtime_mode": "SHADOW",
+  "enabled": false,
+  "live_enabled": false,
+  "hash_encoding": "SHA-256 of file bytes for file hashes; compact sorted-key UTF-8 JSON for document hashes",
+  "config_hash": "36c61d61ab6fe09dc5bfdfccaba923fc9fd06b8731e76ffb8b818f013dd9f601",
+  "policy_hash": "cf902873b364f273dd8c6c4a65222f40f6cc367b6bead00971b70bad727538ca",
+  "universe_example_hash": "8f5dd43cf4488e4a352d87132b362f9be45499b2ac2bd82759ad55fe3a92e9d9",
+  "reviewed_universe_hash": null,
+  "yfinance_symbol_mapping": {
+    "path": "config/yfinance.euronext.example.json",
+    "sha256": "c2ca6d93253ec06e627472107ae91e38884769f8e938e9c56645c664e737d1b9",
+    "review_status": "ILLUSTRATIVE_NOT_CATALOG_VERIFIED"
+  },
+  "alpha_vantage_role": "HISTORICAL_OR_RESEARCH_CROSS_CHECK_NEVER_EXECUTABLE_QUOTE_AUTHORITY",
+  "source_registry_hash": "dfaa913dfd336ae58cff493cbff05955e635913b6ea7d51facd119e7aad05a4d",
+  "rss_source_registry": [
+    {
+      "source_id": "google_eur_news_rss",
+      "url": "https://news.google.com/rss/search",
+      "terms_reference": "owner_review_google_news_rss_eur_2026-11-03"
+    },
+    {
+      "source_id": "publisher_eur_rss",
+      "url": "https://feeds.reuters.com/reuters/businessNews",
+      "terms_reference": "owner_review_publisher_rss_registry_eur_2026-11-03"
+    }
+  ],
+  "x_account_registry": [],
+  "x_account_registry_status": "INDEPENDENT_REVIEW_REQUIRED",
+  "model_identity": {
+    "provider": "opencode-go",
+    "model": "deepseek-v4.1-flash"
+  },
+  "model_hash": "0fd1ca6e84bd5a7b629cb1d3d8633cf0ba325b06cf96be5dbce673ee5a465d71",
+  "prompt_hash": "fea518037e82677c35641197c86361c1e6f207c3fe7464b0cd8e83781ea6b865",
+  "prompt_hash_scope": "analyst prompt-construction source file; per-run expanded prompts still require capture",
+  "activation_authorized": false,
+  "owner_approval": null,
+  "capability_evidence": [
+    "docs/evidence/trading212-demo-capability-2026-11-03.json",
+    "docs/evidence/trading212-quote-compatibility-2026-11-03.json"
+  ],
+  "capability_classification": {
+    "quotes": "UNSUPPORTED_PENDING_REVIEW",
+    "protection": "UNSUPPORTED_PENDING_REVIEW"
+  },
+  "policy": {
+    "max_initial_loss_fraction": "0.02",
+    "minimum_reward_to_risk": "1.5",
+    "leverage": false,
+    "averaging_or_pyramiding": false,
+    "max_daily_entries": 1,
+    "max_open_positions": 1,
+    "no_overnight": true,
+    "same_day_flatten_required": true,
+    "stop_may_widen": false,
+    "rotation_enabled": false
+  }
+}
