@@ -1,5 +1,10 @@
 # Autonomous execution implementation
 
+Historical runtime guide: the IEX30 runner, private child and account/demo-entry
+commands below were [retired on 5 November](./eur-legacy-retirement-2026-11-05.md).
+Current operation uses the [EUR workflow](./eur-execution-and-release.md).
+Shared policy/replay contracts and the earlier evidence remain preserved.
+
 The focused runtime connects automatic approved-market screening for the fixed
 IEX30 universe, approved mathematical limits,
 calibrated prediction fusion, native Perpetual advice, durable order submission,
@@ -171,7 +176,7 @@ calendar and a separate four-outcome model pipeline. Deployment supplies the act
 licensed records, verified source truth and approved artifacts.
 
 All routes are relative to `inputs.base_url` and use strict JSON DTOs in
-[the adapter](../crates/trady-adapters/src/autonomous/mod.rs):
+[the retired adapter](./eur-legacy-retirement-2026-11-05.md):
 
 | Method and path | Response / request |
 | --- | --- |

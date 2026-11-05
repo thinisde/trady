@@ -3,8 +3,8 @@
 ## Overview
 
 [lib.rs](./lib.rs) implements application ports over explicit fixture data.
-Its public modules also expose configured provider transports, automatic research
-inputs, native advisory inference and Telegram delivery state.
+Its public modules also expose configured provider transports, shared research
+documents, native advisory inference and Telegram delivery state.
 
 ## Interface
 
@@ -47,11 +47,10 @@ inputs, native advisory inference and Telegram delivery state.
   `KNOWN_CREDENTIALS`: central path selection, exclusive initialization,
   per-call loading and the status catalog.
 
-- [Automatic inputs](./autonomous/README.md): `TradingInputsConfig`, packet DTOs
-  including `PredictionRequest`, and `AutomaticInputs::{new, with_ports, with_clock}`.
-  Its `TradingInputs` implementation combines configured HTTP observations,
-  screening, authoritative limits and persisted native advice. `MarketInputs`
-  exposes separate session/quote/cost reads without research or model state.
+- [Research documents](./input_documents.rs): `ResearchDraft`, `AnalystPacket`,
+  `SessionPacket`, `CostsPacket` and `PredictionRequest`. These wire contracts
+  remain shared by input-service imports and offline model tests; the old
+  automatic trading-input runner and Alpaca adapter are retired.
 - [Universe ingestion](./screening/README.md): `ApprovedUniverseConfig`,
   `UniverseDocument` and `HttpUniverseSource` implement approved point-in-time
   universe fetching with instance-local throttling.
@@ -84,9 +83,6 @@ inputs, native advisory inference and Telegram delivery state.
 - `[trading212/mod.rs:Trading212Reader]`, `Trading212Executor` and reexported
   `AutonomousTrading212`: typed broker information, guarded execution and paced
   execution observations; see the [provider contract](./trading212/README.md).
-- `[alpaca.rs:AlpacaMarketData]`: read-only Alpaca Basic client restricted to
-  the exact IEX30 symbol set. It supplies IEX quotes and bounded daily bars;
-  Trading 212 remains the execution broker.
 - `[lib.rs:MemoryExecutionRepository]`: account registration, leases, reconciliation,
   paper reservations and outbox-count inspection. Public methods are `new`,
   `register_paper_account` and `outbox_count`; `ExecutionRepository` supplies
@@ -144,9 +140,7 @@ inputs, native advisory inference and Telegram delivery state.
   and revision before incrementing revision. `release` checks worker/generation
   only. `save` does not revalidate session schema/limits. These session leases
   use UTC wall time rather than `FakeClock`.
-- `[autonomous/mod.rs:AutomaticInputs::candidate]` requires scoped provider inputs,
-  active authoritative limits and validated native advice before returning a
-  candidate. `[perpetual/mod.rs:NativePerpetualAdvisor::from_approved_artifacts]`
+- `[perpetual/mod.rs:NativePerpetualAdvisor::from_approved_artifacts]`
   consumes deployment-supplied artifacts; an empty registry provides no usable model.
 
 - `[finbert/mod.rs:FinBertConfig::validate]` requires config v1, a 40-character model
@@ -221,9 +215,8 @@ entries can change in shared process memory. `SystemClock` reads real UTC time.
 expiry; `release` expires the lease. Clones share process memory and use real UTC.
 The explicitly constructed Trading 212 clients make broker network calls;
 `Trading212Executor` and `AutonomousTrading212` expose guarded order mutation,
-and explicit pacing may sleep. `[autonomous/mod.rs:AutomaticInputs::candidate]`
-writes bound calculations and research records through its repository before
-final validation, without an enclosing rollback. `[telegram/spool.rs:StateStore]` locks and writes private
+and explicit pacing may sleep. `[input_documents.rs]` only defines shared
+research wire data. `[telegram/spool.rs:StateStore]` locks and writes private
 plaintext delivery state. Native Perpetual inference computes in memory.
 
 ## Verification

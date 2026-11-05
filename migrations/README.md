@@ -2,13 +2,31 @@
 
 ## Overview
 
-Administrator role provisioning and sixteen transactionally applied Trady migrations.
+Administrator role provisioning and twenty-two transactionally applied Trady migrations.
 Use the [disposable test runner](../scripts/test-postgres.py) for local verification.
 
 Subsequent migrations add model-session state, research-source persistence and
 a separate autonomous execution/research ledger.
 
 ## Interface
+
+- [0022_research_gateway_delivery_claims.sql](./0022_research_gateway_delivery_claims.sql):
+  exclusive claim-before-send and token-fenced completion for research-gateway
+  notifications. Direct gateway acknowledgement is revoked. Existing undelivered
+  rows become `UNKNOWN`; interrupted sends are never automatically reclaimed.
+
+- [0021_eur_protocol_lifetime.sql](./0021_eur_protocol_lifetime.sql): removes the
+  arbitrary 10,000-event protocol ceiling from both the head constraint and
+  append function. Positive bigint revisions, canonical/hash checks, daily entry
+  slots and executor fencing remain enforced. Existing migration text is unchanged.
+- [0020_eur_month_record_windows.sql](./0020_eur_month_record_windows.sql): bounded
+  keyset pages for scoped cumulative evidence collection.
+- [0019_eur_review_handoffs.sql](./0019_eur_review_handoffs.sql): scoped review,
+  research cursor and report handoffs.
+- [0018_eur_order_protocol.sql](./0018_eur_order_protocol.sql): authoritative EUR
+  protocol hash chains and one durable account/day entry slot.
+- [0017_eur_shadow_recovery.sql](./0017_eur_shadow_recovery.sql): durable EUR
+  SHADOW requests, model-attempt recovery and scoped record enumeration.
 
 - [0012_first_order_dispatch.sql](./0012_first_order_dispatch.sql): executor-only
   supervised first-order intent, approval, account/day reservation, dispatch,

@@ -57,7 +57,7 @@ metadata; writing them does not confer executor authority. Research page commits
 check durable cursor revisions. Model-session saves check revision, worker,
 generation and database-time expiry, then renew the lease for its stored TTL.
 
-`[src/lib.rs:migrate]` transactionally applies versions 1–11 and rejects changes to
+`[src/lib.rs:migrate]` transactionally applies versions 1–22 and rejects changes to
 previously applied migration text. `[src/transport.rs:uses_tls]` permits plaintext
 TCP only for exact `127.0.0.1` or `::1` hosts; explicit Unix sockets also qualify
 and plaintext eligibility requires every hostaddr override to be loopback. Remote

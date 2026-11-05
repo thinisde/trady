@@ -60,6 +60,51 @@ fn observed_json<T: serde::de::DeserializeOwned, C: Clock>(
     Ok(typed)
 }
 
+type ObservedFills = BTreeMap<String, BTreeMap<i64, (Decimal, DateTime<Utc>)>>;
+
+/// Completeness concerns the current exact orders, rather than all trading
+/// ever performed in the ticker. Every filled share must have a distinct
+/// native execution; pagination can stop only once those totals agree.
+fn exact_history_complete(
+    state: &ProtocolState,
+    pending: &[dto::Order],
+    history: &BTreeMap<String, dto::Order>,
+    fills: &ObservedFills,
+) -> BrokerResult<bool> {
+    for progress in state
+        .entry
+        .iter()
+        .chain(state.protection.iter())
+        .chain(state.exits.last())
+    {
+        let Some(id) = progress.broker_id.as_ref() else {
+            if !progress.reconciled_terminal {
+                return Ok(false);
+            }
+            continue;
+        };
+        let Some(wire) = pending
+            .iter()
+            .find(|p| p.id.to_string() == *id)
+            .or_else(|| history.get(id))
+        else {
+            return Ok(false);
+        };
+        let order = wire.normalize()?;
+        let total = fills
+            .get(id)
+            .into_iter()
+            .flat_map(|rows| rows.values())
+            .try_fold(Decimal::ZERO, |sum, (quantity, _)| {
+                sum.checked_add(*quantity).ok_or_else(invalid)
+            })?;
+        if total != order.filled_quantity {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
 impl<C: Clock> ProtocolBroker for Trading212ProtocolBroker<C> {
     fn now(&self) -> DateTime<Utc> {
         self.executor.reader.clock.now()
@@ -113,11 +158,12 @@ impl<C: Clock> ProtocolBroker for Trading212ProtocolBroker<C> {
             }
         }
         let mut history = BTreeMap::new();
+        let mut history_fills: ObservedFills = BTreeMap::new();
         let mut entry_first_filled_at = None;
         let mut cursor = None;
         let mut history_complete = false;
-        // Bounded reads. A truncated history remains incomplete and blocks
-        // every replacement mutation, including an emergency market sell.
+        // Reads stay bounded without requiring unrelated old ticker history.
+        // Missing exact orders or incomplete execution totals still block.
         if state.entry.is_some() {
             for _ in 0..8 {
                 let query = HistoryQuery {
@@ -142,16 +188,38 @@ impl<C: Clock> ProtocolBroker for Trading212ProtocolBroker<C> {
                     if order.instrument_id.as_str() != state.context.broker_ticker {
                         return Err(invalid());
                     }
-                    if state.entry.as_ref().and_then(|p| p.broker_id.as_ref())
-                        == Some(&order.broker_order_id)
-                        && let Some(fill) = &row.fill
-                        && fill.quantity.as_ref().is_some_and(|q| q.0 > Decimal::ZERO)
-                        && let Some(filled_at) = fill.filled_at
-                    {
-                        entry_first_filled_at = Some(
-                            entry_first_filled_at
-                                .map_or(filled_at, |old: DateTime<Utc>| old.min(filled_at)),
-                        );
+                    let relevant = state
+                        .entry
+                        .iter()
+                        .chain(state.protection.iter())
+                        .chain(state.exits.last())
+                        .any(|p| p.broker_id.as_ref() == Some(&order.broker_order_id));
+                    if relevant && let Some(fill) = &row.fill {
+                        let id = fill.id.filter(|id| *id > 0).ok_or_else(invalid)?;
+                        let quantity = fill.quantity.ok_or_else(invalid)?.0;
+                        let filled_at = fill.filled_at.ok_or_else(invalid)?;
+                        if quantity <= Decimal::ZERO
+                            || filled_at < state.context.created_at
+                            || filled_at > r.clock.now()
+                        {
+                            return Err(invalid());
+                        }
+                        if let Some(previous) = history_fills
+                            .entry(order.broker_order_id.clone())
+                            .or_default()
+                            .insert(id, (quantity, filled_at))
+                            && previous != (quantity, filled_at)
+                        {
+                            return Err(invalid());
+                        }
+                        if state.entry.as_ref().and_then(|p| p.broker_id.as_ref())
+                            == Some(&order.broker_order_id)
+                        {
+                            entry_first_filled_at = Some(
+                                entry_first_filled_at
+                                    .map_or(filled_at, |old: DateTime<Utc>| old.min(filled_at)),
+                            );
+                        }
                     }
                     if let Some(old) = history.insert(order.broker_order_id.clone(), row.order)
                         && old.normalize()? != order
@@ -163,8 +231,9 @@ impl<C: Clock> ProtocolBroker for Trading212ProtocolBroker<C> {
                     .next_page_path
                     .map(|path| next_cursor(&path, &query))
                     .transpose()?;
-                if cursor.is_none() {
-                    history_complete = true;
+                history_complete =
+                    exact_history_complete(state, &pending, &history, &history_fills)?;
+                if history_complete || cursor.is_none() {
                     break;
                 }
             }
@@ -232,10 +301,11 @@ impl<C: Clock> ProtocolBroker for Trading212ProtocolBroker<C> {
             pending_order_ids: pending_ids.into_iter().collect(),
             exact_orders,
             history_complete,
+            history_coverage_exhausted: !history_complete,
             observed_at: r.clock.now(),
             entry_first_filled_at,
             entry_confirmation_from_full_view_at: None,
-            evidence: serde_json::json!({"provider":"TRADING212_DEMO","broker_account_id":state.context.broker_account_id,"responses":evidence}),
+            evidence: serde_json::json!({"provider":"TRADING212_DEMO","broker_account_id":state.context.broker_account_id,"history_scope":"CURRENT_EXACT_ORDERS_WITH_COMPLETE_FILL_TOTALS","responses":evidence}),
         })
     }
 
@@ -395,6 +465,7 @@ impl<C: Clock> ProtocolBroker for Trading212ProtocolBroker<C> {
                     vec![]
                 },
                 history_complete: order.status.terminal() && !pending_present,
+                history_coverage_exhausted: false,
                 exact_orders: vec![ExactOrderObservation {
                     leg: OrderLeg::Entry,
                     order,

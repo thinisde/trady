@@ -175,6 +175,13 @@ pub enum ProtocolInput {
     CancellationAcknowledged {
         leg: OrderLeg,
     },
+    /// Authorizes one new cancellation attempt for an already known exact ID.
+    /// The driver must still obtain a fresh complete broker view before sending.
+    ReviewedCancellationRetry {
+        leg: OrderLeg,
+        broker_id: String,
+        review_reference: String,
+    },
     DispatchProtection,
     RequestExit {
         reason: String,
@@ -186,6 +193,7 @@ pub enum ProtocolInput {
         history_complete: bool,
     },
     Disconnected,
+    HistoryCoverageExhausted,
     Tick,
     TightenStop {
         price: Decimal,
@@ -216,6 +224,8 @@ pub struct ProtocolState {
     pub desired_stop: Decimal,
     pub exit_requested: bool,
     pub reconciliation_required: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub history_coverage_exhausted: bool,
     pub unprotected_since: Option<DateTime<Utc>>,
     /// Optional for replay compatibility with journals predating broker clocks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -239,6 +249,7 @@ impl ProtocolState {
             holding_quantity: Decimal::ZERO,
             exit_requested: false,
             reconciliation_required: false,
+            history_coverage_exhausted: false,
             unprotected_since: None,
             entry_first_filled_at: None,
             reason: None,
@@ -524,6 +535,25 @@ impl ProtocolState {
                 // and actual holdings agree. A late fill is still admissible.
                 effect = self.recovery_effect();
             }
+            ProtocolInput::ReviewedCancellationRetry {
+                leg,
+                broker_id,
+                review_reference,
+            } => {
+                require(
+                    valid_id(review_reference) && valid_id(broker_id),
+                    "cancellation recovery review or exact ID missing",
+                )?;
+                let p = self.progress_mut(*leg)?;
+                require(
+                    p.cancel_requested
+                        && !p.reconciled_terminal
+                        && p.broker_id.as_ref() == Some(broker_id),
+                    "cancellation recovery must match an unresolved exact order",
+                )?;
+                p.cancel_requested = false;
+                effect = self.recovery_effect();
+            }
             ProtocolInput::DispatchProtection => {
                 require(
                     self.phase == ProtocolPhase::ProtectionPrepared
@@ -593,6 +623,9 @@ impl ProtocolState {
                                 .as_ref()
                                 .is_some_and(|id| pending_order_ids.contains(id))
                     });
+                if !self.reconciliation_required {
+                    self.history_coverage_exhausted = false;
+                }
                 if self.reconciliation_required {
                     self.phase = ProtocolPhase::Recovery;
                     effect = self.recovery_effect();
@@ -603,6 +636,14 @@ impl ProtocolState {
                 self.reconciliation_required = true;
                 self.reason = Some("BROKER_DISCONNECTED".into());
                 effect = self.recovery_effect();
+            }
+            ProtocolInput::HistoryCoverageExhausted => {
+                self.reconciliation_required = true;
+                self.history_coverage_exhausted = true;
+                self.reason = Some("EXACT_ORDER_HISTORY_COVERAGE_EXHAUSTED".into());
+                effect = ProtocolEffect::RequireOperator {
+                    reason: "EXACT_ORDER_HISTORY_COVERAGE_EXHAUSTED".into(),
+                };
             }
             ProtocolInput::Tick => {
                 let exposure_expired = self.unprotected_since.is_some_and(|since| {
@@ -650,7 +691,11 @@ impl ProtocolState {
         let effect = state.reduce(&input, at)?;
         Ok(ProtocolRecord {
             event_id,
-            actor: if matches!(input, ProtocolInput::ReviewedBrokerId { .. }) {
+            actor: if matches!(
+                input,
+                ProtocolInput::ReviewedBrokerId { .. }
+                    | ProtocolInput::ReviewedCancellationRetry { .. }
+            ) {
                 "OPERATOR_REVIEWED_RECOVERY".into()
             } else {
                 "EUR_COORDINATOR".into()
@@ -682,10 +727,10 @@ pub struct ProtocolRecord {
     pub effect: ProtocolEffect,
 }
 pub fn recover(records: &[ProtocolRecord]) -> Result<ProtocolState> {
-    require(
-        !records.is_empty() && records.len() <= 10000,
-        "protocol history missing or oversized",
-    )?;
+    // A valid active intent must remain recoverable for its entire lifetime.
+    // Input/file size bounds belong at the transport boundary, not at an
+    // arbitrary event count which can strand an already acquired position.
+    require(!records.is_empty(), "protocol history missing")?;
     let mut state = ProtocolState::new(records[0].state.context.clone())?;
     let mut ids = std::collections::BTreeSet::new();
     for record in records {

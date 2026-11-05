@@ -15,8 +15,9 @@ do not certify readiness or grant permission to place orders.
 - `[donchian.rs:DonchianAtrSpec]`, `evaluate_signal`, `trade_plan`: the frozen
   long-only 20-bar/Wilder-ATR research baseline used by the IEX30 authority.
   `resolve_entry` records the inclusive next-open gap decision, including a
-  missing-open rejection. `resolve_exit` applies gap-through-stop, stop-first
-  same-bar ordering and the fifth-session close as explicit lifecycle events.
+  missing-open rejection. `resolve_exit` resolves opening gaps through either
+  stop or target before applying stop-first ordering to ambiguous intrabar
+  touches, then the fifth-session close as explicit lifecycle events.
 - `[mod.rs:CalculatedLimits]`, `calculate_limits`: checked quantity, entry/stop/
   target prices, modeled account risk and correlated source snapshot identifiers.
 - `[proof_bridge.rs:Request]`, `Operation`, `Reply`, `evaluate`: offline execution

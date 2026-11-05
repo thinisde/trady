@@ -13,12 +13,12 @@ constituent list and grants no trading authority.
 
 - `[mod.rs:ApprovedUniverseConfig::validate]` checks the trusted deployment configuration.
   `[mod.rs:HttpUniverseSource::new]` selects the production `SafeHttp` transport;
-  `with_bearer(Option<String>)` supplies or clears an out-of-band header credential. Automatic inputs
-  share their service credential only for the same HTTPS origin.
+  `with_bearer(Option<String>)` supplies or clears an out-of-band header credential.
   `with_transport` supports controlled offline transport tests.
   [universe.example.json](./universe.example.json) is the generic disabled
-  template; the focused IEX30 deployment uses the local snapshot selected by
-  `source_id: alpaca_iex30`.
+  template. The retired `source_id: alpaca_iex30` is rejected before HTTP and
+  cannot generate synthetic constituent identities. Generic offline IEX index
+  validation remains shared with historical parity tests.
   Replace its placeholder endpoint/provider/edition, update `allowed_hosts`
   to match the new endpoint host exactly, and record reviewed storage rights
   before explicitly enabling it. No approval is implied by the example.

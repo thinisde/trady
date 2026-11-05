@@ -54,7 +54,7 @@ fn durable_protocol_reserves_daily_slot_and_survives_unknown_dispatch_restart() 
     ));
     assert_eq!(store.daily_entry_count(at.date_naive()).unwrap(), 1);
     store.record_observation(&c,&trady_application::eur_protocol::driver::BrokerObservation{
-        holding_quantity:Decimal::ZERO,available_quantity:Decimal::ZERO,pending_order_ids:vec![],exact_orders:vec![],history_complete:true,observed_at:at,entry_first_filled_at:None,entry_confirmation_from_full_view_at:None,
+        holding_quantity:Decimal::ZERO,available_quantity:Decimal::ZERO,pending_order_ids:vec![],exact_orders:vec![],history_complete:true,history_coverage_exhausted:false,observed_at:at,entry_first_filled_at:None,entry_confirmation_from_full_view_at:None,
         evidence:serde_json::json!({"provider":"SYNTHETIC_POSTGRES_FIXTURE","fill_prices_and_wallet_fees":"retained_without_credentials"}),
     }).unwrap();
     store
@@ -148,5 +148,24 @@ fn durable_protocol_reserves_daily_slot_and_survives_unknown_dispatch_restart() 
         .transition("forbidden".into(), ProtocolInput::Tick, at)
         .unwrap();
     assert!(analyst.append(2, &record).is_err());
+    // Repeated broker observations must never exhaust an active intent's
+    // ability to persist recovery and exits. Exercise both the head constraint
+    // and append function beyond migration 18's old 10,000-event ceiling.
+    let mut state = recover(&restarted.load(&c.intent_id).unwrap()).unwrap();
+    while state.revision <= 10_000 {
+        let next = state
+            .transition(
+                format!("long_lived_{}", state.revision),
+                ProtocolInput::Tick,
+                at,
+            )
+            .unwrap();
+        restarted.append(state.revision, &next).unwrap();
+        state = next.state;
+    }
+    assert_eq!(
+        recover(&restarted.load(&c.intent_id).unwrap()).unwrap(),
+        state
+    );
     restarted.release_executor_lease().unwrap();
 }

@@ -139,6 +139,7 @@ pub fn run(args: &[String]) -> Result<Value> {
             "--intent",
             "--exit-reason",
             "--recover-leg",
+            "--retry-cancel-leg",
             "--broker-order-id",
             "--review-reference",
         ],
@@ -315,6 +316,18 @@ pub fn run(args: &[String]) -> Result<Value> {
                 research["risk_cost_model"]
                     == read::<Value>(&artifact(bundle, &manifest, "forward_cost_model")?)?,
                 "durable risk plan used different or unrecorded forward costs",
+            )?;
+            let costs = snapshot
+                .plan
+                .cost_model
+                .as_ref()
+                .ok_or_else(|| Error("entry plan lacks reproducible cost inputs".into()))?;
+            require(
+                research["risk_cost_model"]["entry"]
+                    == serde_json::to_value(&costs.entry).unwrap_or_default()
+                    && research["risk_cost_model"]["exit"]
+                        == serde_json::to_value(&costs.exit).unwrap_or_default(),
+                "entry plan economics differ from the accepted forward cost model",
             )?;
             let rules: Value = read(&artifact(bundle, &manifest, "instrument_rules")?)?;
             require(
@@ -522,7 +535,14 @@ pub fn run(args: &[String]) -> Result<Value> {
             journal: &mut store,
             broker: port,
         };
-        if let Some(leg) = values.get("--recover-leg") {
+        require(
+            !(values.contains_key("--recover-leg") && values.contains_key("--retry-cancel-leg")),
+            "choose exact-ID recovery or reviewed cancellation retry",
+        )?;
+        if let Some(leg) = values
+            .get("--recover-leg")
+            .or_else(|| values.get("--retry-cancel-leg"))
+        {
             let leg = match leg.as_str() {
                 "ENTRY" => trady_application::eur_protocol::OrderLeg::Entry,
                 "PROTECTION" => trady_application::eur_protocol::OrderLeg::Protection,
@@ -539,10 +559,18 @@ pub fn run(args: &[String]) -> Result<Value> {
                 &mut driver.journal,
                 &context,
                 new_id("reviewed_recovery"),
-                trady_application::eur_protocol::ProtocolInput::ReviewedBrokerId {
-                    leg,
-                    broker_id: id.clone(),
-                    review_reference: review.clone(),
+                if values.contains_key("--retry-cancel-leg") {
+                    trady_application::eur_protocol::ProtocolInput::ReviewedCancellationRetry {
+                        leg,
+                        broker_id: id.clone(),
+                        review_reference: review.clone(),
+                    }
+                } else {
+                    trady_application::eur_protocol::ProtocolInput::ReviewedBrokerId {
+                        leg,
+                        broker_id: id.clone(),
+                        review_reference: review.clone(),
+                    }
                 },
                 Utc::now(),
             )?;
@@ -550,7 +578,7 @@ pub fn run(args: &[String]) -> Result<Value> {
             require(
                 !values.contains_key("--broker-order-id")
                     && !values.contains_key("--review-reference"),
-                "exact-ID recovery options require --recover-leg",
+                "recovery options require --recover-leg or --retry-cancel-leg",
             )?;
         }
         (|| {
@@ -596,15 +624,16 @@ pub fn run(args: &[String]) -> Result<Value> {
                         None
                     });
                 let state = driver.drive_once(&context, Utc::now(), reason)?;
+                let recovery_action = driver.recovery_action(&state)?;
                 if once
                     || matches!(state.phase, ProtocolPhase::Flat | ProtocolPhase::Rejected)
                     || matches!(
-                        state.recovery_effect(),
+                        recovery_action,
                         trady_application::eur_protocol::ProtocolEffect::RequireOperator { .. }
                     )
                 {
                     return Ok(
-                        json!({"status":"EUR_PROTOCOL_CHECKPOINT","state":state,"atomic_protection":false,"live_enabled":false}),
+                        json!({"status":"EUR_PROTOCOL_CHECKPOINT","state":state,"recovery_action":recovery_action,"atomic_protection":false,"live_enabled":false}),
                     );
                 }
                 thread::sleep(Duration::from_millis(250));

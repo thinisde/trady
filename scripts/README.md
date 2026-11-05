@@ -82,7 +82,7 @@ operational PostgreSQL credential-rotation utility.
   links, heading anchors and fences.
 - [test-postgres.py](./test-postgres.py): `main`; provisions a new disposable
   PostgreSQL 18.3 container and runs ignored storage integration tests plus the
-  CLI `opencode`, `autonomous_cli` and `telegram_jobs_cli` integration targets
+  CLI `opencode`, `telegram_jobs_cli` and EUR workflow integration targets
   and service probes/demo.
   The latter verifies the actual analyst child with restricted PostgreSQL access,
   no inherited credentials and absent formula authority; it performs no broker calls.
@@ -243,8 +243,9 @@ its disposable-database environment:
 
 - `cargo test --locked -p trady-storage --tests -- --ignored --nocapture`
 - `cargo test --locked -p trady-cli --test opencode -- --ignored --nocapture`
-- `cargo test --locked -p trady-cli --test autonomous_cli -- --ignored --nocapture`
 - `cargo test --locked -p trady-cli --test telegram_jobs_cli -- --ignored --nocapture`
+- `cargo test --locked -p trady-cli --bin trady durable_intraday_cursor_resumes_and_expires_without_repeating_model_calls -- --ignored --nocapture`
+- `cargo test --locked -p trady-cli --bin trady month_record_window_and_unsubmitted_restart_are_fenced -- --ignored --nocapture`
 - `cargo run --locked --quiet --bin trady -- analyst --once`
 - `cargo run --locked --quiet --bin trady -- executor --once`
 - `cargo run --locked --quiet --bin trady -- gateway --once`

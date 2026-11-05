@@ -10,9 +10,14 @@ use trady_domain::{BrokerOrder, Side};
 struct Journal {
     records: Vec<ProtocolRecord>,
     fail_dispatch: bool,
+    observations: usize,
     trace: Rc<RefCell<Vec<String>>>,
 }
 impl ProtocolJournal for Journal {
+    fn record_observation(&mut self, _: &ProtocolContext, _: &BrokerObservation) -> Result<()> {
+        self.observations += 1;
+        Ok(())
+    }
     fn record_protection_confirmation(
         &mut self,
         _: &ProtocolContext,
@@ -49,6 +54,8 @@ struct Broker {
     unknown_entry: bool,
     reject_stop: bool,
     fail_cancel_prerequisites: bool,
+    fail_cancel: bool,
+    history_coverage_exhausted: bool,
     confirmation_delay_ms: Option<i64>,
     actual_entry_fill: Option<DateTime<Utc>>,
     fast_entry_prior: Option<DateTime<Utc>>,
@@ -146,7 +153,8 @@ impl ProtocolBroker for Broker {
             available_quantity: holding - reserved,
             pending_order_ids: pending,
             exact_orders: exact,
-            history_complete: true,
+            history_complete: !self.history_coverage_exhausted,
+            history_coverage_exhausted: self.history_coverage_exhausted,
             observed_at: self.at,
             entry_first_filled_at: if self.entry_filled > Decimal::ZERO {
                 self.actual_entry_fill
@@ -211,6 +219,11 @@ impl ProtocolBroker for Broker {
         id: &str,
     ) -> BrokerResult<CancellationReceipt> {
         self.cancelled.push(id.into());
+        if self.fail_cancel {
+            let mut error = BrokerFailure::new(BrokerFailureKind::Transport);
+            error.outcome_unknown = true;
+            return Err(error);
+        }
         Ok(CancellationReceipt {
             broker_order_id: id.into(),
         })
@@ -229,6 +242,8 @@ fn fixture() -> (ProtocolContext, ProtocolDriver<Journal, Broker>) {
         unknown_entry: false,
         reject_stop: false,
         fail_cancel_prerequisites: false,
+        fail_cancel: false,
+        history_coverage_exhausted: false,
         confirmation_delay_ms: None,
         actual_entry_fill: None,
         fast_entry_prior: None,
@@ -254,6 +269,211 @@ fn drive(
     d.broker.at += chrono::Duration::milliseconds(20);
     d.drive_once(c, d.broker.at, exit).unwrap()
 }
+
+#[test]
+fn interrupted_cancellation_requires_review_and_can_resume_once_after_restart() {
+    for dispatched in [false, true] {
+        let (c, mut d) = fixture();
+        drive(&mut d, &c, None);
+        d.broker.entry_filled = Decimal::ONE;
+        if dispatched {
+            d.broker.fail_cancel = true;
+            drive(&mut d, &c, None);
+        } else {
+            // Simulate death between the durable marker and the DELETE.
+            advance(
+                &mut d.journal,
+                &c,
+                "interrupted_cancel".into(),
+                ProtocolInput::Cancel {
+                    leg: OrderLeg::Entry,
+                },
+                d.broker.at,
+            )
+            .unwrap();
+        }
+        let attempts = d.broker.cancelled.len();
+        d.journal.records =
+            serde_json::from_slice(&serde_json::to_vec(&d.journal.records).unwrap()).unwrap();
+        let state = drive(&mut d, &c, None);
+        assert_eq!(d.broker.cancelled.len(), attempts);
+        assert!(
+            matches!(d.recovery_action(&state).unwrap(), ProtocolEffect::RequireOperator { reason } if reason.contains("CANCELLATION_OUTCOME_REQUIRES_REVIEW"))
+        );
+        assert!(
+            state
+                .transition(
+                    "wrong_order".into(),
+                    ProtocolInput::ReviewedCancellationRetry {
+                        leg: OrderLeg::Entry,
+                        broker_id: "foreign_order".into(),
+                        review_reference: "operator_review".into(),
+                    },
+                    d.broker.at
+                )
+                .is_err()
+        );
+        advance(
+            &mut d.journal,
+            &c,
+            "reviewed_cancel_retry".into(),
+            ProtocolInput::ReviewedCancellationRetry {
+                leg: OrderLeg::Entry,
+                broker_id: "1001".into(),
+                review_reference: "operator_review".into(),
+            },
+            d.broker.at,
+        )
+        .unwrap();
+        d.broker.fail_cancel = false;
+        let state = drive(&mut d, &c, None);
+        assert_eq!(d.broker.cancelled.len(), attempts + 1);
+        assert!(!matches!(
+            d.recovery_action(&state).unwrap(),
+            ProtocolEffect::RequireOperator { .. }
+        ));
+        drive(&mut d, &c, None);
+        assert_eq!(d.broker.cancelled.len(), attempts + 1);
+        d.broker.entry_terminal = true;
+        assert_eq!(
+            drive(&mut d, &c, None).phase,
+            ProtocolPhase::ProtectionUnknown
+        );
+    }
+}
+
+#[test]
+fn overdue_acknowledged_cancellation_stays_reconcilable_and_requires_review() {
+    let (c, mut d) = fixture();
+    drive(&mut d, &c, None);
+    d.broker.entry_filled = Decimal::ONE;
+    drive(&mut d, &c, None);
+    d.broker.at += chrono::Duration::seconds(11);
+    let state = drive(&mut d, &c, None);
+    assert!(matches!(
+        d.recovery_action(&state).unwrap(),
+        ProtocolEffect::RequireOperator { .. }
+    ));
+    assert_eq!(d.broker.cancelled.len(), 1);
+    d.broker.entry_terminal = true;
+    let state = drive(&mut d, &c, None);
+    assert!(!matches!(
+        d.recovery_action(&state).unwrap(),
+        ProtocolEffect::RequireOperator { .. }
+    ));
+}
+
+#[test]
+fn incomplete_exact_history_requires_review_and_keeps_the_working_stop() {
+    let (c, mut d) = fixture();
+    drive(&mut d, &c, None);
+    d.broker.entry_filled = c.quantity;
+    d.broker.entry_terminal = true;
+    drive(&mut d, &c, None);
+    assert_eq!(drive(&mut d, &c, None).phase, ProtocolPhase::Protected);
+    d.broker.history_coverage_exhausted = true;
+    let state = drive(&mut d, &c, Some("OWNER_EXIT"));
+    assert!(state.reconciliation_required);
+    assert!(
+        matches!(d.recovery_action(&state).unwrap(), ProtocolEffect::RequireOperator { reason } if reason == "EXACT_ORDER_HISTORY_COVERAGE_EXHAUSTED")
+    );
+    assert!(d.broker.cancelled.is_empty());
+    d.broker.history_coverage_exhausted = false;
+    drive(&mut d, &c, None);
+    assert_eq!(d.broker.cancelled, vec!["1002"]);
+}
+
+#[test]
+fn reviewed_retry_waits_for_complete_history_and_accepts_a_late_terminal_order() {
+    let (c, mut d) = fixture();
+    drive(&mut d, &c, None);
+    d.broker.entry_filled = Decimal::ONE;
+    d.broker.fail_cancel = true;
+    drive(&mut d, &c, None);
+    advance(
+        &mut d.journal,
+        &c,
+        "reviewed_retry".into(),
+        ProtocolInput::ReviewedCancellationRetry {
+            leg: OrderLeg::Entry,
+            broker_id: "1001".into(),
+            review_reference: "review".into(),
+        },
+        d.broker.at,
+    )
+    .unwrap();
+    d.broker.fail_cancel = false;
+    d.broker.history_coverage_exhausted = true;
+    drive(&mut d, &c, None);
+    assert_eq!(d.broker.cancelled.len(), 1);
+    d.broker.history_coverage_exhausted = false;
+    d.broker.entry_terminal = true;
+    drive(&mut d, &c, None);
+    assert_eq!(
+        d.broker.cancelled.len(),
+        1,
+        "terminal observation wins over the reviewed retry"
+    );
+}
+
+#[test]
+fn unchanged_protected_observations_do_not_grow_the_state_journal() {
+    let (c, mut d) = fixture();
+    drive(&mut d, &c, None);
+    d.broker.entry_filled = c.quantity;
+    d.broker.entry_terminal = true;
+    drive(&mut d, &c, None);
+    assert_eq!(drive(&mut d, &c, None).phase, ProtocolPhase::Protected);
+    let count = d.journal.records.len();
+    let observations = d.journal.observations;
+    for _ in 0..200 {
+        assert_eq!(drive(&mut d, &c, None).phase, ProtocolPhase::Protected);
+    }
+    assert_eq!(d.journal.records.len(), count);
+    assert_eq!(d.journal.observations, observations + 200);
+    d.journal.records =
+        serde_json::from_slice(&serde_json::to_vec(&d.journal.records).unwrap()).unwrap();
+    drive(&mut d, &c, Some("OWNER_EXIT"));
+    assert_eq!(d.broker.cancelled, vec!["1002"]);
+    d.broker.stop_terminal = true;
+    drive(&mut d, &c, None);
+    d.broker.exit_filled = c.quantity;
+    assert_eq!(drive(&mut d, &c, None).phase, ProtocolPhase::Flat);
+}
+
+#[test]
+fn existing_history_beyond_the_old_limit_remains_recoverable_and_can_flatten() {
+    let (c, mut d) = fixture();
+    drive(&mut d, &c, None);
+    d.broker.entry_filled = c.quantity;
+    d.broker.entry_terminal = true;
+    drive(&mut d, &c, None);
+    let mut state = drive(&mut d, &c, None);
+    // Legacy loops persisted even identical observations. Build a valid old
+    // chain directly without repeatedly replaying every preceding prefix.
+    while d.journal.records.len() <= 10_000 {
+        let record = state
+            .transition(
+                format!("legacy_observation_{}", state.revision),
+                ProtocolInput::HoldingReconciled {
+                    quantity: c.quantity,
+                    pending_order_ids: vec!["1002".into()],
+                    history_complete: true,
+                },
+                d.broker.at,
+            )
+            .unwrap();
+        state = record.state.clone();
+        d.journal.records.push(record);
+    }
+    assert_eq!(recover(&d.journal.records).unwrap(), state);
+    drive(&mut d, &c, Some("OWNER_EXIT"));
+    d.broker.stop_terminal = true;
+    drive(&mut d, &c, None);
+    d.broker.exit_filled = c.quantity;
+    assert_eq!(drive(&mut d, &c, None).phase, ProtocolPhase::Flat);
+}
+
 #[test]
 fn entry_quote_expiry_caps_only_entry_transport() {
     let (mut c, mut d) = fixture();

@@ -12,7 +12,7 @@ use crate::economics::{
     CostBasis, ExitCosts, liquidation_proceeds, planned_loss_fraction, target_price,
 };
 use crate::{
-    EntryCosts, EntryRange, InstrumentRules, Policy, ceil_to, div, fresh, size_entry, sub,
+    EntryCosts, EntryRange, InstrumentRules, Policy, add, ceil_to, div, fresh, mul, size_entry, sub,
 };
 
 pub const INTRADAY_POLICY_VERSION: &str = "eur_intraday_v1";
@@ -116,6 +116,17 @@ pub struct IntradayTradePlan {
     pub flatten_deadline: DateTime<Utc>,
     pub evidence_snapshot_ids: Vec<String>,
     pub stop_revision: u64,
+    /// Retained calculator inputs. Legacy plans can be read for recovery, but
+    /// cannot establish new entry readiness without reproducible economics.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_model: Option<IntradayCostModel>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IntradayCostModel {
+    pub entry: EntryCosts,
+    pub exit: ExitCosts,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -170,9 +181,11 @@ impl IntradayTradePlan {
         policy.validate()?;
         require(
             valid_id(&self.plan_id)
+                && self.policy_revision == policy.revision
                 && valid_id(&self.account_id)
                 && self.instrument_id.as_str().ends_with("_EQ")
                 && self.currency.as_str() == "EUR"
+                && self.acquisition_cost.currency == self.currency
                 && self.entry_price > Decimal::ZERO
                 && self.quantity > Decimal::ZERO
                 && self.acquisition_cost.amount > Decimal::ZERO
@@ -189,6 +202,47 @@ impl IntradayTradePlan {
                 && self.evidence_snapshot_ids.len() <= 128
                 && self.evidence_snapshot_ids.iter().all(|id| valid_id(id)),
             "invalid EUR intraday trade plan",
+        )?;
+        let costs = self
+            .cost_model
+            .as_ref()
+            .ok_or_else(|| Error("intraday entry plan lacks reproducible cost inputs".into()))?;
+        require(
+            costs.entry.fixed.currency == self.currency
+                && costs.entry.uncertainty.currency == self.currency
+                && costs.entry.fixed.amount >= Decimal::ZERO
+                && costs.entry.uncertainty.amount >= Decimal::ZERO
+                && costs.entry.rate >= Decimal::ZERO
+                && costs.entry.rate < Decimal::ONE
+                && costs.entry.fx.is_none()
+                && costs.exit.fx.is_none(),
+            "invalid EUR intraday entry costs",
+        )?;
+        let acquisition = add(
+            mul(
+                self.quantity,
+                mul(self.entry_price, add(Decimal::ONE, costs.entry.rate)?)?,
+            )?,
+            add(costs.entry.fixed.amount, costs.entry.uncertainty.amount)?,
+        )?;
+        require(
+            acquisition == self.acquisition_cost.amount,
+            "intraday acquisition cost differs from calculator inputs",
+        )?;
+        let basis = CostBasis {
+            instrument_id: self.instrument_id.clone(),
+            quantity: self.quantity,
+            instrument_currency: self.currency.clone(),
+            acquisition_cost: self.acquisition_cost.clone(),
+        };
+        let loss = planned_loss_fraction(&basis, self.stop_price, &costs.exit, now)?;
+        let proceeds = liquidation_proceeds(&basis, self.target_price, &costs.exit, now)?;
+        let target = div(sub(proceeds.amount, acquisition)?, acquisition)?;
+        require(
+            loss == self.planned_loss_fraction
+                && target == self.target_net_fraction
+                && self.reward_to_risk == div(target, loss)?,
+            "intraday risk economics differ from calculator inputs",
         )
     }
 }
@@ -384,6 +438,10 @@ pub fn calculate_intraday_plan(
         flatten_deadline,
         evidence_snapshot_ids,
         stop_revision: 0,
+        cost_model: Some(IntradayCostModel {
+            entry: entry_costs.clone(),
+            exit: exit_costs.clone(),
+        }),
     };
     plan.validate(now, policy)?;
     Ok(plan)
@@ -401,11 +459,30 @@ pub fn tighten_stop(
             && now < plan.flatten_deadline,
         "protective stop may only tighten before the deadline",
     )?;
-    plan.stop_price = proposed_stop;
-    plan.stop_revision = plan
+    let revision = plan
         .stop_revision
         .checked_add(1)
         .ok_or_else(|| Error("stop revision overflow".into()))?;
+    let economics = plan
+        .cost_model
+        .as_ref()
+        .map(|costs| {
+            let basis = CostBasis {
+                instrument_id: plan.instrument_id.clone(),
+                quantity: plan.quantity,
+                instrument_currency: plan.currency.clone(),
+                acquisition_cost: plan.acquisition_cost.clone(),
+            };
+            let loss = planned_loss_fraction(&basis, proposed_stop, &costs.exit, now)?;
+            Ok::<_, Error>((loss, div(plan.target_net_fraction, loss)?))
+        })
+        .transpose()?;
+    plan.stop_price = proposed_stop;
+    plan.stop_revision = revision;
+    if let Some((loss, reward_to_risk)) = economics {
+        plan.planned_loss_fraction = loss;
+        plan.reward_to_risk = reward_to_risk;
+    }
     Ok(())
 }
 
@@ -544,7 +621,16 @@ mod tests {
         assert!(plan.planned_loss_fraction <= d("0.02"));
         let mut updated = plan.clone();
         assert!(tighten_stop(&mut updated, d("99.50"), now()).is_ok());
+        assert!(
+            updated
+                .validate(now(), &IntradayRiskPolicy::default())
+                .is_ok()
+        );
         assert!(tighten_stop(&mut updated, d("99.25"), now()).is_err());
+        updated.stop_revision = u64::MAX;
+        let unchanged = updated.clone();
+        assert!(tighten_stop(&mut updated, d("99.75"), now()).is_err());
+        assert_eq!(updated, unchanged);
     }
 
     #[test]

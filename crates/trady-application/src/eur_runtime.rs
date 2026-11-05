@@ -424,7 +424,11 @@ pub fn evaluate_order_readiness(
         blockers.push(ReadinessBlocker::PricePrecision);
     }
     if plan.acquisition_cost.currency != account.spendable_cash.currency
-        || plan.acquisition_cost.amount > account.spendable_cash.amount
+        || account
+            .spendable_cash
+            .amount
+            .checked_mul(rust_decimal::Decimal::new(98, 2))
+            .is_none_or(|budget| plan.acquisition_cost.amount > budget)
     {
         blockers.push(ReadinessBlocker::BuyingPower);
     }
@@ -1089,6 +1093,7 @@ mod tests {
         })).unwrap();
         let plan = IntradayTradePlan {
             plan_id: "plan_fixture".into(),
+            cost_model: None,
             policy_revision: config.policy.revision.clone(),
             account_id: config.account_id.to_string(),
             instrument_id: binding.instrument_id.clone(),
@@ -1170,6 +1175,87 @@ mod tests {
             assert!(blockers.contains(&reason), "{reason:?}: {blockers:?}");
         }
         let mut boundary = snapshot.clone();
+        // Other release/source blockers are intentional in this fixture. A
+        // consistent plan must not add RiskPlanInvalid, and each economic
+        // mutation must add it independently of those unrelated blockers.
+        let mut economics = snapshot.clone();
+        economics.plan.entry_price = Decimal::from(100);
+        economics.plan.quantity = Decimal::ONE;
+        economics.plan.acquisition_cost.amount = Decimal::from(100);
+        economics.plan.stop_price = Decimal::from(99);
+        economics.plan.target_price = Decimal::from(102);
+        economics.plan.target_net_fraction = Decimal::new(2, 2);
+        economics.plan.planned_loss_fraction = Decimal::new(1, 2);
+        economics.plan.reward_to_risk = Decimal::from(2);
+        let zero = trady_domain::Money {
+            amount: Decimal::ZERO,
+            currency: config.base_currency.clone(),
+        };
+        economics.plan.cost_model = Some(trady_policy::intraday::IntradayCostModel {
+            entry: EntryCosts {
+                fixed: zero.clone(),
+                rate: Decimal::ZERO,
+                uncertainty: zero.clone(),
+                fx: None,
+            },
+            exit: ExitCosts {
+                fixed: zero.clone(),
+                rate: Decimal::ZERO,
+                uncertainty: zero,
+                fx: None,
+            },
+        });
+        assert!(
+            matches!(economics.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+            if !blockers.contains(&ReadinessBlocker::RiskPlanInvalid))
+        );
+        for field in [
+            "entry_price",
+            "stop_price",
+            "target_price",
+            "quantity",
+            "acquisition_cost",
+            "target_net_fraction",
+            "planned_loss_fraction",
+            "reward_to_risk",
+            "policy_revision",
+            "cost_currency",
+            "cost_inputs",
+        ] {
+            let mut invalid = economics.clone();
+            match field {
+                "entry_price" => invalid.plan.entry_price += Decimal::ONE,
+                "stop_price" => invalid.plan.stop_price = Decimal::from(50),
+                "target_price" => invalid.plan.target_price += Decimal::ONE,
+                "quantity" => invalid.plan.quantity += Decimal::ONE,
+                "acquisition_cost" => invalid.plan.acquisition_cost.amount += Decimal::ONE,
+                "target_net_fraction" => invalid.plan.target_net_fraction += Decimal::new(1, 3),
+                "planned_loss_fraction" => invalid.plan.planned_loss_fraction += Decimal::new(1, 3),
+                "reward_to_risk" => invalid.plan.reward_to_risk += Decimal::ONE,
+                "policy_revision" => invalid.plan.policy_revision = "different_policy".into(),
+                "cost_currency" => {
+                    invalid.plan.acquisition_cost.currency =
+                        trady_domain::Currency::new("USD").unwrap()
+                }
+                _ => invalid.plan.cost_model = None,
+            }
+            assert!(
+                matches!(invalid.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+                if blockers.contains(&ReadinessBlocker::RiskPlanInvalid)),
+                "{field}"
+            );
+        }
+        for (quantity, blocked) in [(98, false), (100, true)] {
+            let mut allocation = economics.clone();
+            allocation.plan.quantity = Decimal::from(quantity);
+            allocation.plan.acquisition_cost.amount = Decimal::from(quantity * 100);
+            assert!(allocation.plan.validate(now(), &config.policy).is_ok());
+            let OrderReadiness::Blocked { blockers } = allocation.evaluate(&config, now()).unwrap()
+            else {
+                panic!("fixture still lacks release authority")
+            };
+            assert_eq!(blockers.contains(&ReadinessBlocker::BuyingPower), blocked);
+        }
         boundary.session.session_id = "XPAR_physical_session".into();
         assert!(
             matches!(boundary.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
@@ -1294,6 +1380,7 @@ mod tests {
         let eur = trady_domain::Currency::new("EUR").expect("currency");
         let mut plan = IntradayTradePlan {
             plan_id: "plan_1".into(),
+            cost_model: None,
             policy_revision: "eur_intraday_v1".into(),
             account_id: "paper_eur".into(),
             instrument_id: InstrumentId::new("AIR_PA_EQ").expect("instrument"),

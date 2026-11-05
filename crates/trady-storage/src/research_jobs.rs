@@ -108,20 +108,24 @@ fn enqueue(
     read_job(db_client, scope, &row.get::<_, String>(0))?
         .ok_or_else(|| Error("queued job disappeared".into()))
 }
-fn check_lease(db_client: &mut impl GenericClient, lease: &JobLease) -> Result<()> {
+fn lock_lease(db_client: &mut impl GenericClient, lease: &JobLease) -> Result<String> {
     let row=db_client.query_opt("SELECT policy_hash FROM control.research_work WHERE job_id=$1 AND owner_id=$2 AND account_id=$3 AND policy_version=$4
         AND status='RUNNING' AND lease_worker=$5 AND lease_generation=$6 AND lease_until>clock_timestamp() FOR UPDATE",
         &[&lease.job.id,&lease.job.scope.owner_id,&lease.job.scope.account_id,&version(&lease.job.scope)?,&lease.worker_id,&lease.generation]).map_err(db)?
         .ok_or_else(||Error("research job lease expired or fenced".into()))?;
+    Ok(row.get(0))
+}
+fn check_lease(db_client: &mut impl GenericClient, lease: &JobLease) -> Result<()> {
+    let policy_hash = lock_lease(db_client, lease)?;
     let policy = read_policy(db_client, &lease.job.scope)?;
     require(
-        policy.enabled && row.get::<_, String>(0) == digest(&policy)?,
+        policy.enabled && policy_hash == digest(&policy)?,
         "research job policy changed or revoked",
     )
 }
 fn finish(
     db_client: &mut impl GenericClient,
-    lease: &JobLease,
+    job: &ResearchJob,
     result: Option<&Value>,
     error: Option<&str>,
 ) -> Result<()> {
@@ -139,12 +143,19 @@ fn finish(
             "job result exceeds bound",
         )?;
     }
-    db_client.execute("UPDATE control.research_work SET status=$2,result=$3,error_code=$4,completed_at=clock_timestamp(),lease_until=clock_timestamp() WHERE job_id=$1",
-        &[&lease.job.id,&status,&result,&error]).map_err(db)?;
+    let expected_status = if job.status == JobStatus::Running {
+        "RUNNING"
+    } else {
+        "QUEUED"
+    };
+    let updated = db_client.execute("UPDATE control.research_work SET status=$2,result=$3,error_code=$4,completed_at=clock_timestamp(),lease_until=clock_timestamp()
+        WHERE job_id=$1 AND owner_id=$5 AND account_id=$6 AND policy_version=$7 AND lease_generation=$8 AND status=$9",
+        &[&job.id,&status,&result,&error,&job.scope.owner_id,&job.scope.account_id,&version(&job.scope)?,&job.generation,&expected_status]).map_err(db)?;
+    require(updated == 1, "research job terminal update fenced")?;
     let text = if let Some(error) = error {
         format!(
             "Job {} FAILED: {error}. No entry permission was created.",
-            lease.job.id
+            job.id
         )
     } else if let Some(text) = result
         .and_then(|r| r.get("reply_text"))
@@ -152,13 +163,13 @@ fn finish(
     {
         format!(
             "Job {} COMPLETE\n{}",
-            lease.job.id,
+            job.id,
             text.chars().take(2800).collect::<String>()
         )
     } else {
         format!(
             "Job {} COMPLETE\n{}",
-            lease.job.id,
+            job.id,
             result.unwrap_or(&Value::Null)
         )
     };
@@ -166,7 +177,7 @@ fn finish(
     db_client.execute("INSERT INTO control.gateway_outbox(delivery_id,bot_id,owner_user_id,chat_id,owner_id,account_id,policy_version,job_id,text)
         SELECT 'delivery_'||md5(bot_id::text||':'||chat_id::text||':'||job_id),bot_id,owner_user_id,chat_id,owner_id,account_id,policy_version,job_id,$2
         FROM control.gateway_receipts WHERE job_id=$1 GROUP BY bot_id,owner_user_id,chat_id,owner_id,account_id,policy_version,job_id ON CONFLICT DO NOTHING",
-        &[&lease.job.id,&text]).map_err(db)?;
+        &[&job.id,&text]).map_err(db)?;
     Ok(())
 }
 fn load_packet(
@@ -507,13 +518,17 @@ impl ResearchJobRepository for PgResearchJobs {
         )
         .map_err(db)?;
         if tx.query_one("SELECT EXISTS(SELECT 1 FROM control.research_work WHERE owner_id=$1 AND account_id=$2 AND policy_version=$3 AND status='RUNNING' AND lease_until>clock_timestamp())",&[&scope.owner_id,&scope.account_id,&version(scope)?]).map_err(db)?.get::<_,bool>(0) { return Ok(None); }
-        tx.execute("UPDATE control.research_work SET status='FAILED',error_code='RETRY_BUDGET_EXHAUSTED',completed_at=clock_timestamp()
-            WHERE owner_id=$1 AND account_id=$2 AND policy_version=$3 AND status='RUNNING' AND lease_until<=clock_timestamp() AND attempts>=3",
+        let exhausted = tx.query(&format!("SELECT {JOB_COLUMNS} FROM control.research_work
+            WHERE owner_id=$1 AND account_id=$2 AND policy_version=$3 AND status='RUNNING' AND lease_until<=clock_timestamp() AND attempts>=3 FOR UPDATE"),
             &[&scope.owner_id,&scope.account_id,&version(scope)?]).map_err(db)?;
+        for row in exhausted {
+            finish(&mut tx, &job(row)?, None, Some("RETRY_BUDGET_EXHAUSTED"))?;
+        }
         let row=tx.query_opt(&format!("SELECT {JOB_COLUMNS} FROM control.research_work WHERE owner_id=$1 AND account_id=$2 AND policy_version=$3
             AND (status='QUEUED' OR status='RUNNING' AND lease_until<=clock_timestamp()) AND attempts<3 ORDER BY created_at,job_id LIMIT 1 FOR UPDATE SKIP LOCKED"),
             &[&scope.owner_id,&scope.account_id,&version(scope)?]).map_err(db)?;
         let Some(row) = row else {
+            tx.commit().map_err(db)?;
             return Ok(None);
         };
         let mut record = job(row)?;
@@ -522,7 +537,7 @@ impl ResearchJobRepository for PgResearchJobs {
             || record.policy_hash != digest(&policy)?
             || record.work.validate(&policy).is_err()
         {
-            tx.execute("UPDATE control.research_work SET status='FAILED',error_code='POLICY_CHANGED_OR_REVOKED',completed_at=clock_timestamp() WHERE job_id=$1",&[&record.id]).map_err(db)?;
+            finish(&mut tx, &record, None, Some("POLICY_CHANGED_OR_REVOKED"))?;
             tx.commit().map_err(db)?;
             return Ok(None);
         }
@@ -542,7 +557,7 @@ impl ResearchJobRepository for PgResearchJobs {
     fn complete(&mut self, lease: &JobLease, result: &Value) -> Result<()> {
         let mut tx = self.client.transaction().map_err(db)?;
         check_lease(&mut tx, lease)?;
-        finish(&mut tx, lease, Some(result), None)?;
+        finish(&mut tx, &lease.job, Some(result), None)?;
         tx.commit().map_err(db)
     }
     fn fail(&mut self, lease: &JobLease, code: &str) -> Result<()> {
@@ -556,10 +571,8 @@ impl ResearchJobRepository for PgResearchJobs {
         )?;
         let mut tx = self.client.transaction().map_err(db)?;
         // Policy revocation must not strand a failed provider call as RUNNING.
-        let held=tx.query_one("SELECT EXISTS(SELECT 1 FROM control.research_work WHERE job_id=$1 AND lease_worker=$2 AND lease_generation=$3 AND status='RUNNING' AND lease_until>clock_timestamp())",
-            &[&lease.job.id,&lease.worker_id,&lease.generation]).map_err(db)?.get::<_,bool>(0);
-        require(held, "research job lease expired or fenced")?;
-        finish(&mut tx, lease, None, Some(code))?;
+        lock_lease(&mut tx, lease)?;
+        finish(&mut tx, &lease.job, None, Some(code))?;
         tx.commit().map_err(db)
     }
     fn packet(
@@ -603,7 +616,7 @@ impl ResearchJobRepository for PgResearchJobs {
             VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",&[&id,&lease.job.id,&packet.id,&packet.scope.owner_id,&packet.scope.account_id,&version(&packet.scope)?,
                 &assessment.model_revision,&digest(assessment)?,&encode(assessment)?,&reference,&blocker,&packet.expires_at]).map_err(db)?;
         let result = json!({"assessment_id":id,"packet_id":packet.id,"model_revision":assessment.model_revision,"readiness_reference":reference,"readiness_blocker":blocker,"entry_authorized":false});
-        finish(&mut tx, lease, Some(&result), None)?;
+        finish(&mut tx, &lease.job, Some(&result), None)?;
         tx.commit().map_err(db)?;
         Ok(result)
     }
@@ -843,7 +856,7 @@ fn report(
     ))
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct GatewayDelivery {
     pub id: String,
     pub bot_id: i64,
@@ -851,6 +864,18 @@ pub struct GatewayDelivery {
     pub chat_id: i64,
     pub scope: Scope,
     pub text: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct GatewayDeliveryClaim {
+    pub delivery: GatewayDelivery,
+    pub token: String,
+}
+
+pub enum GatewayDeliveryOutcome {
+    Sent,
+    Unknown,
+    Suppressed,
 }
 
 impl PgResearchJobs {
@@ -1035,16 +1060,57 @@ impl PgResearchJobs {
             self.role == "trady_gateway" && bot_id > 0 && (1..=50).contains(&limit),
             "invalid gateway outbox query",
         )?;
-        self.client.query("SELECT delivery_id,bot_id,owner_user_id,chat_id,owner_id,account_id,policy_version,text FROM control.gateway_outbox WHERE bot_id=$1 AND delivered_at IS NULL ORDER BY created_at,delivery_id LIMIT $2",
+        self.client.query("SELECT delivery_id,bot_id,owner_user_id,chat_id,owner_id,account_id,policy_version,text FROM control.gateway_outbox WHERE bot_id=$1 AND delivery_status='PENDING' ORDER BY created_at,delivery_id LIMIT $2",
             &[&bot_id,&(limit as i64)]).map_err(db)?.into_iter().map(|r|Ok(GatewayDelivery { id:r.get(0),bot_id:r.get(1),owner_user_id:r.get(2),chat_id:r.get(3),
                 scope:Scope { owner_id:r.get(4),account_id:r.get(5),policy_version:r.get::<_,i32>(6) as u32 },text:r.get(7) })).collect()
     }
-    pub fn acknowledge_delivery(&mut self, bot_id: i64, id: &str) -> Result<()> {
+    pub fn claim_delivery(&mut self, bot_id: i64) -> Result<Option<GatewayDeliveryClaim>> {
+        require(
+            self.role == "trady_gateway" && bot_id > 0,
+            "invalid gateway outbox claim",
+        )?;
+        let token = new_id("delivery_claim");
+        let value: Option<Value> = self
+            .client
+            .query_one(
+                "SELECT control.claim_gateway_delivery($1,$2)",
+                &[&bot_id, &token],
+            )
+            .map_err(db)?
+            .get(0);
+        let Some(value) = value.filter(|v| !v.is_null()) else {
+            return Ok(None);
+        };
+        Ok(Some(GatewayDeliveryClaim {
+            delivery: decode(value)?,
+            token,
+        }))
+    }
+    pub fn finish_delivery(
+        &mut self,
+        claim: &GatewayDeliveryClaim,
+        outcome: GatewayDeliveryOutcome,
+    ) -> Result<()> {
         require(
             self.role == "trady_gateway",
             "invalid gateway outbox writer",
         )?;
-        self.client.execute("UPDATE control.gateway_outbox SET delivered_at=clock_timestamp() WHERE delivery_id=$1 AND bot_id=$2 AND delivered_at IS NULL",&[&id,&bot_id]).map_err(db)?;
+        let outcome = match outcome {
+            GatewayDeliveryOutcome::Sent => "SENT",
+            GatewayDeliveryOutcome::Unknown => "UNKNOWN",
+            GatewayDeliveryOutcome::Suppressed => "SUPPRESSED",
+        };
+        self.client
+            .query_one(
+                "SELECT control.finish_gateway_delivery($1,$2,$3,$4)",
+                &[
+                    &claim.delivery.bot_id,
+                    &claim.delivery.id,
+                    &claim.token,
+                    &outcome,
+                ],
+            )
+            .map_err(db)?;
         Ok(())
     }
     pub fn selected_session(&mut self, scope: &Scope) -> Result<Option<String>> {

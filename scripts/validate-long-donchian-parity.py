@@ -123,6 +123,12 @@ def boundary_cases() -> list[dict]:
     gap_exit = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200", "exit_bars": [gap_bar]})
     cases.append({"name": "open_below_stop_is_gap_stop", "rust": gap_exit, "passed": gap_exit["exit"]["reason"] == "GAP_THROUGH_STOP"})
 
+    target_gap = {**same_bar, "open": str(target + 1), "high": str(target + 2)}
+    target_exit = rust_bridge({"bars": synthetic_bars(35, close="200"), "entry": "200", "exit_bars": [target_gap]})
+    cases.append({"name": "target_at_open_precedes_later_stop", "rust": target_exit,
+                  "passed": target_exit["exit"]["reason"] == "TARGET"
+                  and Decimal(target_exit["exit"]["executable_price"]) == target + 1})
+
     fifth_bars = [
         {"observed_at": f"2026-02-0{index}T21:00:00Z", "open": "200", "high": "201", "low": "199", "close": "200.5"}
         for index in range(1, 6)

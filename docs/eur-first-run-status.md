@@ -1,5 +1,9 @@
 # EUR first-run implementation status
 
+The later [legacy retirement](./eur-legacy-retirement-2026-11-05.md) removes the
+old runtime/CLI paths described in this historical checkpoint. Its parity
+fixtures and immutable evidence remain; EUR activation gates are unchanged.
+
 Latest continuation: [bounded DEMO month preparation](./eur-demo-month-2026-11.md).
 Month operation is prepared for 6 November–6 December, with LIVE disabled and
 no automatic model promotion. The final evidence record, rather than the

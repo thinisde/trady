@@ -43,6 +43,14 @@ invoke the analyst or create a risk plan merely to exercise the positive path.
 use the existing `EntryCosts` and `ExitCosts` contracts. The reviewed universe
 supplies exact broker rules. No default costs or guessed precision are imported.
 
+New risk plans retain their entry/exit `cost_model`. Validation recomputes
+acquisition cost, stop loss, target net return and reward-to-risk from prices,
+quantity and those inputs, and checks currency and policy revision. Entry also
+binds the plan's cost inputs to the release's accepted forward model. Entry
+snapshots must also stay within the calculator's 98% spendable-cash ceiling.
+Older plans without reproducible economics remain readable for historical inspection
+but cannot authorize a new entry. Existing protocol contexts remain recoverable.
+
 The earlier pre-month SHADOW sensitivity file, used at the 5 November
 12:21 UTC checkpoint, had no independent cost acceptance. Its `ReviewedCosts`
 configuration type alone did not satisfy the release gate. That historical
@@ -105,6 +113,17 @@ After an operator identifies an ambiguous submission, add `--recover-leg ENTRY`
 (or `PROTECTION`/`EXIT`), `--broker-order-id EXACT_ID` and
 `--review-reference REVIEW_ID`. The reducer records that review; the adapter
 then verifies the exact order shape, holdings and history before any replacement.
+
+An interrupted DELETE has a separate recovery path. A missing cancellation
+acknowledgement, or an order still unresolved ten seconds after its cancellation
+marker, returns `recovery_action=REQUIRE_OPERATOR` with the exact leg and ID.
+Restart still reconciles first; a late terminal observation clears that condition.
+After reviewing the native order, use `--retry-cancel-leg ENTRY` (or `PROTECTION`),
+`--broker-order-id EXACT_ID` and `--review-reference REVIEW_ID` to authorize one
+further cancellation attempt. This cannot change the broker ID or retry a POST.
+The attempt requires a fresh complete broker observation and liquidation
+prerequisites; another ambiguous attempt requires another explicit review.
+
 `--once` records one checkpoint for supervised diagnostics; it does not run the
 remaining lifecycle. An expired release cannot start another entry; recovery
 retains the original release binding and latches an exit. LIVE remains rejected.
@@ -115,6 +134,17 @@ Raw pending, positions and bounded history responses, including fill prices and
 wallet fees, are committed as `protocol_broker_observation` before their reducer
 inputs. This preserves costs for subsequent reconciliation rather than declaring
 missing P&L or fees to be zero.
+
+History completeness is scoped to the current exact order IDs: distinct native
+fill quantities must equal each order's cumulative filled quantity. Missing
+orders or incomplete totals block reconciliation and return the explicit
+`EXACT_ORDER_HISTORY_COVERAGE_EXHAUSTED` operator action; malformed or conflicting
+fill IDs reject the observation. A restart can obtain a new proof. The
+eight-page bound does not require scanning unrelated old ticker history; this
+proof does not establish account-wide economic-history completeness.
+Unchanged protected holdings retain their raw broker observations without
+duplicating reducer events. Migration 21 and replay remove the former 10,000-event
+ceiling, so older long journals can still reconcile and flatten.
 
 The exposure clock starts at the broker's first fill timestamp, retained as an
 optional journal field for compatibility with existing records. Scoped entry

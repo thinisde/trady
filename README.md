@@ -1,18 +1,20 @@
 # Trady
 
-Trady is a Rust research and execution system migrating from IEX30/Alpaca to
-EUR equities. The first operational milestone is a real-input SHADOW run with
+Trady is a Rust research and execution system for EUR equities. The first
+operational milestone is a real-input SHADOW run with
 PostgreSQL and Telegram. That SHADOW milestone has completed with blocked
 selection; a successful paper day and demo acceptance remain incomplete.
 The checked-in EUR example is disabled, uses SHADOW, and cannot submit orders.
-LIVE is rejected; DEMO remains blocked pending independently accepted quote,
-protection/recovery, replay, and owner-release evidence.
+LIVE is rejected. DEMO remains blocked on native partial-entry/protection
+evidence, a positive real-input paper lifecycle, complete independent acceptance
+and exact-hash owner approval. Scoped quote/rule/cost components are accepted.
 
 The target operator profile is [config/eur-demo.example.json](./config/eur-demo.example.json).
 The migration plan and authority boundary are documented in
 [docs/trady-bot-implementation-plan.md](./docs/trady-bot-implementation-plan.md).
-The IEX30/Alpaca implementation remains in place for migration comparison; it
-has not been archived while EUR acceptance is pending. The
+The obsolete IEX30/Alpaca runtime, private worker and old account/preflight CLI
+have been [retired](./docs/eur-legacy-retirement-2026-11-05.md). Shared offline
+parity fixtures and historical journals remain. The
 [current follow-up](./docs/eur-blocker-resolution-2026-11-05.md) records the
 real DEMO fills, protocol fixes, cash reconciliation and remaining acceptance.
 The [bounded DEMO month handoff](./docs/eur-demo-month-2026-11.md) prepares
@@ -67,7 +69,7 @@ Use `t212 snapshot` for a read-only Trading 212 account check. EUR journal
 writes use database leases and fencing; acknowledgements reload their exact
 reserved intent from PostgreSQL after restart. The target outbox atomically
 publishes lifecycle events and deliveries. Its gateway primitives are tested
-but are not yet connected to the long-running EUR services. Interrupted sends
+and are connected to the long-running EUR coordinator/gateway. Interrupted sends
 remain ambiguous instead of being retried blindly. A weekly Codex review may
 propose changes and cannot activate them.
 
@@ -75,6 +77,9 @@ Credentials are loaded from the private credential store or the documented
 environment variables. Never place secrets in committed configuration.
 
 ## Verification
+
+See the [5 November codebase audit](./docs/codebase-audit-2026-11-05.md) for the
+latest fixes, regression coverage and migrations 21–22.
 
 ```sh
 cargo fmt --all -- --check
@@ -84,6 +89,6 @@ cargo test --workspace --locked
 git diff --check
 ```
 
-The legacy IEX30/Alpaca adapters and replay fixtures remain available only for
-compatibility tests and migration comparison. They are not the EUR runtime
-authority.
+The current binary rejects legacy runtime configurations before credentials.
+Historical IEX/formula fixtures remain only where shared mathematical replay,
+database compatibility or retained evidence still consumes them.

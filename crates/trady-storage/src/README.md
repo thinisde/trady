@@ -48,7 +48,7 @@ dossiers, screening snapshots and Perpetual contexts/assessments/reviews.
 - `[research_jobs.rs:PgResearchJobs]` also exposes `install_policy`, `get_job`,
   `recent_jobs`, `budget`, `checked_readiness_reference`, `selected_session`,
   `select_session`, `bind_job_session`, `pending_deliveries` and
-  `acknowledge_delivery`. `[research_jobs.rs:GatewayDelivery]` carries delivery
+  `claim_delivery` and `finish_delivery`. `[research_jobs.rs:GatewayDelivery]` carries delivery
   identity, bot/user/chat, scope and text.
 - `[intelligence.rs:PgIntelligenceRepository]` implements `register`, `insert`,
   `find`, `candidates`, `has_erased`, `invalidations`, `invalidate`, `reject`,
@@ -88,9 +88,15 @@ belong to the invoked SQL functions.
   `AUTONOMOUS_SQL`, `X_API_MONITORING_SQL`, `WEEKLY_LAB_SQL`, `RESEARCH_JOBS_SQL`,
   `VERIFIED_HOLDINGS_SQL`, `FINANCIAL_DATA_SQL`, `OPTIONAL_INTELLIGENCE_SQL`,
   `FAIL_CLOSED_STORAGE_SQL`: embedded SQL.
-  `[lib.rs:migrate]` applies versions 1–11 transactionally,
+  `[lib.rs:migrate]` applies versions 1–22 transactionally,
   protected by advisory lock `861204733` and exact source comparison;
   `ROLES_SQL` is exposed separately and is not executed by `migrate`.
+  Migrations 15–20 add EUR runtime records, fences, protocol history, review
+  handoffs and evidence windows. Migration 21 removes the 10,000-event protocol
+  ceiling while retaining positive bigint revisions and the existing hash/fence
+  checks; an active intent must remain writable for recovery and exits.
+  Migration 22 adds atomic research-gateway outbox claims and token-fenced
+  completion. A `SENDING` or `UNKNOWN` delivery is not automatically reclaimed.
   Migration 3 covers source state, observations, revisions, collection events,
   invalidations and content redaction.
   Migration 4 adds `execution.autonomous_accounts`, `research.trading_records`
@@ -331,10 +337,23 @@ scenario or validate `checked_at`.
 `[research_jobs.rs:select_session]` checks the analyst role, ID syntax and policy;
 it does not query session existence or ownership. `[research_jobs.rs:publish_report]`
 requires a nonfuture observation and expiry after that observation, permitting an
-already-stale report. `[research_jobs.rs:pending_deliveries]` returns at most 50
-undelivered rows without claiming a lease, while `acknowledge_delivery` does not
-require an affected row. `[research_jobs.rs:claim]` returns without committing its
-retry-exhaustion cleanup when no candidate is selected.
+already-stale report. `[research_jobs.rs:pending_deliveries]` is a read-only
+diagnostic for at most 50 `PENDING` rows. Sending uses `claim_delivery`, which
+commits an exclusive `SENDING` marker before transport, and `finish_delivery`,
+which requires the matching token and rejects repeated/stale completion.
+Failed sends become `UNKNOWN`; a crash can leave `SENDING`. Neither state is
+automatically replayed. Policy-ineligible messages become `SUPPRESSED`.
+Migration 22 marks old undelivered rows `UNKNOWN`, since the old sender had no
+dispatch marker. These rows require operator review of the native chat before
+any explicitly authorized redelivery; no automatic retry API is provided.
+The gateway can inspect delivery status, ID and timestamps through its SELECT
+grant; direct acknowledgement writes are revoked.
+
+`[research_jobs.rs:fail]` locks the exact owner/account/worker/generation row
+through its terminal update, independently of policy revocation. All terminal
+updates compare the stored generation and status and require one affected row.
+`claim` commits exhausted-attempt and revoked-policy failures together with
+their deduplicated notifications even when no next job is available.
 
 `[research_jobs.rs:enqueue]` validates work before invoking
 `control.enqueue_information_work`. The SQL function compares the supplied work

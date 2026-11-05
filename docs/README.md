@@ -2,6 +2,10 @@
 
 ## Overview
 
+The [5 November codebase audit and fixes](./codebase-audit-2026-11-05.md) records
+the latest execution, risk, replay and persistence corrections, regression checks
+and migration requirements.
+
 This directory contains Trady's operator guides and the EUR day-trading target
 authority. Shared research, storage, and legacy IEX30/v1 modules remain
 available for offline replay; the target runtime uses a reviewed EUR universe,
@@ -14,6 +18,8 @@ records actual DEMO fills, preserved failures and the remaining release gates.
 The [6 November–6 December DEMO month preparation](./eur-demo-month-2026-11.md)
 describes the finite operation, fresh-input research cadence, native ledger
 audit and outstanding activation evidence.
+The [legacy retirement record](./eur-legacy-retirement-2026-11-05.md) documents
+the removed IEX30/Alpaca execution path and retained shared replay contracts.
 
 ## Subdirectories & Boundaries
 
@@ -23,16 +29,14 @@ audit and outstanding activation evidence.
   independent release evidence.
 - [Isolated runtime deployment](../services/runtime/README.md): separate service
   identities, private analyst IPC and opt-in scheduler/network policy.
-- [Autonomous runtime](./autonomous.md): automatic universe screening, mathematical
-  limits, calibrated predictions, native advice, durable execution/protection,
-  exact-ID recovery and deployment prerequisites.
+- [Historical autonomous design](./autonomous.md): earlier runtime design and
+  shared policy background; its retired commands are superseded by the EUR workflow.
 - [EUR migration plan](./trady-bot-implementation-plan.md): target contracts,
   phased migration, and acceptance tests.
 - [IEX30 code audit](./iex30-audit.md): implemented, wired, configured and
   still-blocked features for the focused runtime.
-- [Cold-start account workflow](./cold-start.md): runtime account discovery,
-  shadow-only seed artifacts, independent OpenCode Go review and the supervised
-  first-order gate.
+- [Historical cold-start workflow](./cold-start.md): preserved provenance for
+  the retired account CLI and its earlier evidence.
 
 - [Central credentials](./credentials.md): private storage, environment overrides,
   API/shared/hashing/signing keys, database roles and setup/status commands.

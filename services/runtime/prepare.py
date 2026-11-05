@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Prepare disabled, reviewable application configs; never install/start services."""
+"""Prepare a disabled EUR SHADOW config; never install/start services."""
 import argparse
 import json
 import os
@@ -18,31 +18,24 @@ def unique(pairs):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=pathlib.Path, required=True,
-                        help="complete reviewed autonomous config with real approved model/formula/source references")
+                        help="reviewed EUR configuration; legacy runtime shapes are rejected")
     parser.add_argument("--destination", type=pathlib.Path, required=True)
     args = parser.parse_args()
     if args.source.stat().st_size > 4 * 1024 * 1024:
         raise ValueError("configuration too large")
     config = json.loads(args.source.read_text(), object_pairs_hook=unique)
-    target_eur = "approved_universe_snapshot_id" in config
-    if target_eur:
-        if (config.get("base_currency") != "EUR"
-                or config.get("live_enabled") is not False
-                or config.get("broker", {}).get("environment") != "demo"
-                or config.get("execution_stage") not in ["REPLAY", "SHADOW", "DEMO"]):
-            raise ValueError("EUR preparation requires a non-live EUR demo authority")
-        if any(key in config for key in ["trading", "alpaca_market_data", "inputs", "universe"]):
-            raise ValueError("mixed legacy and EUR authority")
-        config["enabled"] = False
-        config["execution_stage"] = "SHADOW"
-        names = ["eur-shadow.json"]
-    else:
-        for key in ["config_version", "trading", "broker", "inputs", "universe", "models", "controls"]:
-            if key not in config:
-                raise ValueError("complete reviewed autonomous configuration required")
-        config["analyst_socket"] = "/run/trady-analyst/analyst.sock"
-        config["enabled"] = False
-        names = ["analyst.json", "executor.json"]
+    if "approved_universe_snapshot_id" not in config:
+        raise ValueError("only EUR configurations are supported; legacy runtime retired")
+    if (config.get("base_currency") != "EUR"
+            or config.get("live_enabled") is not False
+            or config.get("broker", {}).get("environment") != "demo"
+            or config.get("execution_stage") not in ["REPLAY", "SHADOW", "DEMO"]):
+        raise ValueError("EUR preparation requires a non-live EUR demo authority")
+    if any(key in config for key in ["trading", "alpaca_market_data", "inputs", "universe"]):
+        raise ValueError("mixed legacy and EUR authority")
+    config["enabled"] = False
+    config["execution_stage"] = "SHADOW"
+    names = ["eur-shadow.json"]
     args.destination.mkdir(mode=0o755, parents=True, exist_ok=True)
     data = json.dumps(config, indent=2) + "\n"
     for name in names:

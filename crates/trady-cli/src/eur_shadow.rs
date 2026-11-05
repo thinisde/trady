@@ -45,11 +45,6 @@ struct Loaded {
     cycle_id: String,
 }
 
-pub fn configured(path: &str) -> Result<bool> {
-    let value: Value = read_json(Path::new(path))?;
-    Ok(value.get("shadow").is_some_and(|value| !value.is_null()))
-}
-
 fn read_json<T: DeserializeOwned>(path: &Path) -> Result<T> {
     let mut bytes = Vec::new();
     fs::File::open(path)

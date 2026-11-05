@@ -22,6 +22,9 @@ pub struct BrokerObservation {
     pub pending_order_ids: Vec<String>,
     pub exact_orders: Vec<ExactOrderObservation>,
     pub history_complete: bool,
+    /// The bounded exact-order scan ended without a complete execution proof.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub history_coverage_exhausted: bool,
     pub observed_at: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entry_first_filled_at: Option<DateTime<Utc>>,
@@ -138,6 +141,52 @@ pub struct ProtocolDriver<J, B> {
 }
 
 impl<J: ProtocolJournal, B: ProtocolBroker> ProtocolDriver<J, B> {
+    /// Report ambiguous or overdue DELETE outcomes without changing historical
+    /// reducer effects. Reads remain allowed so a late terminal result can win.
+    pub fn recovery_action(&mut self, state: &ProtocolState) -> Result<ProtocolEffect> {
+        let effect = state.recovery_effect();
+        if matches!(effect, ProtocolEffect::RequireOperator { .. }) {
+            return Ok(effect);
+        }
+        if state.history_coverage_exhausted {
+            return Ok(ProtocolEffect::RequireOperator {
+                reason: "EXACT_ORDER_HISTORY_COVERAGE_EXHAUSTED".into(),
+            });
+        }
+        let records = self.journal.load(&state.context.intent_id)?;
+        for leg in [OrderLeg::Entry, OrderLeg::Protection, OrderLeg::Exit] {
+            let Ok(progress) = state.progress(leg) else {
+                continue;
+            };
+            if !progress.cancel_requested || progress.reconciled_terminal {
+                continue;
+            }
+            let mut acknowledged = false;
+            for record in records.iter().rev() {
+                match record.input {
+                    ProtocolInput::CancellationAcknowledged { leg: l } if l == leg => {
+                        acknowledged = true;
+                    }
+                    ProtocolInput::Cancel { leg: l } if l == leg => {
+                        if !acknowledged
+                            || (state.last_reconciled_at - record.at).num_seconds() >= 10
+                        {
+                            return Ok(ProtocolEffect::RequireOperator {
+                                reason: format!(
+                                    "CANCELLATION_OUTCOME_REQUIRES_REVIEW:{leg:?}:{}",
+                                    progress.broker_id.as_deref().unwrap_or_default()
+                                ),
+                            });
+                        }
+                        break;
+                    }
+                    _ => (),
+                }
+            }
+        }
+        Ok(effect)
+    }
+
     pub fn state(&mut self, context: &ProtocolContext) -> Result<ProtocolState> {
         let records = self.journal.load(&context.intent_id)?;
         if records.is_empty() {
@@ -303,7 +352,22 @@ impl<J: ProtocolJournal, B: ProtocolBroker> ProtocolDriver<J, B> {
             .chain(state.protection.iter())
             .chain(state.exits.last())
             .any(|p| p.broker_id.as_ref().is_some_and(|id| !ids.contains(id)));
-        if entry_update.is_none() {
+        // Raw observations above remain durable on every pass. A stable
+        // protected position needs no duplicate reducer event; any change or
+        // recovery still records a fresh complete account reconciliation.
+        let current = self.state(context)?;
+        let unchanged_protected = current.phase == ProtocolPhase::Protected
+            && current == state
+            && !current.reconciliation_required
+            && view.history_complete
+            && !missing
+            && current.holding_quantity == view.holding_quantity
+            && view.pending_order_ids.iter().all(|id| {
+                current
+                    .all_orders()
+                    .any(|p| p.broker_id.as_ref() == Some(id) && !p.reconciled_terminal)
+            });
+        if entry_update.is_none() && !unchanged_protected {
             self.record(
                 context,
                 ProtocolInput::HoldingReconciled {
@@ -313,6 +377,10 @@ impl<J: ProtocolJournal, B: ProtocolBroker> ProtocolDriver<J, B> {
                 },
                 at,
             )?;
+        }
+        if view.history_coverage_exhausted {
+            require(!view.history_complete, "contradictory history completeness")?;
+            self.record(context, ProtocolInput::HistoryCoverageExhausted, at)?;
         }
         let refreshed = self.state(context)?;
         if !refreshed.exit_requested

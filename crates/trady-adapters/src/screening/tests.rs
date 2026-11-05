@@ -94,6 +94,18 @@ fn transport(responses: Vec<HttpResponse>) -> (Transport, Requests) {
 }
 
 #[test]
+fn retired_alpaca_provider_never_falls_through_to_http_or_synthetic_membership() {
+    for name in ["alpaca_iex30", "ALPACA_IEX30"] {
+        let (transport, requests) = transport(vec![response(&document())]);
+        let mut retired = config();
+        retired.source_id = name.into();
+        let result = HttpUniverseSource::with_transport(retired, transport);
+        assert!(result.is_err());
+        assert!(requests.borrow().is_empty());
+    }
+}
+
+#[test]
 fn reviewed_universe_token_is_sent_only_as_a_header_and_rejects_control_bytes() {
     let (transport, requests) = transport(vec![response(&document())]);
     let mut source = HttpUniverseSource::with_transport(config(), transport)

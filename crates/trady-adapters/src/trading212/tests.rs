@@ -1221,6 +1221,12 @@ fn eur_protocol_observer_requires_exact_stop_shape_and_terminal_history() {
         "wrong_confirmation",
         "wrong_confirmation_tif",
         "wrong_confirmation_holding",
+        "older_history",
+        "split_fills",
+        "incomplete_fill_total",
+        "duplicate_fill",
+        "conflicting_fill",
+        "missing_fill_id",
     ] {
         let mut observed_stop = stop.clone();
         let mut observed_entry = entry.clone();
@@ -1251,15 +1257,46 @@ fn eur_protocol_observer_requires_exact_stop_shape_and_terminal_history() {
                 .unwrap()
                 .remove("timeInForce");
         }
+        let mut fill = json!({"id":7001,"quantity":2,"filledAt":if case == "missing_fill_time" { serde_json::Value::Null } else { json!(now()) }});
+        if matches!(
+            case,
+            "split_fills" | "incomplete_fill_total" | "duplicate_fill" | "conflicting_fill"
+        ) {
+            fill["quantity"] = json!(1);
+        }
+        if case == "missing_fill_id" {
+            fill.as_object_mut().unwrap().remove("id");
+        }
+        let mut items = vec![json!({"order":observed_entry,"fill":fill})];
+        if matches!(case, "split_fills" | "duplicate_fill" | "conflicting_fill") {
+            let mut another = items[0].clone();
+            if case == "split_fills" {
+                another["fill"]["id"] = json!(7002);
+            }
+            if case == "conflicting_fill" {
+                another["fill"]["quantity"] = json!(2);
+            }
+            items.push(another);
+        }
+        if case == "older_history" {
+            for id in 2000..2049 {
+                let mut old = entry.clone();
+                old["id"] = json!(id);
+                items.push(json!({"order":old,"fill":null}));
+            }
+        }
+        let next = if case == "older_history" {
+            json!("/api/v0/equity/history/orders?limit=50&ticker=AIRp_EQ&cursor=1234")
+        } else {
+            serde_json::Value::Null
+        };
         let server = Server::new(vec![
             ok(json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}})),
             ok(
                 json!([{"instrument":{"ticker":"AIRp_EQ","currency":"EUR"},"quantity":2,"quantityAvailableForTrading":0}]),
             ),
             ok(pending),
-            ok(
-                json!({"items":[{"order":observed_entry,"fill":{"quantity":2,"filledAt":if case == "missing_fill_time" { serde_json::Value::Null } else { json!(now()) }}}],"nextPagePath":null}),
-            ),
+            ok(json!({"items":items,"nextPagePath":next})),
             ok(confirmed_stop),
             ok(
                 json!([{"instrument":{"ticker":"AIRp_EQ","currency":"EUR"},"quantity":if case == "wrong_confirmation_holding" {1} else {2},"quantityAvailableForTrading":0}]),
@@ -1291,7 +1328,17 @@ fn eur_protocol_observer_requires_exact_stop_shape_and_terminal_history() {
                     assert_eq!(confirmation.stop_price, Decimal::from(98));
                 }
             }
-            "missing_history" => assert!(!result.unwrap().history_complete),
+            "older_history" | "split_fills" => {
+                assert!(result.unwrap().history_complete);
+                assert_eq!(
+                    server.requests().len(),
+                    4,
+                    "unrelated old history must not be scanned"
+                );
+            }
+            "missing_history" | "incomplete_fill_total" | "duplicate_fill" => {
+                assert!(!result.unwrap().history_complete)
+            }
             _ => assert!(result.is_err()),
         }
     }

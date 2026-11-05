@@ -5,15 +5,30 @@ use std::{
 };
 
 fn run(args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_trady"))
+    let directory = std::env::temp_dir().join(format!("trady-t212-cli-{}", uuid::Uuid::new_v4()));
+    let mut builder = fs::DirBuilder::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder.create(&directory).unwrap();
+    let credentials = directory.join("credentials.json");
+    fs::write(&credentials, r#"{"config_version":1,"credentials":{}}"#).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&credentials, fs::Permissions::from_mode(0o600)).unwrap();
+    }
+    let output = Command::new(env!("CARGO_BIN_EXE_trady"))
         .args(args)
-        .env_remove("TRADY_CREDENTIALS_FILE")
-        .env("TRADY_T212_DEMO_API_KEY", "")
-        .env("TRADY_T212_DEMO_API_SECRET", "")
-        .env("TRADY_T212_LIVE_API_KEY", "")
-        .env("TRADY_T212_LIVE_API_SECRET", "")
+        .current_dir(&directory)
+        .env_clear()
+        .env("TRADY_CREDENTIALS_FILE", credentials)
         .output()
-        .unwrap()
+        .unwrap();
+    fs::remove_dir_all(directory).unwrap();
+    output
 }
 
 #[test]

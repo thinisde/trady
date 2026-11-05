@@ -1,14 +1,13 @@
 //! Fixtures, scoped model/skill adapters and explicitly configured provider clients.
 
-pub mod alpaca;
 pub mod alpha_vantage;
 pub mod api_health;
-pub mod autonomous;
 pub mod credentials;
 pub mod financial;
 pub mod finbert;
 pub mod ibkr_bars;
 pub mod ibkr_smart;
+pub mod input_documents;
 pub mod inputs_service;
 pub mod intelligence;
 pub mod news;

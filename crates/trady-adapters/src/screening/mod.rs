@@ -37,6 +37,10 @@ pub struct ApprovedUniverseConfig {
 impl ApprovedUniverseConfig {
     pub fn validate(&self) -> Result<()> {
         require(
+            !self.source_id.eq_ignore_ascii_case("alpaca_iex30"),
+            "Alpaca IEX30 runtime provider was retired",
+        )?;
+        require(
             self.config_version == 1
                 && valid_reference(&self.source_id)
                 && valid_reference(&self.expected_taxonomy_edition)
@@ -95,9 +99,7 @@ impl ApprovedUniverseConfig {
             || self.url.to_ascii_lowercase().contains("sp500")
         {
             Some(SP500_INDEX_ID)
-        } else if self.source_id == "alpaca_iex30"
-            || self.url.to_ascii_lowercase().contains("iex30")
-        {
+        } else if self.url.to_ascii_lowercase().contains("iex30") {
             Some(IEX30_INDEX_ID)
         } else {
             None
@@ -178,9 +180,6 @@ impl<T: HttpTransport> UniverseSource for HttpUniverseSource<T> {
             self.config.rights.store_content,
             "universe storage rights are required",
         )?;
-        if self.config.source_id == "alpaca_iex30" {
-            return static_iex30_snapshot(&self.config, now);
-        }
         require(
             self.last_attempt_at.is_none_or(|at| {
                 now.signed_duration_since(at)
@@ -290,71 +289,6 @@ impl<T: HttpTransport> UniverseSource for HttpUniverseSource<T> {
             members: document.members,
         })
     }
-}
-
-/// Alpaca Basic exposes the fixed IEX feed, not a licensed index constituent
-/// endpoint. Keep the owner-reviewed 30-symbol membership local and immutable.
-fn static_iex30_snapshot(
-    config: &ApprovedUniverseConfig,
-    now: DateTime<Utc>,
-) -> Result<UniverseSnapshot> {
-    use trady_domain::screening::{
-        Classification, EffectiveInterval, IEX30_INDEX_ID, UniverseMember, UniverseProvenance,
-    };
-    let from = now - Duration::days(1);
-    let until = now + Duration::minutes(5);
-    let members = trady_domain::iex::SYMBOLS
-        .iter()
-        .enumerate()
-        .map(|(index, symbol)| {
-            Ok(UniverseMember {
-                issuer_id: format!("iex30_issuer_{symbol}"),
-                share_class_isin: synthetic_isin(index)?,
-                symbol: (*symbol).into(),
-                listing_mic: "XNAS".into(),
-                currency: trady_domain::Currency::new("USD")?,
-                membership: EffectiveInterval { from, until: None },
-                classification: Classification {
-                    sector_code: "45".into(),
-                    industry_group_code: "4510".into(),
-                    effective: EffectiveInterval { from, until: None },
-                    observed_at: now - Duration::seconds(1),
-                },
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let content = trady_domain::iex::SYMBOLS.join(",");
-    Ok(UniverseSnapshot {
-        snapshot_id: format!("alpaca_iex30_{}", now.timestamp()),
-        classification_snapshot_id: format!("alpaca_iex30_classification_{}", now.timestamp()),
-        index_id: IEX30_INDEX_ID.into(),
-        complete: true,
-        taxonomy_edition: "IEX30_GICS_2026".into(),
-        as_of: now - Duration::seconds(1),
-        available_at: now,
-        expires_at: until,
-        provenance: UniverseProvenance {
-            source_id: config.source_id.clone(),
-            source_url: config.url.clone(),
-            provider: config.expected_provider.clone(),
-            content_sha256: hex_digest(content.as_bytes()),
-            parser_version: "trady-alpaca-iex30-v1".into(),
-            fetched_at: now,
-            rights: config.rights.clone(),
-        },
-        members,
-    })
-}
-
-fn synthetic_isin(index: usize) -> Result<String> {
-    let body = format!("US{index:09}");
-    for check in b'0'..=b'9' {
-        let candidate = format!("{body}{}", check as char);
-        if trady_domain::screening::valid_isin(&candidate) {
-            return Ok(candidate);
-        }
-    }
-    Err(Error("cannot construct IEX30 share-class identity".into()))
 }
 
 #[cfg(test)]

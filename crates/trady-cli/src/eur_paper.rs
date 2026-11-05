@@ -134,6 +134,12 @@ pub fn run(args: &[String]) -> Result<Value> {
         serde_json::from_value(context["provider_configurations"]["risk"].clone())
             .map_err(|_| Error("paper cost model unavailable".into()))?;
     require(
+        plan.cost_model
+            .as_ref()
+            .is_some_and(|model| model.entry == costs.entry && model.exit == costs.exit),
+        "paper plan differs from its retained cost inputs",
+    )?;
+    require(
         costs.reviewed_at <= Utc::now()
             && costs.valid_until > Utc::now()
             && !costs.review_reference.is_empty()
@@ -487,6 +493,10 @@ pub(super) fn validate_for_capture(ledger: &Value, context: &Value) -> Result<()
     selection.validate(entry_at)?;
     require(
         selection.failure.is_none()
+            && plan
+                .cost_model
+                .as_ref()
+                .is_some_and(|model| model.entry == costs.entry && model.exit == costs.exit)
             && selection.selected_instrument_id.as_ref() == Some(&plan.instrument_id)
             && costs.reviewed_at <= entry_at
             && costs.valid_until > exit_at
@@ -605,13 +615,22 @@ mod tests {
             "model":{"run_id":"fixture_research","session_id":"fixture_session","provider":"opencode-go","model":"deepseek-v4.1-flash","prompt_hash":"a".repeat(64),"tool_manifest_hash":"b".repeat(64),"model_revision":"c".repeat(64)},
             "fallback_attempts":[],"candidates":[{"instrument_id":"AIR_PA_EQ","currency":"EUR","eligibility_snapshot_id":"fixture_universe","eligible":true,"ranking_score":"1","sentiment_score":null,"confidence":null,"evidence_ids":["fixture_quote"],"exclusion_reasons":[],"catalyst":null,"contradictions":[],"strategy_snapshot_ids":["fixture_signal"]}],
             "selected_instrument_id":"AIR_PA_EQ","proposal":{"entry_minimum":"100","entry_maximum":"100.10","stop_price":"99","target_price":"102","maximum_hold_until":deadline,"rationale":"Synthetic unit fixture only"},"evidence_snapshot_ids":["fixture_quote"],"failure":null});
-        let plan = json!({"plan_id":"fixture_plan","policy_revision":config.policy.revision,"account_id":"paper_fixture","instrument_id":"AIR_PA_EQ","currency":"EUR",
+        let mut plan = json!({"plan_id":"fixture_plan","policy_revision":config.policy.revision,"account_id":"paper_fixture","instrument_id":"AIR_PA_EQ","currency":"EUR",
             "entry_price":"100","quantity":"1","acquisition_cost":{"amount":"100.06","currency":"EUR"},"stop_price":"99","target_price":"102","target_net_fraction":"0.019","planned_loss_fraction":"0.011","reward_to_risk":"1.7",
             "created_at":at-chrono::Duration::seconds(1),"flatten_deadline":deadline,"evidence_snapshot_ids":["fixture_quote"],"stop_revision":0});
         let zero = json!({"amount":"0","currency":"EUR"});
         let reserve = json!({"amount":"0.01","currency":"EUR"});
         let costs = json!({"review_reference":"synthetic_unit_fixture_not_release","reviewed_at":at-chrono::Duration::seconds(5),"valid_until":deadline,
             "entry":{"fixed":zero,"rate":"0.0005","uncertainty":reserve,"fx":null},"exit":{"fixed":zero,"rate":"0.0005","uncertainty":reserve,"fx":null}});
+        // Exact unrounded model proceeds for this one-share fixture: entry
+        // 100 + 0.05 + 0.01; stop 99 - 0.0495 - 0.01; target 102 - 0.051 - 0.01.
+        let acquisition = decimal(&json!("100.06")).unwrap();
+        let loss = (acquisition - decimal(&json!("98.9405")).unwrap()) / acquisition;
+        let target = (decimal(&json!("101.939")).unwrap() - acquisition) / acquisition;
+        plan["cost_model"] = json!({"entry":costs["entry"],"exit":costs["exit"]});
+        plan["planned_loss_fraction"] = json!(loss);
+        plan["target_net_fraction"] = json!(target);
+        plan["reward_to_risk"] = json!(target / loss);
         let account = json!({"snapshot_id":"fixture_account","account_id":"paper_fixture","mode":"paper","spendable_cash":{"amount":"1000","currency":"EUR"},"positions":[],"orders":[],"observed_at":at-chrono::Duration::seconds(3)});
         let binding = json!({"con_id":29612256,"primary_exchange":"SBF","isin":"NL0000235190"});
         let quote = |offset: i64, bid: &str, ask: &str| {

@@ -40,9 +40,6 @@ paper-day or release acceptance.
 - [OpenCode Go contract](./src/opencode/README.md): authenticated model calls and
   approved skill/memory tools. `[src/opencode/llm.rs:OpenCodeGoConfig::default]`
   selects `deepseek-v4.1-flash`; credential loading supplies no model override.
-- `[src/alpaca.rs:AlpacaMarketData]`: read-only paper/live account identity,
-  bounded IEX/SIP quotes, and daily bars. It exposes no order API; Trading 212
-  remains the execution broker.
 - `[src/yfinance.rs:YfinanceMarketData]`: explicitly mapped, read-only
   Euronext quote reads through `yfinance-rs`; both bid/ask and freshness are
   required before an observation can enter the executable quote contract.
@@ -55,9 +52,9 @@ paper-day or release acceptance.
   generation/revision fencing.
 - [X and news contract](./src/news/README.md): reviewed read-only sources, bounded
   HTTP, X polling/lookup, RSS/Atom and optional Alpha Vantage.
-- [Automatic input contract](./src/autonomous/README.md): `AutomaticInputs`
-  composes HTTP packets, screening, authoritative limits and persisted native advice;
-  `MarketInputs` supplies separate executor market reads.
+- [Research input documents](./src/input_documents.rs): immutable packet DTOs
+  shared by the reviewed input service and offline model tools. The obsolete
+  automatic trading-input runner and Alpaca client have been removed.
 - [Trusted input service](./src/inputs_service/README.md): reviewed immutable
   provider documents, explicit calendars and scenario-bound predictions.
 - [Research jobs](./src/research_jobs/README.md): scoped information tools,
@@ -140,10 +137,9 @@ for one configured mapping and never writes broker or execution state.
 `[src/credentials.rs:CredentialStore::load]` reads environment and configured files;
 `initialize` exclusively creates a private template file. FinBERT, universe and
 automatic-input adapters perform explicitly configured HTTP calls.
-`[src/autonomous/mod.rs:AutomaticInputs::candidate]` writes screening, bound
-calculation, dossier, context, assessment and review through the supplied
-repository before final candidate validation, without an enclosing rollback.
-Native inference itself computes in memory.
+The input-document module performs no provider call or mutation. Native
+inference computes in memory; reviewed input publication and model persistence
+remain separate operations.
 
 `[src/inputs_service/store.rs:ImportStore]` creates private import/review/index/
 tombstone files, locks writers and prunes expired content. Review and index

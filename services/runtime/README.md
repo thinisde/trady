@@ -1,209 +1,65 @@
 # Isolated Trady runtime deployment
 
-The [bounded EUR DEMO month](../../docs/eur-demo-month-2026-11.md) adds a
-[disabled service template](./trady-eur-demo-month.service) and
-[exact release environment template](./eur-demo-month-release.env.example).
-These files do not create a recurring Codex task or activate orders. Root must
-first obtain a complete verified release and exact-hash owner approval; the
-helper then issues the executor-readable, root-owned read-only receipt.
+These are reviewable templates. They do not install units, enable a timer or
+grant trading authority. The [bounded EUR month](../../docs/eur-demo-month-2026-11.md)
+still requires complete evidence and exact-hash owner approval before DEMO.
 
-## Overview
+## EUR services
 
-These are reviewable deployment artifacts. Nothing here installs units/users,
-changes a firewall, starts a listener, installs a timer or enables trading.
+- [trady-eur-analyst.service](./trady-eur-analyst.service): provider capture and
+  model work as the analyst identity, with its own restricted credentials.
+- [trady-eur-executor.service](./trady-eur-executor.service): `autonomous run`
+  with the EUR SHADOW config as executor. This route cannot select a legacy
+  runtime or submit orders.
+- [trady-eur-gateway.service](./trady-eur-gateway.service): durable private-owner
+  outbox delivery as gateway.
+- [trady-eur-demo-month.service](./trady-eur-demo-month.service) and
+  [release environment example](./eur-demo-month-release.env.example): disabled
+  preparation for the verified finite DEMO supervisor. The root helper issues
+  an executor-readable receipt only after complete evidence and owner approval.
+- [trady-daily.timer](./trady-daily.timer) and
+  [EUR weekly timer](./trady-eur-weekly-report.timer): existing calendar/research
+  and review handoffs. A timer cannot approve a release.
+- [Database backup timer](./trady-postgres-backup.timer): private persistent-volume
+  backups; recovery verification remains separate from activation.
 
-## Interface
+[prepare.py](./prepare.py) accepts only EUR configuration, forces
+`enabled=false` and `execution_stage=SHADOW`, and exclusively creates
+`eur-shadow.json`. Existing output is never overwritten. The separate
+[SHADOW deployment helper](../../scripts/prepare-eur-shadow.py) validates its
+recorded source/owner delegation before the explicit SHADOW install path.
+Neither helper activates DEMO orders.
 
-- `[trady-analyst.service:ExecStart]` runs `trady autonomous analyst-service --config
-  /etc/trady/runtime/analyst.json` as UID 13001, group `trady-ipc`.
-- `[trady-executor.service:ExecStart]` runs `trady autonomous run --config
-  /etc/trady/runtime/executor.json` as UID 13002, with supplemental IPC group.
-  The unit declares `Requires=trady-analyst.service` and lists it in `After`.
-- `[trady-gateway.service:ExecStart]` runs `trady telegram run --config
-  /etc/trady/runtime/telegram.json` as UID 13003. Configure the expanded gateway
-  to keep analysis out of this identity.
-- `[trady-weekly.service:ExecStart]` and `[trady-weekly.timer:OnCalendar]` run the offline lab as UID 13004 on Saturday
-  08:00 Europe/Berlin. A timer trigger reviews a week; it cannot approve a release.
-  The command is `trady weekly run --config /etc/trady/lab/run.json`; the timer
-  declares `Persistent=yes` and `AccuracySec=1min`.
-- `[trady-evaluator.service:ExecStart]` runs the concrete sealed evaluator as UID 13005,
-  using `/usr/bin/python3 -B /opt/trady/lab/evaluator_worker.py --lock
-  /etc/trady/evaluator/lock.json --socket /run/trady-evaluator/evaluator.sock
-  --state-directory /var/lib/trady-evaluator/exposures`,
-  with no credential load and only `AF_UNIX` sockets permitted
-  (`[trady-evaluator.service:RestrictAddressFamilies]`). Its native-ABI syscall
-  filter denies outbound `connect` and all `io_uring` syscalls with EPERM
-  (`[trady-evaluator.service:SystemCallFilter]`). The worker additionally installs
-  its own mandatory filter before opening sealed inputs, denying new sockets
-  while preserving listener accept/reply. This blocks PostgreSQL Unix socket
-  connections at every path, including abstract addresses, without relying on
-  filesystem masks. The lab's fixed helper client
-  uses `/run/trady-evaluator/evaluator.sock` and expected worker UID 13005.
-- `[sysusers.conf:trady-analyst]` describes distinct identities. `[firewall.nft:trady_runtime]` contains explicit
-  per-UID IPv4/IPv6 database/provider allowlists, initially empty.
-- `[prepare.py:main]` exposes `prepare.py --source REVIEWED_CONFIG --destination NEW_DIRECTORY` and produces full
-  analyst/executor app configs with `enabled=false` and the private socket path.
-  The destination directory may already exist; it refuses to overwrite either
-  output file. Validate the resulting complete files through the CLI.
-  For the EUR target shape it instead produces only `eur-shadow.json`, forces
-  `enabled=false` and `execution_stage=SHADOW`, and rejects mixed/live authority.
-  This helper grants no activation authority.
+The old IEX30 worker/executor unit templates are
+[archived as text](../../docs/archive/legacy-runtime/README.md). Their CLI and
+config-preparation paths were retired; these archived units must not be installed.
 
-The separate `scripts/prepare-eur-shadow.py` helper prepares the durable EUR
-SHADOW deployment. Its default output remains disabled. The reviewed
-`--activate-shadow --install-units` path uses the recorded owner delegation and
-installs `trady-eur-analyst`, `trady-eur-executor` and `trady-eur-gateway` units
-with separate role credentials. It does not enable demo order mutations.
+## Shared offline and research services
 
-The analyst captures yfinance-rs WebSocket last trades separately from REST
-quote observations. Event timestamps remain provider timestamps, including any
-delay. `QuoteUpdate` has no bid/ask fields and cannot authorize an order. Alpha
-Vantage is a metered historical cross-check, with per-process request pacing;
-its shared PostgreSQL allowance remains authoritative across processes. The
-reviewed X sources collect bounded metadata without post text or model access.
-Provider failures are preserved, including a quota notice received as HTTP 200.
+The generic Telegram gateway/worker templates retain scoped research dialogue,
+not the removed private trading analyst child. The weekly lab and evaluator
+retain separate identities, immutable helper pins and private IPC. The
+evaluator has no credential load and denies new/outbound sockets and io_uring;
+its accepted worker socket and client UID remain independently checked.
 
-An operator can capture fresh diagnostic inputs without replacing a completed
-daily decision or sending another daily summary:
+[sysusers.conf](./sysusers.conf), [firewall.nft](./firewall.nft) and
+[PostgreSQL policy](./postgres/pg_hba.conf) define separate identity/network/DB
+boundaries. Empty allowlists grant no provider access. A service credential
+contains only that identity's required values; no unit embeds secret text.
+The lab/evaluator cannot read broker or activation-owner credentials.
 
-```sh
-trady eur diagnose-inputs --config /etc/trady/runtime/eur-shadow.json
-```
+## Sources and recovery
 
-The [current status](../../docs/eur-first-run-status.md) records outstanding
-quote/protection/replay gates and the earlier database-loss incident. The
-`trady-postgres-backup.timer` keeps private database and role backups; the backup
-script refuses a tmpfs database and supports isolated restore verification.
+The EUR coordinator uses exact native broker metadata/calendar/account checks,
+verified current IBKR candles and separately timestamped live type-1 bid/ask.
+Yahoo/Alpha remain historical/news research; X stays metadata-only. Raw failures
+are retained and cannot become a fallback quote or a successful paper day.
 
-| Identity | Required secret set | Allowed routes |
-| --- | --- | --- |
-| analyst | `TRADY_ANALYST_DSN`, approved model/input source token if required | analyst input/universe/model providers, database, private socket |
-| executor | `TRADY_EXECUTOR_DSN`, one explicitly scoped broker credential pair, `TRADY_TRADING_INPUTS_TOKEN` when required | approved broker and input-service endpoints, database, analyst socket |
-| gateway | `TRADY_GATEWAY_DSN`, `TRADY_TELEGRAM_BOT_TOKEN` | Telegram endpoint, database |
-| lab | `TRADY_LAB_DSN` | Unix database socket; no internet |
-| evaluator | none | accepted evaluator IPC only; outbound/new sockets and `io_uring` denied; no internet |
+An operator can capture read-only diagnostic inputs with
+`trady eur diagnose-inputs --config /etc/trady/runtime/eur-shadow.json`.
+Unknown submissions and interrupted deliveries remain ambiguous until exact
+reconciliation; a service restart never grants permission to retry them.
 
-Verification, owner approval and release commands use separate credentials outside
-these service secret sets. The lab cannot read a verifier, owner, releaser,
-broker, executor or gateway secret. The executor does not need analyst credentials.
-Its `MarketInputs` still fetches session, quote and exit-cost data from
-`config.inputs.base_url` with the approved hosts and optional input token, even
-when candidate analysis uses the external analyst socket. For HTTPS on port 443,
-include the approved input-service IPs alongside broker IPs in `broker_https4`
-and `broker_https6`; those executor sets admit both required destinations.
-Other reviewed endpoint ports need corresponding explicit rules before deployment.
-Verifier attestations for verification, calendar and readiness must explicitly use
-`evidence_class:"PRODUCTION"`; TEST/DEMO evidence is rejected, even with the verifier role.
-
-## Invariants
-
-- Root installs reviewed immutable binaries under `/opt/trady/bin`, configuration
-  under `/etc/trady/runtime`, approved model files under `/var/lib/trady/models`
-  and credentials under root-only `/etc/trady/secrets`. Analyst, executor,
-  gateway and weekly units load their respective credential JSON through
-  `LoadCredential`; paths use `%d`. The evaluator has no `LoadCredential`
-  directive (`[trady-analyst.service:LoadCredential]`,
-  `[trady-executor.service:LoadCredential]`, `[trady-gateway.service:LoadCredential]`,
-  `[trady-weekly.service:LoadCredential]`, `[trady-evaluator.service:Service]`).
-- `[prepare.py:main]` initially bounds source size to 4 MiB and checks required
-  top-level keys; `[prepare.py:unique]` rejects duplicate JSON keys. These checks
-  do not validate the complete application schema or establish absence of secret
-  values. The helper forces `enabled=false` and the private analyst socket path.
-- Both complete autonomous configs set
-  `analyst_socket:"/run/trady-analyst/analyst.sock"`. The analyst's
-  `RuntimeDirectory` is owned by analyst/IPC group, mode `0750`; the server socket
-  is `0660`. The executor shares the IPC group. This uses the real persistent
-  analyst service and does not spawn an analyst under the executor's UID.
-- Configs contain reviewed policy/model/source references, without secret values.
-  The preparation helper disables them; a later explicit deployment review owns
-  enabling. Live mode additionally requires a matching database `ACTIVE` release,
-  fresh reconciled broker state and all runtime readiness/protection gates.
-- The executor resolves ACTIVE authority with its own database session before
-  analysis and immediately before dispatching a new live entry. The immutable
-  database candidate must exactly match `RuntimeConfig.release_candidate`, the
-  approved formula/policy/owner core and every locally loaded native model hash.
-  Entry validity is bounded by the actual resolved owner approval expiry.
-  Gate references use this mapping:
-
-  | Runtime gate | Resolved source |
-  | --- | --- |
-  | `owner_approval` | `evidence.owner` |
-  | `shadow_acceptance` | `shadow_<subject_hash>` |
-  | `model_validation` | `evidence.verification` |
-  | Remaining five runtime gate names | `evidence.readiness` |
-
-  Existing holdings retain their original authority and bypass new-entry release
-  resolution so an expired or unavailable release cannot disable risk-reducing
-  recovery/protection. This does not authorize a new entry.
-- All services have read-only filesystems, no ambient capabilities, no-new-privilege
-  settings, dedicated bounded writable state, process limits, CPU quotas and
-  memory limits. Weekly tools also have per-process/pipeline bounds.
-- Apply the firewall only after inspecting local UID conflicts and approved routes.
-  Empty route sets intentionally block traffic. DNS is not generally permitted:
-  deploy approved hostname-to-IP mappings or a separately reviewed resolver route.
-  These nftables rules are for host systemd users; container traffic needs its own
-  corresponding namespace/forwarding policy. Do not assume UID rules cover NAT.
-- The lab uses a Unix PostgreSQL socket because its unit permits only `AF_UNIX`.
-  Prepare engine/toolchain/data before the weekly run; grant no Docker socket or
-  download route. Store writable tool builds/artifacts outside this checkout.
-- Evaluator IPC uses a separate `trady-evaluation-ipc` group, with only the lab
-  and evaluator as members. The runtime parent is evaluator-owned 0750 and socket
-  0660. Root provisions sealed data at `/var/lib/trady/sealed` and the lock at
-  `/etc/trady/evaluator`, root-owned and readable only by the evaluator's private
-  group; do not use the shared IPC group for sealed file access. The lab unit
-  explicitly makes these paths and `/var/lib/trady-evaluator` inaccessible.
-  Worker state is 0700 and includes a durable one-candidate-per-source-dataset
-  exposure latch. Even a changed lock cannot re-expose that dataset to another
-  candidate. See the complete [input schema and gates](../../lab/evaluator/README.md).
-  Prepare these files before explicitly deploying the unit; none is bundled as
-  production evidence. The evaluator remains independent of candidate code and
-  accepts only the exact request frozen by the administrator.
-- The evaluator requires Linux/procfs, `libseccomp.so.2`, no-new-privilege and
-  thread-synchronized seccomp support. Its startup self-test must confirm local
-  outbound connection and new-socket denial before reading the lock/data.
-  Missing support is a startup failure for both PRODUCTION and TEST_ONLY workers.
-  It refuses existing threads, inherited connected descriptors and anonymous
-  resources; ordinary stdio and root-owned read-only regular files are permitted,
-  with connected stdout/stderr limited to the systemd journal. Keep the worker
-  separate from clients: the filter applies irreversibly to its process and
-  descendants. The sealed lock's diagnostics directory must be evaluator-owned
-  with exact mode 0700; unsafe existing directories fail without permission
-  repair. See `isolate_worker` and `diagnostics_directory` in the
-  [evaluator component](../../lab/evaluator/README.md). Refresh all prepared
-  evaluator dependency pins, including the new isolation module, after updates.
-
-## Side Effects
-
-Explicit installation of `[sysusers.conf:trady-analyst]` and the service artifacts
-by an administrator would provision users/units/secrets and
-apply the reviewed firewall. Running the analyst/executor/gateway would access
-their authorized providers and database. Running an enabled executor can place
-orders and requires the reviewed account, inputs, artifacts and runtime gates
-described above. Timer installation is an explicit deployment action.
-`[prepare.py:main]` writes
-new disabled analyst/executor files sequentially using exclusive creation and
-file fsync. Failure may leave partial output; there is no rollback. Requested
-directory/file modes are 0755/0644, subject to the process umask.
-`[trady-evaluator.service:ExecStartPre]` uses `mkdir -p -m 0700` for exposures;
-existing directory permissions remain unchanged by that command.
-
-## Verification
-
-Run `cargo test --workspace --locked` from the repository root for workspace verification.
-
-Validate units with `systemd-analyze verify services/runtime/*.service
-services/runtime/*.timer` on the target system; missing installed binaries or
-users are deployment prerequisites. Check firewall syntax with `nft --check -f
-services/runtime/firewall.nft` in an authorized isolated network namespace.
-Do not apply either as part of a code/test check.
-
-Run `cargo test --locked -p trady-adapters --test shadow_recording --test weekly_helpers`,
-`cargo test --locked -p trady-cli --test weekly_cli`, and `python3 -B -m unittest discover
--s lab/tests -v`. The root's disposable PostgreSQL runner executes
-`crates/trady-storage/tests/weekly_durable.rs` for role isolation, durable trial
-budgets, restart/concurrency, fenced checkpoints, consumed holdouts and tampering.
-
-Provision `migrations/0000_lab_roles.sql` once with the cluster administrator before
-running schema migration 0006. It creates roles only; grant local authentication
-and scoped secrets through the deployment process. Migration 0006 grants CONNECT
-and narrowly selected functions; none receives table mutation grants.
+Source cleanup preserves migrations, immutable evidence and recovery artifacts.
+Any rebuilt deployment must be tested, reviewed and bound to a new exact bundle;
+no old activation receipt approves changed bytes.

@@ -7,6 +7,7 @@
     "implementation": true,
     "independent_reviewer": true,
     "live_credentials_used": false,
+    "owner_approved_one_time_scheduling_exception": true,
     "unknown_submission_blind_retry": false
   },
   "branch": "implement/eur-first-run",
@@ -15,18 +16,42 @@
     "broker_account_id": 52211463,
     "currency": "EUR",
     "handoff_cash_eur": "4992.68",
-    "handoff_observed_at": "2026-11-05T16:48:28.687225118Z",
-    "handoff_snapshot": "var/eur-autonomous-evidence-20261105-1534/final-handoff-demo-state.json",
+    "handoff_observed_at": "2026-11-05T18:38:03.413717128Z",
+    "handoff_snapshot": "var/eur-legacy-cleanup-20261105/handoff-demo-state.json",
     "live_enabled": false,
     "native_history_snapshot": "var/eur-month-preparation-20261105/final-demo-native-snapshot.json",
     "pending_orders": [],
     "positions": []
   },
   "continuation_schedule": {
-    "enabled": false,
-    "next_run_at": null,
-    "read_only_confirmation": "var/eur-month-preparation-20261105/continuation-schedule-check.json",
-    "recurring_codex_work_created": false
+    "bound_binary_sha256": "3e1e796466dc934eae964c67be35bbf92c4bd38de386af75ae7a0f7d597e7264",
+    "bound_release_sha256": "d09df2264cbb3bb13fb4fc8ad3e5de9b449348bfdb0446a021b68b09ee31fc73",
+    "effective_runs_authorized": 1,
+    "enabled": true,
+    "next_run_at": "2026-11-06T08:15:00.000Z",
+    "next_run_cet": "2026-11-06T09:15:00+01:00",
+    "observation_cutoff_cet": "2026-11-06T11:00:00+01:00",
+    "original_task_preserved_disabled": {
+      "enabled": false,
+      "id": "scheduled-task:command:mcp:fef44704-17d7-4627-b824-1c3a114403b5:schedule-task:eur-open-session-blockers-20261105-v1",
+      "nextRunAt": null
+    },
+    "read_only_confirmation": "var/eur-legacy-cleanup-20261105/continuation-rebound.json",
+    "read_only_confirmation_sha256": "f779aab7223bf83bd9b31070a8b8b4808c1adbd8da8442ef8a8cdcaaf52adc82",
+    "recurring_codex_work_created": true,
+    "recurring_work_after_first_run_authorized": false,
+    "requires_self_disable_before_any_broker_or_provider_work": true,
+    "scope": "ONE_NEW_SELF_DISABLING_CONTINUATION_EXPLICITLY_APPROVED_BY_OWNER",
+    "source_cleanup_review_bound": true,
+    "task_id": "scheduled-task:command:mcp:287ca9e3-ef94-4e38-ab7f-5404392d7145:schedule-task:eur-evidence-once-20261106-0915-cet-authorized-20261105-1715",
+    "underlying_repeating_trigger": {
+      "timeOfDay": "09:15",
+      "type": "fixed_time",
+      "weekdays": [
+        5
+      ]
+    },
+    "underlying_repeating_trigger_exception_approved": true
   },
   "current_candles": {
     "age_seconds_at_receipt": {
@@ -124,64 +149,77 @@
     "source_live_freshness_is_separate_from_executable_quote_type1": true
   },
   "deployment": {
-    "at": "2026-11-05T16:30:44.085397+00:00",
-    "binary_sha256": "48afedeaf209412f58fe4e6fa2d2f9397c600cd081bfcf2c6f924f7ccd329f4b",
+    "at": "2026-11-05T18:35:06.660248+00:00",
+    "binary_sha256": "3e1e796466dc934eae964c67be35bbf92c4bd38de386af75ae7a0f7d597e7264",
     "broker_mutations": 0,
     "current_bars_bridge_sha256": "785000c69d444b33922f27adba20a831121daf5ba3de73ee74803bcb44b5bd1d",
     "current_bars_config_sha256": "0b47cf6ed909922710bd7ed804644ad78fdea1833cf0c135318d005aec21ca31",
     "demo_environment_file_created": false,
     "demo_runtime_installed": false,
     "demo_service_enabled": false,
-    "demo_service_state": "var/eur-autonomous-evidence-20261105-1534/demo-unit-final-state.txt",
-    "deployment_id": "eur_month_ibkr_candles_v1",
+    "demo_service_state": "var/eur-legacy-cleanup-20261105/demo-unit-after.txt",
+    "deployment_id": "eur_month_legacy_retired_v1",
     "execution_stage": "SHADOW",
     "installed_binary_matches_final_bundle": true,
-    "installed_deployment_id": "eur_month_ibkr_candles_v1",
-    "installed_runtime_sha256": "eb0ae36e184973a3ada3b93f1f0b08e5bc504e2d6cc95541b09a5b8687d178d7",
+    "installed_deployment_id": "eur_month_legacy_retired_v1",
+    "installed_runtime_sha256": "d53383c355f165754a499c5b313eb4cdbbf90db8d64b93ac1e941f916ae2bf0d",
     "live_enabled": false,
     "migration": 20,
-    "migration_changed_during_current_candle_work": false,
+    "migration_changed_during_cleanup": false,
     "owner_receipt_created": false,
-    "previous_binary_sha256": "9bb9b133466b58c60eef2e597238058f6ada77fc2566da1e1036f73133692b3a",
-    "previous_deployments_preserved": "var/eur-autonomous-evidence-20261105-1534/deployment-backup",
-    "runtime_sha256": "eb0ae36e184973a3ada3b93f1f0b08e5bc504e2d6cc95541b09a5b8687d178d7",
+    "previous_binary_sha256": "48afedeaf209412f58fe4e6fa2d2f9397c600cd081bfcf2c6f924f7ccd329f4b",
+    "previous_deployments_preserved": "var/eur-legacy-cleanup-20261105/deployment-backup",
+    "previous_runtime_sha256": "eb0ae36e184973a3ada3b93f1f0b08e5bc504e2d6cc95541b09a5b8687d178d7",
+    "release_sha256": "d09df2264cbb3bb13fb4fc8ad3e5de9b449348bfdb0446a021b68b09ee31fc73",
+    "runtime_sha256": "d53383c355f165754a499c5b313eb4cdbbf90db8d64b93ac1e941f916ae2bf0d",
     "services": {
       "trady-eur-analyst": "active",
       "trady-eur-executor": "active",
       "trady-eur-gateway": "active"
     },
     "settled_health": {
-      "path": "var/eur-autonomous-evidence-20261105-1534/shadow-settled-health.json",
-      "sha256": "3733895e42310cc46fa3616d46d6022a5a51d155ec384fd02917c937f7cb3444"
+      "path": "var/eur-legacy-cleanup-20261105/settled-health.json",
+      "sha256": "6b3c6d7f6bc14fc4136413ce8af2fc362393f0108a10f7b1187d8170026158f7"
     },
-    "source_policy_sha256": "a653a08c62bc96abeefd5ab41e0ffc4d64d90263806480d1c82bf0158b55245f",
-    "status": "IBKR_CURRENT_CANDLE_SHADOW_ONLY_INSTALLED"
+    "status": "REVIEWED_LEGACY_CLEANUP_SHADOW_ONLY_INSTALLED"
   },
   "external_blockers": [
     {
-      "detail": "Complete retained94-order accountwide history has no approved native partial BUY. Previous bounded entries filled completely. No new order was justified by unchanged broker capabilities or closed primary session.",
+      "detail": "Fresh native broker calendar confirms today close16:30UTC and flatten16:15UTC. No new native entry after the approved deadline.",
+      "id": "APPROVED_PRIMARY_SESSION_CLOSED",
+      "next_air_open_at": "2026-11-06T08:00:00Z",
+      "next_asml_open_at": "2026-11-06T08:00:03Z",
+      "status": "WAITING_FOR_NEXT_OPEN"
+    },
+    {
+      "detail": "No native partial was created or relabelled; one additional bounded opportunity attempt is scheduled in the next eligible session.",
       "id": "NATIVE_PARTIAL_ENTRY_REMAINDER_PROTECTION",
       "status": "UNOBSERVED"
     },
     {
-      "detail": "Verified current IBKR access is available. A valid registered-strategy analyst/risk/paper lifecycle was not observed before the broker flatten deadline; no signal or evidence was manufactured.",
+      "detail": "Actual current-source forward-paper attempt exited1: no completed EUR shadow decision to export. Real10secondSMART stream retained; no simulated entry or positive ledger was created.",
       "id": "GENUINE_POSITIVE_REAL_INPUT_PAPER",
       "status": "UNOBSERVED"
     }
   ],
-  "git_head": "d76dba53fe13dfffea49b97dda0737792b334e6d",
+  "git_head": "75cba97a657f62d17917363d5a24e44b3ac178b2",
   "identity": {
     "checked_immediately": true,
     "current_account_listing_schedule_calendar_smart_check_required_each_session_and_entry": true,
+    "first_failed_renewal_preserved": "var/eur-evidence-request-20261105-1715/identity-renewal.log",
+    "latest_renewal_is_identity_only_not_release_acceptance": true,
     "month_expected_identity_policy_expires_at": "2026-12-06T00:00:00+00:00",
+    "month_expected_identity_policy_unchanged": true,
     "month_policy_is_fresh_observation_or_order_authority": false,
     "month_policy_sha256": "8879ab9d7eca020e46903942cfa46303a6902e774c61f20a8bdfdc828c348cd4",
     "original_review_expires_at": "2026-11-05T19:08:04.851142+00:00",
     "original_review_unchanged": true,
     "policy_review": "var/eur-month-preparation-20261105/reviewer-policy/component-policy-review.json",
-    "renewal": "var/eur-month-preparation-20261105/identity-renewal/renewal.json",
+    "previous_renewal_observation_preserved": "var/eur-month-preparation-20261105/identity-renewal/renewal.json",
+    "renewal": "var/eur-evidence-request-20261105-1715/identity-renewal-v2/renewal.json",
     "renewal_performed": true,
-    "renewed_observation_review_expires_at": "2026-11-06T13:25:13.132668+00:00"
+    "renewed_observation_review_expires_at": "2026-11-06T17:23:08.013199+00:00",
+    "separate_actual_429_response_preserved": "var/eur-evidence-request-20261105-1715/account-native.json"
   },
   "implementation": {
     "all_reviewed_findings_resolved_in_reviewed_scope": true,
@@ -199,24 +237,30 @@
       "Native coverage and successor-based candle completion; raw normalization independently re-derived during replay.",
       "Frozen paper source/configuration/bridge bindings reject a source downgrade or substituted provider file.",
       "Source findings CANDLES-R1 and CANDLES-R2 repaired; real colliding temporary test fixture names made unique. Failed validation runs retained.",
-      "Historical unaccepted SHADOW cost wording explicitly separated from the current independently accepted bounded month sensitivity model."
+      "Historical unaccepted SHADOW cost wording explicitly separated from the current independently accepted bounded month sensitivity model.",
+      "Removed obsolete IEX30/Alpaca CLI runtime, private analyst worker/localSHADOW, account/cold-start, watchdog and synthetic demo-entry commands.",
+      "Retained a strict EUR-only autonomous router and rejected legacy shapes/actions before credentials.",
+      "Removed unused automatic trading-input/client pipeline; retained identical shared research packet DTOs under input_documents.",
+      "Rejected reserved Alpaca provider before HTTP and removed fabricated constituent membership; retained shared domain/recovery/migration/parity contracts.",
+      "EUR-only disabled configuration preparation; archived old service templates; isolated retained CLI credential-failure tests."
     ],
+    "cleanup_public_evidence": "docs/evidence/eur-legacy-cleanup-2026-11-05.json",
     "current_candle_scoped_review": "var/eur-autonomous-evidence-20261105-1534/reviewer/current-bars-implementation-review-v2.json",
-    "findings": "var/eur-autonomous-evidence-20261105-1534/reviewer-final/independent-review.json",
-    "report": "var/eur-autonomous-evidence-20261105-1534/reviewer-final/implementation-review.md"
+    "findings": "var/eur-legacy-cleanup-20261105/reviewer-implementation/implementation-review.json",
+    "report": "var/eur-legacy-cleanup-20261105/reviewer-implementation/implementation-review.md"
   },
   "independent_review": {
-    "artifact": "var/eur-autonomous-evidence-20261105-1534/release-final-reviewed/artifacts/independent_review.json",
+    "artifact": "var/eur-legacy-cleanup-20261105/release-final-reviewed/artifacts/independent_review.json",
     "artifact_roles_reviewed": 31,
-    "artifact_sha256": "c026addb4bbac22a8742e57f21d7e1e17a2005471c10585bffeffb9b303568db",
-    "checksum_confirmation": "var/eur-autonomous-evidence-20261105-1534/reviewer-final/final-hash-confirmation.json",
+    "artifact_sha256": "d958eb5488b8b91f5e45dc4fb387ddad806d8ce44d7f5b19d7924bd402e85f89",
+    "checksum_confirmation": "var/eur-legacy-cleanup-20261105/reviewer-final/final-hash-confirmation.json",
     "component_decisions": {
       "costs": {
         "artifact_sha256": "78e4498b8b63fd898bfd26f36ad89f0c54396db5f3c51d93656604e37cd2ba18",
         "passed": true
       },
       "independent_review": {
-        "artifact_sha256": "c026addb4bbac22a8742e57f21d7e1e17a2005471c10585bffeffb9b303568db",
+        "artifact_sha256": "d958eb5488b8b91f5e45dc4fb387ddad806d8ce44d7f5b19d7924bd402e85f89",
         "passed": false
       },
       "instrument_rules": {
@@ -224,7 +268,7 @@
         "passed": true
       },
       "paper_day_acceptance": {
-        "artifact_sha256": "8f270d961b5f90fd3b28ce88f3b8bb3c7c48ca07b8b5bdf078da12cb26e28900",
+        "artifact_sha256": "1e41b19bb532e1c862323a4e84bdb00f12fc066b6ae8b42adb64581856a51244",
         "passed": false
       },
       "protocol_acceptance": {
@@ -236,18 +280,26 @@
         "passed": true
       }
     },
-    "current_candle_scoped_findings_resolved": [
-      "CANDLES-R1",
-      "CANDLES-R2"
-    ],
     "decision": "REQUEST_CHANGES",
-    "missing_native_and_paper_evidence_approved": false,
+    "implementation_review": "var/eur-legacy-cleanup-20261105/reviewer-implementation/implementation-review.json",
+    "implementation_review_passed": true,
+    "missing_native_or_paper_evidence_approved": false,
     "nonself_hash_references_verified": 30,
     "passed": false,
-    "report": "var/eur-autonomous-evidence-20261105-1534/reviewer-final/implementation-review.md",
     "reviewer": "independent_agent:/root/eur_independent_review"
   },
   "initial_checkpoint": "var/eur-month-preparation-20261105/initial-checkpoint",
+  "latest_evidence_collection": {
+    "broker_mutations": 0,
+    "collection_authorization_is_final_hash_approval": false,
+    "continuation_pending": true,
+    "fresh_native_calendar": "var/eur-evidence-request-20261105-1715/session-preflight.json",
+    "native_entry_attempts": 0,
+    "native_fills_added": 0,
+    "record": "var/eur-evidence-request-20261105-1715/evidence-summary-final.json",
+    "sha256": "e5bd5cb2d65f962d76a49b5733ee8785c98517f7c7e7b2d1d944ff675768d9d0",
+    "strategy_signal_forced": false
+  },
   "native_evidence": {
     "actual_demo_fills": 48,
     "analysis_directory": "var/eur-session-20261105/evidence-month-v1",
@@ -365,6 +417,35 @@
     "ibkr_current_source_diagnostic_is_positive_paper": false,
     "independent_rebuilt_binary_check": "var/eur-month-preparation-20261105/reviewer-final/final-rebind",
     "interval_seconds": 300,
+    "latest_authorized_attempt_evidence": "var/eur-evidence-request-20261105-1715/paper-attempt.json",
+    "latest_authorized_current_source_attempt": {
+      "binary_sha256": "48afedeaf209412f58fe4e6fa2d2f9397c600cd081bfcf2c6f924f7ccd329f4b",
+      "broker_mutations": 0,
+      "classification": "UNSUCCESSFUL_REAL_INPUT_FORWARD_PAPER_ATTEMPT_NOT_POSITIVE_LIFECYCLE",
+      "command": [
+        "/opt/trady/bin/trady",
+        "eur",
+        "forward-paper",
+        "--config",
+        "/etc/trady/runtime/eur-shadow.json",
+        "--stream",
+        "/thinisde/trady/var/eur-evidence-request-20261105-1715/paper-stream",
+        "--out",
+        "/thinisde/trady/var/eur-evidence-request-20261105-1715/forward-paper-attempt",
+        "--exit-after-seconds",
+        "60"
+      ],
+      "completed_at": "2026-11-05T17:27:49.375682+00:00",
+      "exit_code": 1,
+      "live_enabled": false,
+      "no_signal_forced": true,
+      "paper_passed": false,
+      "runtime_sha256": "eb0ae36e184973a3ada3b93f1f0b08e5bc504e2d6cc95541b09a5b8687d178d7",
+      "started_at": "2026-11-05T17:27:38.620709+00:00",
+      "stderr": "trady: no completed EUR shadow decision to export\n",
+      "stdout": "",
+      "stream_exit_code": 0
+    },
     "latest_bar_closes_at": "2026-11-05T14:45:00+00:00",
     "latest_decision_completed_at": "2026-11-05T15:04:01.829989145+00:00",
     "latest_real_completed_bars_each": 489,
@@ -408,19 +489,19 @@
     "x_llm_processing_allowed": false
   },
   "previous_evidence_record": {
-    "path": "var/eur-autonomous-evidence-20261105-1534/baseline-evidence.json",
-    "sha256": "f2a321a77947e7e88a64c0b079ba2241bdf3dd845d98ec019407b705faf7e3af"
+    "path": "var/eur-legacy-cleanup-20261105/public-evidence-before.json",
+    "sha256": "b77df9caee7fa5c9addaf63415d28c6abdba07e76777874d2272be97835bf947"
   },
-  "recorded_at": "2026-11-05T16:49:14.576611+00:00",
+  "recorded_at": "2026-11-05T18:42:22.584767+00:00",
   "release": {
     "activation_requested": false,
     "artifact_roles": 31,
     "builder": "codex_implementation_agent",
-    "bundle": "var/eur-autonomous-evidence-20261105-1534/release-final-reviewed",
-    "bundled_verification_file": "var/eur-autonomous-evidence-20261105-1534/verify-bundled-final.json",
-    "created_at": "2026-11-05T16:45:21.549476+00:00",
-    "manifest": "var/eur-autonomous-evidence-20261105-1534/release-final-reviewed/manifest.json",
-    "manifest_sha256": "9e0478dd96c677eeb75ee1d3b1d172514184dd2a8dc244562ec8512c46a9bc62",
+    "bundle": "var/eur-legacy-cleanup-20261105/release-final-reviewed",
+    "bundled_verification_file": "var/eur-legacy-cleanup-20261105/verify-bundled-final.json",
+    "created_at": "2026-11-05T18:24:21.792707+00:00",
+    "manifest": "var/eur-legacy-cleanup-20261105/release-final-reviewed/manifest.json",
+    "manifest_sha256": "d09df2264cbb3bb13fb4fc8ad3e5de9b449348bfdb0446a021b68b09ee31fc73",
     "owner_approval_created": false,
     "prior_candidates_preserved": [
       {
@@ -448,6 +529,14 @@
       {
         "bundle": "var/eur-autonomous-evidence-20261105-1534/release-draft-v2",
         "manifest_sha256": "8624f4368d5873f1f240432cd876b40cfde5d9988e078768c91a932e73301176"
+      },
+      {
+        "bundle": "var/eur-autonomous-evidence-20261105-1534/release-final-reviewed",
+        "manifest_sha256": "9e0478dd96c677eeb75ee1d3b1d172514184dd2a8dc244562ec8512c46a9bc62"
+      },
+      {
+        "bundle": "var/eur-legacy-cleanup-20261105/release-draft-v1",
+        "manifest_sha256": "e50eecaf1c0f15d0de8aa499949270de7193cff3bc396acaa4ed5f41a3529d91"
       }
     ],
     "prospective_runtime_installed": false,
@@ -466,10 +555,10 @@
       ],
       "broker_mutations": 0,
       "live_enabled": false,
-      "release_sha256": "9e0478dd96c677eeb75ee1d3b1d172514184dd2a8dc244562ec8512c46a9bc62",
+      "release_sha256": "d09df2264cbb3bb13fb4fc8ad3e5de9b449348bfdb0446a021b68b09ee31fc73",
       "schema_version": 1
     },
-    "verification_file": "var/eur-autonomous-evidence-20261105-1534/verify-final-reviewed.json",
+    "verification_file": "var/eur-legacy-cleanup-20261105/verify-final-reviewed.json",
     "verifier_exit_code": 1
   },
   "release_activation_authorized": false,
@@ -514,30 +603,32 @@
     "sha256": "a653a08c62bc96abeefd5ab41e0ffc4d64d90263806480d1c82bf0158b55245f",
     "x_content": "METADATA_ONLY"
   },
-  "status": "VERIFIED_IBKR_CURRENT_CANDLES_INSTALLED_SHADOW_DEMO_ACTIVATION_BLOCKED",
+  "status": "LEGACY_RUNTIME_RETIRED_REVIEWED_SHADOW_INSTALLED_DEMO_ACTIVATION_BLOCKED",
   "uncommitted_changes_preserved": true,
   "validation": {
     "assets_and_links": "PASS",
     "clippy": "PASS",
-    "disposable_postgresql": {
-      "log": "var/eur-autonomous-evidence-20261105-1534/postgres-bars.log",
-      "passed": 40
+    "credential_test_isolation_followup": {
+      "log": "var/eur-legacy-cleanup-20261105/credential-isolation-test-v2.log",
+      "passed": 2
     },
-    "failed_workspace_fixture_and_clippy_runs_preserved": true,
+    "disposable_postgresql": {
+      "log": "var/eur-legacy-cleanup-20261105/postgres.log",
+      "passed": 39
+    },
+    "failed_intermediate_checks_preserved": true,
     "format": "PASS",
     "logs_in_bundle_role": "validation_logs",
     "native_partial_entry_evidence": "UNOBSERVED",
-    "native_service_account_candle_bridge": "COMPLETED_AFTER_CLOSE_NO_ORDER_OR_PAPER_AUTHORITY",
     "positive_real_input_paper_lifecycle": "BLOCKED",
     "python": {
-      "log": "var/eur-autonomous-evidence-20261105-1534/python-bars-final.log",
-      "passed": 55
+      "log": "var/eur-legacy-cleanup-20261105/python.log",
+      "passed": 57
     },
     "rust_workspace": {
-      "ignored": 41,
-      "log": "var/eur-autonomous-evidence-20261105-1534/workspace-bars-final.log",
-      "passed": 689
-    },
-    "strict_clippy_log": "var/eur-autonomous-evidence-20261105-1534/clippy-bars-v2.log"
+      "ignored": 40,
+      "log": "var/eur-legacy-cleanup-20261105/workspace.log",
+      "passed": 660
+    }
   }
 }

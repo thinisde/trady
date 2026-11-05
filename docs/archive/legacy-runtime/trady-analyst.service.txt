@@ -1,3 +1,4 @@
+# Historical IEX30 template; its CLI worker was retired. Do not install.
 [Unit]
 Description=Trady analyst private Unix socket service
 After=network-online.target
