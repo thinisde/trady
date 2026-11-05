@@ -482,7 +482,7 @@ fn cli_ingestion_training_evaluation_serving_and_offline_inference_preserve_test
     );
     publish(
         "TEST_ONLY_COSTS",
-        ImportPayload::Costs(trady_adapters::autonomous::CostsPacket {
+        ImportPayload::Costs(trady_adapters::input_documents::CostsPacket {
             instrument_id: input.quote.instrument_id.clone(),
             observed_at: now,
             valid_until: freshness_until,
@@ -515,7 +515,7 @@ fn cli_ingestion_training_evaluation_serving_and_offline_inference_preserve_test
     );
     publish(
         "TEST_ONLY_SESSION_IMPORT",
-        ImportPayload::Session(trady_adapters::autonomous::SessionPacket {
+        ImportPayload::Session(trady_adapters::input_documents::SessionPacket {
             account_id: account.clone(),
             session: Some(trady_application::autonomous::MarketSession {
                 session_id: "TEST_ONLY_SESSION".into(),
@@ -622,7 +622,7 @@ fn cli_ingestion_training_evaluation_serving_and_offline_inference_preserve_test
         forecast["prediction"]["context"]["scenario_hash"],
         calculation.calculation_id.strip_prefix("limits_").unwrap()
     );
-    let wire = serde_json::to_vec(&trady_adapters::autonomous::PredictionRequest {
+    let wire = serde_json::to_vec(&trady_adapters::input_documents::PredictionRequest {
         schema_version: 1,
         account_id: account,
         owner_id: "TEST_ONLY_OWNER".into(),

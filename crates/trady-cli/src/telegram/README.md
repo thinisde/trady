@@ -82,8 +82,12 @@ for phone setup and the implemented command subset.
   temporarily contains the original confirmation message until acknowledgement.
 - `[gateway.rs:Gateway::drain]` uses a database outbox and rechecks current private
   allowlists, bot, owner/account/policy scope and enabled research policy before
-  delivery. A send followed by a crash before acknowledgement may be delivered
-  again; it cannot duplicate the underlying job or owner command.
+  delivery. It commits a token-fenced claim for one row before sending, so
+  concurrent drains cannot send the same row. A transport error becomes
+  `UNKNOWN`; a crash before acknowledgement leaves `SENDING`. Both require
+  operator review and are excluded from automatic replay. Ineligible messages
+  become `SUPPRESSED`. Migration 22 conservatively marks pre-existing
+  undelivered rows `UNKNOWN`; inspect the native chat before any redelivery.
 
 - `[mod.rs:Config]` rejects unknown fields during deserialization.
   `[mod.rs:Config::validate]` rejects unsupported versions, empty allowlists/paths,

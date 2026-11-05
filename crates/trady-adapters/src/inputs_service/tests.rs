@@ -632,7 +632,7 @@ fn research_fixture(
         valid_until: until,
         retain_until: now + Duration::hours(1),
         screening_observations: ScreeningObservations::default(),
-        proposals: vec![crate::autonomous::ResearchDraft {
+        proposals: vec![crate::input_documents::ResearchDraft {
             proposal_id: "TEST_ONLY_PROPOSAL".into(),
             instrument_id: InstrumentId::new("TEST_ONLY_STOCK").unwrap(),
             currency: Currency::new("EUR").unwrap(),

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "broker_account_id": 52211463,
+  "environment": "demo",
+  "observed_at": "2026-11-04T19:37:41.849110+00:00",
+  "passed": false,
+  "entry_authorized": false,
+  "review_status": "PENDING_INDEPENDENT_ACCEPTANCE",
+  "kind": "EUR_QUOTE_COMPATIBILITY",
+  "source": "IBKR_SMART_LIVE",
+  "maximum_divergence_bps": "20",
+  "maximum_spread_bps": "20",
+  "maximum_quote_age_seconds": 10,
+  "samples": [],
+  "limits_status": "VERIFIER_CEILINGS_PENDING_ACCEPTANCE",
+  "blockers": [
+    "NO_AIRBUS_EUR_FILL_BOOK_SAMPLES",
+    "NO_ASML_EUR_FILL_BOOK_SAMPLES"
+  ],
+  "supporting_usd_evidence": "docs/evidence/trading212-ibkr-history-compatibility-2026-11-04.json"
+}

@@ -1,0 +1,8 @@
+{
+  "config_version": 1,
+  "runtime_config": "/etc/trady/runtime/eur-shadow.json",
+  "approved_exchanges": ["XPAR", "XAMS"],
+  "daily_calendar": "Mon..Fri *-*-* 07:30:00 Europe/Berlin",
+  "weekly_calendar": "Sat *-*-* 08:00:00 Europe/Berlin",
+  "notes": "Timers start work; the broker's exact reviewed calendar decides the actual session, holidays and flatten deadline. Review the trigger before adding an exchange."
+}

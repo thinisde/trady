@@ -105,6 +105,8 @@ def simulate_symbol(symbol: str, bars: list[dict]) -> list[dict]:
             low = dec(row["low"])
             if opened <= stop:
                 exit_price, exit_status = opened, "STOP_GAP"
+            elif opened >= target:
+                exit_price, exit_status = opened, "TARGET"
             elif low <= stop and high >= target:
                 exit_price, exit_status = stop, "STOP_SAME_BAR_FIRST"
             elif low <= stop:

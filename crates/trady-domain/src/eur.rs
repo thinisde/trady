@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 use crate::{
-    Currency, InstrumentId, Result,
+    AccountId, Currency, ExecutionStage, InstrumentId, Result,
     market::{SessionWindow, VenueQuote},
     require,
     research::SourceRights,
@@ -37,6 +37,8 @@ pub struct EurInstrumentBinding {
     pub price_tick: Decimal,
     pub quantity_step: Decimal,
     pub fractional_orders: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value_rules: Option<EurOrderValueRules>,
     pub effective_from: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub liquidity_threshold: LiquidityThreshold,
@@ -45,8 +47,136 @@ pub struct EurInstrumentBinding {
     pub review_owner: String,
 }
 
-impl EurInstrumentBinding {
+/// EUR value constraints are separate from the quantity lattice. A minimum
+/// quantity observed at a EUR 1 limit is not a universal one-share minimum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EurOrderValueRules {
+    pub minimum_trade_value: Decimal,
+    pub minimum_remaining_position_value: Decimal,
+    pub price_floor: Decimal,
+    pub price_ceiling: Decimal,
+}
+impl EurOrderValueRules {
+    fn validate(&self) -> Result<()> {
+        require(
+            self.minimum_trade_value > Decimal::ZERO
+                && self.minimum_remaining_position_value > Decimal::ZERO
+                && self.price_floor > Decimal::ZERO
+                && self.price_ceiling >= self.price_floor,
+            "invalid reviewed EUR order-value rules",
+        )
+    }
+}
+
+/// Canonical orderable crosswalk row. `broker_ticker` is the provider catalog
+/// ticker used in an order body; `broker_instrument_id` remains the stable
+/// account/catalog identity used to bind quotes and ISIN evidence.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EurInstrumentRegistryEntry {
+    pub internal_instrument_id: InstrumentId,
+    pub broker_ticker: String,
+    pub broker_instrument_id: String,
+    pub isin: String,
+    pub legal_name: String,
+    pub exchange: String,
+    pub venue: String,
+    pub currency: Currency,
+    pub session_timezone: String,
+    pub yahoo_symbol: String,
+    pub alpha_vantage_symbol: String,
+    pub minimum_quantity: Decimal,
+    pub quantity_step: Decimal,
+    pub price_tick: Decimal,
+    pub fractional_support: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value_rules: Option<EurOrderValueRules>,
+    pub effective_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub owner_review_reference: String,
+}
+
+impl EurInstrumentRegistryEntry {
+    pub fn from_binding(binding: &EurInstrumentBinding, alpha_vantage_symbol: String) -> Self {
+        Self {
+            internal_instrument_id: binding.instrument_id.clone(),
+            broker_ticker: binding.broker_instrument_id.clone(),
+            broker_instrument_id: binding.broker_instrument_id.clone(),
+            isin: binding.isin.clone(),
+            legal_name: binding.legal_name.clone(),
+            exchange: binding.exchange_mic.clone(),
+            venue: binding.exchange_mic.clone(),
+            currency: binding.currency.clone(),
+            session_timezone: binding.session_timezone.clone(),
+            yahoo_symbol: binding.yahoo_symbol.clone(),
+            alpha_vantage_symbol,
+            minimum_quantity: binding.minimum_quantity,
+            quantity_step: binding.quantity_step,
+            price_tick: binding.price_tick,
+            fractional_support: binding.fractional_orders,
+            value_rules: binding.value_rules.clone(),
+            effective_at: binding.effective_from,
+            expires_at: binding.expires_at,
+            owner_review_reference: binding.review_owner.clone(),
+        }
+    }
+
     pub fn validate(&self, now: DateTime<Utc>) -> Result<()> {
+        if let Some(rules) = &self.value_rules {
+            rules.validate()?;
+        }
+        require(
+            self.internal_instrument_id.as_str().ends_with("_EQ")
+                && valid_reference(&self.broker_ticker)
+                && valid_reference(&self.broker_instrument_id)
+                && valid_isin(&self.isin)
+                && text(&self.legal_name, 256)
+                && !self.session_timezone.is_empty()
+                && self.exchange.len() == 4
+                && self.venue == self.exchange
+                && self.currency.as_str() == "EUR"
+                && reviewed_yahoo_symbol(&self.yahoo_symbol, &self.exchange)
+                && !self.alpha_vantage_symbol.is_empty()
+                && self.minimum_quantity > Decimal::ZERO
+                && self.quantity_step > Decimal::ZERO
+                && self.price_tick > Decimal::ZERO
+                && (self.fractional_support || self.quantity_step.fract() == Decimal::ZERO)
+                && self.effective_at <= now
+                && self
+                    .expires_at
+                    .is_none_or(|until| self.effective_at < until && now < until)
+                && valid_reference(&self.owner_review_reference),
+            "invalid EUR instrument registry row",
+        )
+    }
+}
+
+impl EurInstrumentBinding {
+    pub fn entry_minimum_quantity(&self, price: Decimal) -> Result<Decimal> {
+        require(
+            price > Decimal::ZERO && self.quantity_step > Decimal::ZERO,
+            "invalid EUR entry quantity price or step",
+        )?;
+        let Some(rules) = &self.value_rules else {
+            return Ok(self.minimum_quantity);
+        };
+        rules.validate()?;
+        require(
+            price >= rules.price_floor && price <= rules.price_ceiling,
+            "price outside reviewed EUR rule band",
+        )?;
+        let units = rules
+            .minimum_trade_value
+            .checked_div(price)
+            .and_then(|q| q.checked_div(self.quantity_step))
+            .ok_or_else(|| crate::Error("EUR minimum order value arithmetic failed".into()))?;
+        Ok((units.ceil() * self.quantity_step).max(self.minimum_quantity))
+    }
+    pub fn validate(&self, now: DateTime<Utc>) -> Result<()> {
+        if let Some(rules) = &self.value_rules {
+            rules.validate()?;
+        }
         require(
             self.instrument_id.as_str().ends_with("_EQ")
                 && valid_reference(&self.broker_instrument_id)
@@ -156,6 +286,96 @@ pub struct EurUniverseSnapshot {
     pub members: Vec<EurInstrumentBinding>,
 }
 
+/// Content-addressed activation evidence for a concrete EUR release. The
+/// document is intentionally independent from deployment secrets and cannot
+/// enable LIVE: an owner approval may only select SHADOW or DEMO.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EurReleaseCandidate {
+    pub code_commit: String,
+    pub config_hash: String,
+    pub policy_hash: String,
+    pub universe_hash: String,
+    pub session_calendar_hash: String,
+    pub model_hash: String,
+    pub prompt_hash: String,
+    pub broker_account_id: i64,
+    pub broker_environment: String,
+    pub capability_evidence_ids: Vec<String>,
+    pub paper_day_evidence_id: String,
+    pub postgres_test_evidence_id: String,
+    pub daily_report_schema: String,
+    pub review_expiry: DateTime<Utc>,
+    pub live_enabled: bool,
+}
+
+impl EurReleaseCandidate {
+    pub fn validate(&self, now: DateTime<Utc>) -> Result<()> {
+        require(
+            valid_reference(&self.code_commit)
+                && is_sha256(&self.config_hash)
+                && is_sha256(&self.policy_hash)
+                && is_sha256(&self.universe_hash)
+                && is_sha256(&self.session_calendar_hash)
+                && is_sha256(&self.model_hash)
+                && is_sha256(&self.prompt_hash)
+                && self.broker_account_id > 0
+                && self.broker_environment == "demo"
+                && !self.capability_evidence_ids.is_empty()
+                && self.capability_evidence_ids.len() <= 32
+                && self
+                    .capability_evidence_ids
+                    .iter()
+                    .all(|id| valid_reference(id))
+                && valid_reference(&self.paper_day_evidence_id)
+                && valid_reference(&self.postgres_test_evidence_id)
+                && valid_reference(&self.daily_report_schema)
+                && self.review_expiry > now
+                && !self.live_enabled,
+            "invalid or live-enabled EUR release candidate",
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EurOwnerApproval {
+    pub owner: String,
+    pub approved_at: DateTime<Utc>,
+    pub release_candidate_hash: String,
+    pub approved_runtime_mode: ExecutionStage,
+    pub account_id: AccountId,
+    pub max_notional: Decimal,
+    pub max_daily_orders: u8,
+    pub max_initial_loss_fraction: Decimal,
+    pub protection_recovery_decision: String,
+    pub evidence_expiry: DateTime<Utc>,
+    pub rollback_procedure: String,
+}
+
+impl EurOwnerApproval {
+    pub fn validate(&self, now: DateTime<Utc>) -> Result<()> {
+        require(
+            valid_reference(&self.owner)
+                && is_sha256(&self.release_candidate_hash)
+                && matches!(
+                    self.approved_runtime_mode,
+                    ExecutionStage::Shadow | ExecutionStage::Demo
+                )
+                && self.account_id.as_str().starts_with("paper_")
+                && self.max_notional > Decimal::ZERO
+                && self.max_daily_orders == 1
+                && self.max_initial_loss_fraction > Decimal::ZERO
+                && self.max_initial_loss_fraction <= Decimal::new(2, 2)
+                && valid_reference(&self.protection_recovery_decision)
+                && self.approved_at <= now
+                && self.evidence_expiry > now
+                && valid_reference(&self.rollback_procedure),
+            "invalid or expired EUR owner approval",
+        )
+    }
+}
+
 impl EurUniverseSnapshot {
     pub fn validate(&self, now: DateTime<Utc>) -> Result<()> {
         require(
@@ -230,7 +450,7 @@ impl Default for EurEligibilityPolicy {
 impl EurEligibilityPolicy {
     pub fn validate(&self) -> Result<()> {
         require(
-            (1..=300).contains(&self.quote_max_age_seconds)
+            (1..=60).contains(&self.quote_max_age_seconds)
                 && (60..=86_400).contains(&self.minimum_seconds_to_flatten)
                 && self.minimum_price > Decimal::ZERO
                 && self.maximum_price > self.minimum_price
@@ -478,6 +698,7 @@ mod tests {
             price_tick: Decimal::new(1, 2),
             quantity_step: Decimal::ONE,
             fractional_orders: false,
+            value_rules: None,
             effective_from: now() - Duration::days(1),
             expires_at: Some(now() + Duration::days(1)),
             liquidity_threshold: LiquidityThreshold {
@@ -492,6 +713,38 @@ mod tests {
             provenance_ids: vec!["review_1".into()],
             review_owner: "owner".into(),
         }
+    }
+
+    #[test]
+    fn euro_trade_value_is_not_a_fixed_one_share_minimum() {
+        let mut b = binding();
+        b.minimum_quantity = Decimal::new(1, 4);
+        b.quantity_step = Decimal::new(1, 4);
+        b.fractional_orders = true;
+        b.value_rules = Some(EurOrderValueRules {
+            minimum_trade_value: Decimal::ONE,
+            minimum_remaining_position_value: Decimal::ONE,
+            price_floor: Decimal::from(190),
+            price_ceiling: Decimal::from(210),
+        });
+        assert_eq!(
+            b.entry_minimum_quantity(Decimal::new(19840, 2)).unwrap(),
+            Decimal::new(51, 4)
+        );
+        assert_eq!(
+            b.entry_minimum_quantity(Decimal::from(203)).unwrap(),
+            Decimal::new(50, 4)
+        );
+        assert!(b.entry_minimum_quantity(Decimal::from(189)).is_err());
+        assert!(b.entry_minimum_quantity(Decimal::ZERO).is_err());
+        b.quantity_step = Decimal::new(1, 5);
+        b.minimum_quantity = b.quantity_step;
+        b.value_rules.as_mut().unwrap().price_floor = Decimal::from(1200);
+        b.value_rules.as_mut().unwrap().price_ceiling = Decimal::from(1400);
+        assert_eq!(
+            b.entry_minimum_quantity(Decimal::new(128752, 2)).unwrap(),
+            Decimal::new(78, 5)
+        );
     }
 
     fn quote() -> VenueQuote {

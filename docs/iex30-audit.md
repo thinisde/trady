@@ -1,5 +1,10 @@
 # IEX30 code audit
 
+Historical audit: the IEX30/Alpaca runtime and private workers were
+[retired on 5 November](./eur-legacy-retirement-2026-11-05.md). This document
+records the earlier implementation; the current source policy is
+[IBKR current candles and live bid/ask](./eur-data-sources.md).
+
 This audit records the focused path after removing the unused IBKR data plane,
 European deployment artifacts and generated design/review files.
 

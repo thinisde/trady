@@ -13,7 +13,7 @@
   "bindings": {
     "AIR_PA_EQ": {
       "broker_instrument_id": "demo_air_pa",
-      "isin": "FR0000120404",
+      "isin": "NL0000235190",
       "exchange_mic": "XPAR"
     },
     "ASML_AS_EQ": {

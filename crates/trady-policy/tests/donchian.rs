@@ -144,6 +144,23 @@ fn exit_resolution_is_gap_safe_stop_first_and_expires_on_session_five() {
     assert_eq!(same_bar_exit.reason, DonchianExitReason::StopSameBarFirst);
     assert_eq!(same_bar_exit.executable_price, plan.stop);
 
+    for opening in [plan.target, plan.target + d("1")] {
+        let target_gap = DonchianBar {
+            open: opening,
+            high: opening + d("1"),
+            low: plan.stop - d("1"),
+            close: plan.entry,
+            ..same_bar.clone()
+        };
+        let exit = resolve_exit(&plan, &target_gap, 2, &spec).unwrap().unwrap();
+        assert_eq!(exit.reason, DonchianExitReason::Target);
+        assert_eq!(exit.executable_price, opening);
+        assert_eq!(
+            exit.price_source,
+            trady_policy::limits::DonchianExecutionPriceSource::HoldingBarOpen
+        );
+    }
+
     let open = DonchianBar {
         observed_at: Utc.with_ymd_and_hms(2026, 2, 3, 21, 0, 0).unwrap(),
         open: d("100"),

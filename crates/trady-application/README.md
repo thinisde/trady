@@ -23,6 +23,13 @@ Perpetual and universe screening supply scoped advisory/research observations.
 
 ## Interface
 
+- [EUR protocol driver](./src/eur_protocol/driver.rs): commit before send,
+  exact-order/holding reconciliation, partial-fill cancellation, native stop,
+  cancellation-before-exit and restart recovery. Provider observations and
+  economic response evidence are journalled separately from state transitions.
+  [Driver tests](./src/eur_protocol/driver_tests.rs) are synthetic regressions,
+  not broker acceptance.
+
 - `[src/lib.rs:FoundationConfig]`, `ExecutionRepository`, `reconcile`,
   `reconcile_account`: paper configuration, information ports and reconciliation.
 - `[src/broker.rs:BrokerExecutionPort]`, `BrokerOrderRequest`,

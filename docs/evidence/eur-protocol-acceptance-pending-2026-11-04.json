@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "broker_account_id": 52211463,
+  "environment": "demo",
+  "observed_at": "2026-11-04T19:37:41.849110+00:00",
+  "passed": false,
+  "entry_authorized": false,
+  "review_status": "PENDING_INDEPENDENT_ACCEPTANCE",
+  "kind": "EUR_SEQUENTIAL_NATIVE_STOP_ACCEPTANCE",
+  "source": "SYNTHETIC_AND_HTTP_FIXTURES_PLUS_UNFILLED_BROKER_CANCEL_PROBES",
+  "protection_mode": "SEQUENTIAL_NATIVE_STOP",
+  "synthetic_driver_regressions_passed": 6,
+  "synthetic_reducer_scenarios_passed": 15,
+  "http_exact_stop_and_history_checks_passed": true,
+  "real_unfilled_orders_cancelled": 11,
+  "cases": [
+    {
+      "case": "partial_entry_fill",
+      "passed": false,
+      "broker_evidence": false
+    },
+    {
+      "case": "stop_rejection",
+      "passed": false,
+      "broker_evidence": false
+    },
+    {
+      "case": "cancellation_race",
+      "passed": false,
+      "broker_evidence": false
+    },
+    {
+      "case": "unknown_submission",
+      "passed": false,
+      "broker_evidence": false
+    },
+    {
+      "case": "restart_recovery",
+      "passed": false,
+      "broker_evidence": false
+    }
+  ],
+  "blockers": [
+    "REAL_FILL_PROTECTION_AND_FAULT_RECOVERY_EVIDENCE_MISSING"
+  ]
+}

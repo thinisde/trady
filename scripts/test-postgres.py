@@ -94,8 +94,9 @@ def main():
             child_env[key] = dsn + " password='" + password + "'"
         run("cargo", "test", "--locked", "-p", "trady-storage", "--tests", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
         run("cargo", "test", "--locked", "-p", "trady-cli", "--test", "opencode", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
-        run("cargo", "test", "--locked", "-p", "trady-cli", "--test", "autonomous_cli", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
         run("cargo", "test", "--locked", "-p", "trady-cli", "--test", "telegram_jobs_cli", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
+        run("cargo", "test", "--locked", "-p", "trady-cli", "--bin", "trady", "durable_intraday_cursor_resumes_and_expires_without_repeating_model_calls", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
+        run("cargo", "test", "--locked", "-p", "trady-cli", "--bin", "trady", "month_record_window_and_unsubmitted_restart_are_fenced", "--", "--ignored", "--nocapture", cwd=ROOT, env=child_env)
         for service in ["analyst", "executor", "gateway"]:
             run("cargo", "run", "--locked", "--quiet", "--bin", "trady", "--", service, "--once", cwd=ROOT, env=child_env)
         run("cargo", "run", "--locked", "--quiet", "--bin", "trady", "--", "demo-postgres", cwd=ROOT, env=child_env)

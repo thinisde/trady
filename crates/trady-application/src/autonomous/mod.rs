@@ -807,6 +807,14 @@ impl AutonomousTrader {
                     .filter(|o| o.role == OrderRole::Protection && !o.terminal())
                     .try_fold(Decimal::ZERO, |sum, o| add(sum, o.remaining()?))?
                     >= quantity;
+                let pending_update = journal.pending_holding_update(&self.fence).ok().flatten();
+                let research_available = pending_update.as_ref().is_some_and(|update| {
+                    update.created_at <= now
+                        && update.valid_until > now
+                        && update.research.account_id == self.config.account_id
+                        && update.research.instrument_id == instrument
+                        && update.research.validate_dossier(&self.config, now).is_ok()
+                });
                 let context = trady_policy::holding::HoldingContext {
                     now,
                     session: session.map(|s| trady_policy::holding::SessionWindow {
@@ -819,7 +827,7 @@ impl AutonomousTrader {
                     ),
                     overnight_protection_verified: protected
                         && self.config.capabilities.protective_orders.usable(now),
-                    research_available: false,
+                    research_available,
                     order_outcome_known: true,
                     owner_close_authenticated: controls.close_position,
                 };
@@ -837,7 +845,7 @@ impl AutonomousTrader {
                         .get_or_insert_with(|| format!("{:?}", latch.reason));
                 }
                 if plan.exit_latch.is_none()
-                    && let Some(update) = journal.pending_holding_update(&self.fence).ok().flatten()
+                    && let Some(update) = pending_update
                     && let Ok(activation) = activate_reviewed_holding_update(
                         &self.config,
                         plan,

@@ -1,0 +1,51 @@
+{
+  "baseline_head": "75cba97a657f62d17917363d5a24e44b3ac178b2",
+  "branch": "implement/eur-first-run",
+  "canonical_iex_formula_fixtures_unchanged": true,
+  "credential_test_followup_passed": 2,
+  "credential_test_isolation_fix": "Private0700cwd and actual0600emptyfixturestore with cleared environment; original required-key assertions preserved. Prior failed fix and review test store read recorded.",
+  "deployment_status_is_in": "docs/evidence/eur-blocker-followup-2026-11-05.json",
+  "implementation_review": {
+    "complete_release_accepted": false,
+    "decision": "ACCEPT_FOR_SHADOW_ONLY_REBIND_AND_INSTALL",
+    "path": "var/eur-legacy-cleanup-20261105/reviewer-implementation/implementation-review.json",
+    "python_tests_passed": 2,
+    "rust_tests_passed": 112,
+    "sha256": "cbaec0a6af95178fd5c4f3996649593680d65d754990dd14b430b8b4001c01dd",
+    "synthetic_router_controls_passed": 5
+  },
+  "independent_dependency_assessment": "var/eur-legacy-cleanup-20261105/reviewer/dependency-assessment.json",
+  "known_unresolved_release_evidence": [
+    "NATIVE_PARTIAL_ENTRY",
+    "POSITIVE_REAL_INPUT_PAPER",
+    "FINAL_EXACT_HASH_OWNER_APPROVAL"
+  ],
+  "live_enabled": false,
+  "migrations_and_native_failed_evidence_unchanged": true,
+  "next_session_continuation_requires_matching_reviewed_pins": true,
+  "prior_uncommitted_changes_preserved": true,
+  "private_validation_directory": "var/eur-legacy-cleanup-20261105",
+  "rebuilt_binary_sha256": "3e1e796466dc934eae964c67be35bbf92c4bd38de386af75ae7a0f7d597e7264",
+  "recorded_at": "2026-11-05T18:24:18.949856+00:00",
+  "release_activation_authorized": false,
+  "remaining_eur_recovery_gate_tests_preserved": true,
+  "retired_test_scopes": [
+    "legacy Alpaca client and MarketInputs unit tests",
+    "old private child/autonomous CLI integration target",
+    "synthetic demo-entry CLI target",
+    "account/cold-start internal tests"
+  ],
+  "schema_version": 1,
+  "shared_packet_model_pipeline_preserved": true,
+  "source_checkpoint_sha256": "f0fc1d5d4a29fb339a6b43dff2df29f8679ff0b38358d606e3059d34011b18c2",
+  "status": "IMPLEMENTED_VALIDATED_INDEPENDENTLY_REVIEWED_FOR_SHADOW_REBIND",
+  "validation": {
+    "build": "PASS",
+    "clippy": "PASS",
+    "disposable_postgresql_passed": 39,
+    "format": "PASS",
+    "python_passed": 57,
+    "rust_workspace_ignored": 40,
+    "rust_workspace_passed": 660
+  }
+}

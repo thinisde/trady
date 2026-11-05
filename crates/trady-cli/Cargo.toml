@@ -20,12 +20,8 @@ rust_decimal.workspace = true
 serde_json.workspace = true
 serde.workspace = true
 ctrlc.workspace = true
-socket2.workspace = true
 sha2.workspace = true
 uuid.workspace = true
-
-[target.'cfg(target_os = "linux")'.dependencies]
-nix.workspace = true
 
 [lints]
 workspace = true

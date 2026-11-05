@@ -1,5 +1,10 @@
 # Cold-start account workflow
 
+Historical evidence guide: this account CLI was
+[retired on 5 November](./eur-legacy-retirement-2026-11-05.md). Current account
+checks use `t212 snapshot`; trading uses the [EUR release workflow](./eur-execution-and-release.md).
+The examples below describe the earlier implementation and do not activate it.
+
 `trady account cold-start` is the read-only bootstrap path for a demo account
 with no assumed execution history. It discovers the provider account identity,
 captures the account snapshot and available history, validates an independent

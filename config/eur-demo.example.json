@@ -1,7 +1,11 @@
 {
   "config_version": 1,
   "enabled": false,
-  "execution_stage": "SUPERVISED_DEMO",
+  "execution_stage": "SHADOW",
+  "live_enabled": false,
+  "broker": {
+    "environment": "demo"
+  },
   "account_id": "paper_t212_eur_demo",
   "base_currency": "EUR",
   "owner_id": "configured_owner",
@@ -18,10 +22,10 @@
     "min_reward_to_risk": "1.50",
     "max_hold_seconds": 28800,
     "minimum_seconds_to_flatten": 900,
-    "max_daily_entries": 2,
-    "max_daily_exits": 2,
+    "max_daily_entries": 1,
+    "max_daily_exits": 1,
     "max_open_positions": 1,
-    "rotation_enabled": true,
+    "rotation_enabled": false,
     "minimum_rotation_net_improvement_fraction": "0.002",
     "no_overnight": true,
     "sentiment_may_widen_stop": false
@@ -48,7 +52,8 @@
   "opencode_config": "config/opencode/llm.json",
   "notes": [
     "Trading 212 demo is the first operational target.",
-    "Live execution remains disabled until exact venue quote and protection evidence is approved.",
-    "One open position is allowed; rotation requires a verified close and stronger replacement economics."
+    "Live execution is structurally blocked for this migration.",
+    "The example crosswalk is illustrative; an independent exact broker-catalog review is required.",
+    "One entry slot is allowed; rotation is disabled for the first supervised session."
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "owner_instruction_date": "2026-11-04",
+  "real_time_bid_ask": "IBKR_SMART_LIVE",
+  "quote_fallback_allowed": false,
+  "maximum_quote_age_seconds": 10,
+  "research_providers": ["YFINANCE", "ALPHA_VANTAGE"],
+  "current_candles": "IBKR_SMART_TRADES",
+  "current_candles_fallback_allowed": false,
+  "current_candle_owner_instruction_date": "2026-11-05",
+  "research_uses": ["COMPLETED_OHLCV", "HISTORICAL_STOCK_DATA", "NEWS_WHEN_AVAILABLE", "ADDITIONAL_RESEARCH_QUERIES"],
+  "execution_broker": "TRADING212",
+  "x_content_llm_processing": false
+}

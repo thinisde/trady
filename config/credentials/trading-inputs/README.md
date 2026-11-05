@@ -2,17 +2,15 @@
 
 ## TRADY_TRADING_INPUTS_TOKEN
 
-This is the bearer token for the approved service configured as `inputs.base_url`
-in an autonomous deployment. That service supplies session, quote, cost and
-finalized research inputs to
-[`AutomaticInputs`](../../../crates/trady-adapters/src/autonomous/mod.rs).
+This is the historical bearer-token name for the
+[retired automatic-input client](../../../docs/eur-legacy-retirement-2026-11-05.md).
+Its existing private value is preserved, but the EUR runtime does not load an
+`inputs.base_url` trading client. Shared research wire documents and the reviewed
+input-service server remain available for offline/interoperability tools.
 
-1. Identify the operator of the configured inputs service.
-2. Request a token with access to the endpoints required by your deployment.
-   Follow that service's own issuance and rotation procedure.
-3. Store the raw token as `TRADY_TRADING_INPUTS_TOKEN` in
-   `config/credentials.local.json`; see the [store setup](../README.md).
-   Trady adds the `Bearer` header prefix.
+For a separately reviewed interoperability client, obtain its scoped bearer
+from the service operator and keep it in the private [store](../README.md).
+An old token name grants no EUR quote or execution authority.
 
 If you operate the service and it supports a static shared bearer token, generate
 a value locally with OpenSSL:
@@ -34,6 +32,6 @@ scoped to their respective service identities. The
 [input-service guide](../../../services/inputs/README.md) describes its loopback
 listener and HTTPS reverse proxy.
 
-The client token is optional in Trady's client: leave it empty only when the approved
-service's authentication setup permits unauthenticated requests. The service
-operator provides the actual credential; Trady has no public sign-up flow for it.
+The retained server requires its own credential. Any new client must follow
+the service's authentication policy; the retired client's optional-token behavior
+is not an authorization policy for that server.

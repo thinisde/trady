@@ -21,24 +21,29 @@ fn inputs() -> Inputs {
     let document: serde_json::Value = serde_json::from_slice(&config).unwrap();
     let authority: trady_application::optimization::FormulaAuthority =
         serde_json::from_value(document["trading"]["limits_authority"].clone()).unwrap();
-    let manifest: DonchianIntegrityManifest = serde_json::from_slice(
+    let mut manifest: DonchianIntegrityManifest = serde_json::from_slice(
         &fs::read("../../config/formulas/long-donchian-atr-v1.integrity.json").unwrap(),
     )
     .unwrap();
+    let implementation = fs::read("../../crates/trady-policy/src/limits/donchian.rs").unwrap();
+    // Synthetic positive fixture only. The checked-in historical authority is
+    // deliberately not re-signed when executable behavior changes.
+    manifest.implementation_sha256 =
+        trady_application::harness::content_hash(std::str::from_utf8(&implementation).unwrap());
     Inputs {
         manifest,
         authority: fs::read("../../config/formulas/long-donchian-atr-v1.authority.json").unwrap(),
         spec: fs::read("../../config/formulas/long-donchian-atr-v1.json").unwrap(),
         universe: fs::read("../../config/iex30.universe.json").unwrap(),
         runtime: config,
-        implementation: fs::read("../../crates/trady-policy/src/limits/donchian.rs").unwrap(),
+        implementation,
         runtime_authority: authority,
         policy: serde_json::from_value(document["trading"]["policy"].clone()).unwrap(),
     }
 }
 
 #[test]
-fn registered_shadow_authority_is_content_addressed_and_paused() {
+fn matching_synthetic_manifest_is_content_addressed_and_paused() {
     let Inputs {
         manifest,
         authority,
@@ -63,6 +68,27 @@ fn registered_shadow_authority_is_content_addressed_and_paused() {
     assert_eq!(report.status, DonchianReleaseState::Shadow);
     assert!(!report.live_enabled);
     assert!(report.entries_paused);
+}
+
+#[test]
+fn historical_registration_does_not_approve_the_corrected_exit_implementation() {
+    let mut fixture = inputs();
+    fixture.manifest = serde_json::from_slice(
+        &fs::read("../../config/formulas/long-donchian-atr-v1.integrity.json").unwrap(),
+    )
+    .unwrap();
+    let error = verify_donchian_integrity(
+        &fixture.manifest,
+        &fixture.authority,
+        &fixture.spec,
+        &fixture.universe,
+        &fixture.runtime,
+        &fixture.implementation,
+        &fixture.runtime_authority,
+        &fixture.policy,
+    )
+    .unwrap_err();
+    assert_eq!(error.0, "Donchian authority integrity hash mismatch");
 }
 
 #[test]

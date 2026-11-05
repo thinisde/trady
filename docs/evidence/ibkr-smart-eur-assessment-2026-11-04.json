@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "assessment_id": "ibkr_smart_eur_20261104",
+  "review_status": "SELF_REVIEW_NOT_INDEPENDENT_RELEASE_APPROVAL",
+  "controller": {
+    "repository": "https://github.com/code-hustler-ft3d/ibg-controller",
+    "version": "0.16.3",
+    "image_digest": "sha256:dcfbb07fb0c28ab9efae0e5b6c686306944bd67517db215d1c0228a3be666534",
+    "health": "healthy",
+    "trading_mode": "paper",
+    "configured_read_only_api": true,
+    "api_endpoint": "127.0.0.1:4002",
+    "gateway_restarted_or_reconfigured": false
+  },
+  "sdk": {
+    "provider": "Official Interactive Brokers Python TWS API",
+    "version": "10.50.2",
+    "source": "https://interactivebrokers.github.io/downloads/twsapi_macunix.1050.02.zip",
+    "archive_sha256": "673129e5cba58c4d77bc40647265f84ea42f605eccf88fa4c1221d62d12454f3",
+    "server_protocol_version": 226
+  },
+  "started_at": "2026-11-04T17:42:56.208216+00:00",
+  "completed_at": "2026-11-04T17:43:01.544691+00:00",
+  "requested_market_data_type": 1,
+  "observed_market_data_type": "LIVE",
+  "instruments": [
+    {
+      "internal_instrument_id": "AIR_PA_EQ",
+      "broker_ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "con_id": 29612256,
+      "currency": "EUR",
+      "security_type": "STK",
+      "requested_exchange": "SMART",
+      "primary_exchange": "SBF",
+      "primary_listing_mic": "XPAR",
+      "exact_isin_contracts_returned": 1,
+      "market_data_type_callback": 1,
+      "timestamped_bid_ask_callbacks": 1
+    },
+    {
+      "internal_instrument_id": "ASML_AS_EQ",
+      "broker_ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "con_id": 117589399,
+      "currency": "EUR",
+      "security_type": "STK",
+      "requested_exchange": "SMART",
+      "primary_exchange": "AEB",
+      "primary_listing_mic": "XAMS",
+      "exact_isin_contracts_returned": 1,
+      "market_data_type_callback": 1,
+      "timestamped_bid_ask_callbacks": 2
+    }
+  ],
+  "probe": {
+    "source_path": "scripts/probe-ibkr-smart.py",
+    "source_sha256": "77048077f15e671524e964041d5029052a71412ef77cf12397920c3e36b585a1",
+    "artifact_path": "var/eur-first-run-checks/ibkr-smart-eur-reviewed-probe.json",
+    "artifact_sha256": "e992fe277eaf0ee9a1339dcd6ad659f880abb2256040e6e58701ac3af8fdf7f7",
+    "read_only_outgoing_message_allowlist": true,
+    "regulatory_snapshots": false,
+    "subscription_purchase_performed": false,
+    "broker_mutations": 0
+  },
+  "technical_result": "LIVE_SMART_TIMESTAMPED_EUR_BID_ASK_CONFIRMED",
+  "scope_limits": [
+    "The approved primary Euronext sessions were closed during this probe",
+    "SMART composite quotes are not represented as Trading 212 executable prices",
+    "Freshness must be evaluated from each BidAsk provider timestamp; local receipt does not refresh an old book",
+    "A live market-data callback does not authorize a broker mutation"
+  ],
+  "trading212_quote_compatibility": "NOT_YET_ACCEPTED",
+  "trading212_protection_capability": "UNCHANGED_UNSUPPORTED_PENDING_REVIEW",
+  "entry_authorized": false,
+  "live_enabled": false
+}

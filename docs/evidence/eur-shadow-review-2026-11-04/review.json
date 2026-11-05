@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "review_reference": "eur-shadow-identity-source-review-2026-11-04",
+  "review_date": "2026-11-04",
+  "reviewer": "Codex / gpt-6.1-sol",
+  "review_kind": "AGENT_SELF_REVIEW_OF_PRIMARY_SOURCES",
+  "independent_reviewer_approval": false,
+  "owner_release_approval": false,
+  "verdict": "IDENTITIES_REVIEWED_WITH_RUNTIME_AND_SOURCE_BLOCKERS",
+  "scope": "Non-mutating EUR SHADOW identity research; no orderable universe or release activation.",
+  "broker_account_id": 52211463,
+  "broker_environment": "demo",
+  "base_currency": "EUR",
+  "catalog_instrument_count": 17143,
+  "accepted_identity_count": 2,
+  "orderable_instrument_count": 0,
+  "broker_mutations": 0,
+  "entry_authorized": false,
+  "live_enabled": false,
+  "first_shadow_run_passed": false,
+  "paper_day_passed": false,
+  "source_decisions": [
+    {
+      "source_id": "yfinance_eur",
+      "identity_status": "EUR_LISTINGS_CONFIRMED_BY_PROVIDER_METADATA",
+      "observation_status": "STALE_MISSING_BID_ASK",
+      "executable_quote_accepted": false,
+      "read_only_config": "config/yfinance.eur-shadow.reviewed.json",
+      "rights_scope": "Private diagnostic observations only; no commercial redistribution entitlement was established."
+    },
+    {
+      "source_id": "alpha_eur_news_sentiment",
+      "identity_status": "SYMBOL_SEARCH_VERIFIED",
+      "enabled": false,
+      "role": "HISTORICAL_RESEARCH_CROSSCHECK_ONLY",
+      "credential_reference": "TRADY_ALPHA_VANTAGE_API_KEY",
+      "key_access_verified": true,
+      "review_requests": 2,
+      "documented_free_daily_limit": 25,
+      "configured_daily_limit": 20,
+      "executable_quote_accepted": false,
+      "blockers": [
+        "The current news adapter does not implement the intended historical crosscheck role.",
+        "Symbol search is not proof of NEWS_SENTIMENT ticker coverage.",
+        "No cross-consumer global Alpha Vantage budget or commercial entitlement was established."
+      ]
+    },
+    {
+      "source_id": "ecb_eur_press_rss",
+      "identity_status": "OFFICIAL_FEED_AND_USAGE_TERMS_REVIEWED",
+      "enabled": true,
+      "collection_status": "COMPLETE_WITH_SNAPSHOT_COVERAGE_LIMIT",
+      "postgresql_items_written": 15,
+      "model_readback_items": 5,
+      "retention_hours": 72,
+      "rights_scope": "Direct ECB feed titles and supplied summaries with attribution; no linked full papers or third-party material.",
+      "coverage_gap": "rss_snapshot_not_full_history"
+    },
+    {
+      "source_id": "airbus_eur_press_rss",
+      "identity_status": "OFFICIAL_FEED_VERIFIED",
+      "http_status": 200,
+      "enabled": false,
+      "collection_status": "UNAVAILABLE",
+      "error_state": "rss_parser_unhealthy",
+      "store_content": false,
+      "llm_processing": false,
+      "blockers": [
+        "Publisher pubDate values use a nonstandard date format without a timezone; current parser rejects the feed.",
+        "Airbus site terms do not establish permission for content extraction and model processing."
+      ]
+    },
+    {
+      "source_id": "x_eur_airbus",
+      "identity_status": "OFFICIAL_OWNERSHIP_AND_API_ID_VERIFIED",
+      "handle": "Airbus",
+      "user_id": "15425377",
+      "enabled": false,
+      "post_access_verified": false,
+      "recent_activity_verified": false,
+      "store_content": false,
+      "llm_processing": false
+    },
+    {
+      "source_id": "x_eur_ecb",
+      "identity_status": "OFFICIAL_OWNERSHIP_AND_API_ID_VERIFIED",
+      "handle": "ecb",
+      "user_id": "83466368",
+      "enabled": false,
+      "post_access_verified": false,
+      "recent_activity_verified": false,
+      "store_content": false,
+      "llm_processing": false
+    }
+  ],
+  "x_budget_review": {
+    "billing_scope": "iex30_x_balance",
+    "meaning": "Existing shared provider billing ledger; this is not an IEX market-universe authority.",
+    "new_budget_created": false,
+    "identity_requests": 2,
+    "recorded_cost_microusd": 20000,
+    "remaining_microusd": 1880000,
+    "post_content_requested": false,
+    "post_collection_and_llm_rights_approved": false,
+    "account_specific_license_established": false
+  },
+  "remaining_blockers": [
+    "The runtime universe schema requires order precision which the catalog does not establish; this crosswalk must not be imported as an orderable registry.",
+    "The EUR coordinator and durable Telegram service wiring are not complete.",
+    "X post access, current activity, affordable collection coverage, and applicable processing rights remain unverified.",
+    "Alpha Vantage historical input wiring and shared daily budget enforcement remain incomplete.",
+    "The available Yahoo observations have no fresh executable bid/ask or accepted Trading 212 venue compatibility.",
+    "Protection, recovery, real-input SHADOW, paper-day replay, independent capability review and exact-release owner approval remain open."
+  ]
+}

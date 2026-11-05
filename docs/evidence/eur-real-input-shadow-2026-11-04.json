@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "evidence_id": "eur_real_input_shadow_20261104_sources_v4",
+  "classification": "OBSERVED_SHADOW_RUN_NOT_DEMO_RELEASE_APPROVAL",
+  "implementation_commit": "f521286679558d033e0bba672be515d8ada0f88a",
+  "deployed_binary_sha256": "76533eea209eda757be798de049676dd81b8ebc294d7ce829ad5594244e65743",
+  "cycle_id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f",
+  "runtime_mode": "SHADOW",
+  "broker_environment": "demo",
+  "broker_account_id": "52211463",
+  "base_currency": "EUR",
+  "entry_authorized": false,
+  "live_enabled": false,
+  "broker_mutations": 0,
+  "reconciled_flat": true,
+  "coordinator_state": "REJECTED",
+  "selection_failure": {
+    "code": "NO_EXECUTABLE_EUR_CANDIDATE",
+    "kind": "OPERATIONAL_INPUTS_UNAVAILABLE",
+    "message": "No reviewed executable quote and order rules; candidate blockers are retained."
+  },
+  "analyst_invoked": false,
+  "configuration_hash": "2c76d19d547f2145530b19248baf5765be7f40ca65c33f6dd9d853f6c54593fb",
+  "crosswalk_hash": "432b9dfb2cf26fd4eb9ac9801a0eb9ee7daf8f4f6c1f5466ada5b998a38fa97d",
+  "policy_hash": "3338b0bc74e881b0f2f02ba733abf96f4bdefbe7732f0bb30ced1ef386cf72ed",
+  "compiled_shadow_source_hash": "60181fb621400a3b476b5c4c5e997714a6636520fcb8819d7df8b63d0ef6f952",
+  "started_at": "2026-11-04T15:29:17.294305340Z",
+  "completed_at": "2026-11-04T15:29:20.241295567Z",
+  "provider_observations": [
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_yf_stream",
+      "source": "yf_stream",
+      "status": "STALE",
+      "error_code": "STREAM_TRADE_TIMESTAMP_STALE",
+      "response_hash": "c630d9979f3fc42b8bb40bf1230970c228aca7cd3e21c362bc63a868f9ab8c84"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_yf_bars_AIR_PA_EQ",
+      "source": "yf_bars_AIR_PA_EQ",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "f2e435fb8db9de312c52b72a0b0371cceb8b93e6c220e23b8794be9cffe7321d"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_yf_news_AIR_PA_EQ",
+      "source": "yf_news_AIR_PA_EQ",
+      "status": "UNAVAILABLE",
+      "error_code": "PROVIDER_UNAVAILABLE",
+      "response_hash": "e2af74c7cf50381ca309d35b577178d6f3e2a2e9f97527506a9d69bc2d651efb"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_alpha_history_AIR_PA_EQ",
+      "source": "alpha_history_AIR_PA_EQ",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "fed8f34e4ac071b2f761d3cd095605e596aaa45a5bad7a0a27107035530a8b9b"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_yf_bars_ASML_AS_EQ",
+      "source": "yf_bars_ASML_AS_EQ",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "38f501ec4774287f4b4f6c8a3e1d4f221dcf90b0111556ee3f6b66ad9adf09ef"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_yf_news_ASML_AS_EQ",
+      "source": "yf_news_ASML_AS_EQ",
+      "status": "UNAVAILABLE",
+      "error_code": "PROVIDER_UNAVAILABLE",
+      "response_hash": "e2af74c7cf50381ca309d35b577178d6f3e2a2e9f97527506a9d69bc2d651efb"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_alpha_history_ASML_AS_EQ",
+      "source": "alpha_history_ASML_AS_EQ",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "de5cef94c5cfd67b23641140f0bab2d3c7aa4123c36a46318ac29c548de50593"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_research_ecb_eur_press_rss",
+      "source": "research_ecb_eur_press_rss",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "97031b49e4f1307a6200592e2d4698422ce0f4035f2d232bac9c1e93d2b1294b"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_research_x_eur_airbus",
+      "source": "research_x_eur_airbus",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "7eb9ccb83ff8f024b6219b4a79bfdee5577f35da4e7b90fa79807f8d75426d64"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_research_x_eur_ecb",
+      "source": "research_x_eur_ecb",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "bc2c29f86925b9718c1feb6bbc1384e4ebb84075035075d671df3187585d810a"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_start",
+      "source": "start",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "daf4673890e341884736bacbe5e92a65206225aa2d2df540a20503c15cd1f3de"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_broker_catalog",
+      "source": "broker_catalog",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "4d08f3a5f1782fee6d73f487c50b4db49cb88d2b0d1df18b551e6cb345b10660"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_broker_sessions",
+      "source": "broker_sessions",
+      "status": "OK",
+      "error_code": null,
+      "response_hash": "4d3a700770023dd951171fcd9a2650e2510cda9735c1e0268a3ecf988362bd81"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_quote_AIR_PA_EQ",
+      "source": "quote_AIR_PA_EQ",
+      "status": "STALE",
+      "error_code": "QUOTE_STALE",
+      "response_hash": "dac8c72f48a3d886b1932152388f18a151ccd18e883525eca41771459cddfd97"
+    },
+    {
+      "id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_quote_ASML_AS_EQ",
+      "source": "quote_ASML_AS_EQ",
+      "status": "STALE",
+      "error_code": "QUOTE_STALE",
+      "response_hash": "d8a40522773b0287feae0e4510d1b25d765c44fe38a63a260bc8935d5f9c19cf"
+    }
+  ],
+  "telegram_deliveries": [
+    {
+      "attempt_count": 1,
+      "event_id": "eur_eur_shadow_sources_v4_20261104_2c76d19d547f_summary",
+      "last_error": null,
+      "notification_kind": "DAILY_REPORT",
+      "sent_at": "2026-11-04T15:30:17.23128+00:00",
+      "status": "SENT"
+    }
+  ],
+  "verification": {
+    "workspace_tests_passed": 636,
+    "workspace_tests_ignored": 36,
+    "disposable_postgres_runner_passed": true,
+    "credential_rotation_and_role_probes_passed": true,
+    "systemd_verification_passed": true,
+    "strict_workspace_clippy_passed": true
+  },
+  "database_incident": {
+    "reference": "docs/incident-2026-11-04-volatile-postgres.md",
+    "prior_unarchived_history_lost": true,
+    "recovery_complete": false,
+    "rebuilt_database_persistent_volume": "trady-eur-postgres18-data",
+    "rebuilt_database_restore_and_guarded_restart_verified": true,
+    "verification_applies_to_rebuilt_state_not_lost_history": true
+  },
+  "paper_day_passed": false,
+  "demo_approved": false,
+  "remaining_release_blockers": [
+    "FRESH_TWO_SIDED_EUR_EXECUTABLE_QUOTE_UNAVAILABLE",
+    "QUOTE_VENUE_COMPATIBILITY_UNACCEPTED",
+    "BROKER_ORDER_PRECISION_UNVERIFIED",
+    "PROTECTION_AND_RECOVERY_UNSUPPORTED_OR_UNREVIEWED",
+    "COMPLETE_RECORDED_PAPER_DAY_NOT_PASSED",
+    "RELEASE_CANDIDATE_AND_OWNER_APPROVAL_NOT_BOUND",
+    "YAHOO_NEWS_UNAVAILABLE",
+    "X_CONTENT_AND_MODEL_RIGHTS_NOT_APPROVED"
+  ],
+  "artifacts": [
+    {
+      "path": "var/eur-first-run-checks/eur-sources-v4-report.json",
+      "sha256": "38a55971448d0251d9d3d956108ffc221cb862bef110b988de6531b0ab036acb"
+    },
+    {
+      "path": "var/eur-first-run-checks/eur-sources-v4-observations.json",
+      "sha256": "855d167b34626cd6d2a5a383e3f4a756834bef458eb1ff3c6cf55a836a9bab5f"
+    },
+    {
+      "path": "var/eur-first-run-checks/eur-sdk-workspace-tests.log",
+      "sha256": "b84a035d3c54915bef52a2c3a30e1f43f131d81755f41b824d641f1ef9e15c3e"
+    },
+    {
+      "path": "var/eur-first-run-checks/eur-sdk-postgres-test.log",
+      "sha256": "1077c0397e6d8c003d21881cfcb7d4fd7e8ba787b826179e9608410ea8ddd17d"
+    },
+    {
+      "path": "var/eur-first-run-checks/eur-provider-final-tests.log",
+      "sha256": "8c2484170bdb84691fc53645579eb9f50b9b0d5385ccabd3d1769db44358649b"
+    },
+    {
+      "path": "var/eur-first-run-checks/eur-provider-final-clippy.log",
+      "sha256": "69ca3e3170b731c7af0b88525c30e9cebe1cf3f1f88f79e876d13bc6e880147c"
+    },
+    {
+      "path": "var/eur-first-run-checks/eur-sdk-systemd-verify.log",
+      "sha256": "ebc3b5f2e067bbda6ede8ac1e43abd1ee7a37440658538e15b9a7bfef55b3c25"
+    }
+  ]
+}
+

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:trady:eur-config:1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["config_version","enabled","execution_stage","live_enabled","broker","account_id","base_currency","owner_id","policy","eligibility","approved_universe_snapshot_id","opencode_model","trading212_only","telegram_enabled"],
+  "properties": {
+    "config_version": {"const": 1},
+    "enabled": {"type": "boolean"},
+    "execution_stage": {"enum": ["REPLAY","SHADOW","DEMO","LIVE"]},
+    "live_enabled": {"const": false},
+    "broker": {
+      "type": "object", "additionalProperties": false,
+      "required": ["environment"], "properties": {"environment": {"const": "demo"}}
+    },
+    "account_id": {"type": "string", "pattern": "^(paper|replay)_[A-Za-z0-9_-]+$"},
+    "base_currency": {"const": "EUR"},
+    "owner_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "approved_universe_snapshot_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "policy": {
+      "type":"object","additionalProperties":false,
+      "required":["revision","desired_target_min_fraction","desired_target_max_fraction","max_initial_loss_fraction","min_reward_to_risk","max_hold_seconds","minimum_seconds_to_flatten","max_daily_entries","max_daily_exits","max_open_positions","rotation_enabled","minimum_rotation_net_improvement_fraction","no_overnight","sentiment_may_widen_stop"],
+      "properties":{
+        "revision":{"const":"eur_intraday_v1"},
+        "desired_target_min_fraction":{"$ref":"#/$defs/Decimal"},
+        "desired_target_max_fraction":{"$ref":"#/$defs/Decimal"},
+        "max_initial_loss_fraction":{"$ref":"#/$defs/Decimal"},
+        "min_reward_to_risk":{"$ref":"#/$defs/Decimal"},
+        "max_hold_seconds":{"type":"integer","minimum":300,"maximum":86400},
+        "minimum_seconds_to_flatten":{"type":"integer","minimum":60,"maximum":86400},
+        "max_daily_entries":{"const":1},"max_daily_exits":{"type":"integer","minimum":1,"maximum":2},
+        "max_open_positions":{"const":1},"rotation_enabled":{"type":"boolean"},
+        "minimum_rotation_net_improvement_fraction":{"$ref":"#/$defs/Decimal"},
+        "no_overnight":{"const":true},"sentiment_may_widen_stop":{"const":false}
+      }
+    },
+    "eligibility":{
+      "type":"object","additionalProperties":false,
+      "required":["quote_max_age_seconds","minimum_seconds_to_flatten","minimum_price","maximum_price","maximum_volatility_fraction"],
+      "properties":{
+        "quote_max_age_seconds":{"type":"integer","minimum":1,"maximum":60},
+        "minimum_seconds_to_flatten":{"type":"integer","minimum":60,"maximum":86400},
+        "minimum_price":{"$ref":"#/$defs/Decimal"},"maximum_price":{"$ref":"#/$defs/Decimal"},
+        "maximum_volatility_fraction":{"$ref":"#/$defs/Decimal"}
+      }
+    },
+    "opencode_model":{"const":"deepseek-v4.1-flash"},"trading212_only":{"const":true},
+    "telegram_enabled":{"type":"boolean"},
+    "session_deadlines":{
+      "type":"array","minItems":1,"items":{
+        "type":"object","additionalProperties":false,"required":["exchange_mic","timezone","flatten_minutes_before_close"],
+        "properties":{
+          "exchange_mic":{"type":"string","pattern":"^[A-Z0-9]{4}$"},
+          "timezone":{"type":"string","minLength":1},
+          "flatten_minutes_before_close":{"type":"integer","minimum":1,"maximum":120}
+        }
+      }
+    },
+    "operation_config":{"$ref":"#/$defs/Path"},"universe_config":{"$ref":"#/$defs/Path"},"yfinance_config":{"$ref":"#/$defs/Path"},
+    "research_config":{"$ref":"#/$defs/Path"},"trading212_config":{"$ref":"#/$defs/Path"},
+    "opencode_config":{"$ref":"#/$defs/Path"},"notes":{"type":"array","items":{"type":"string"}},
+    "shadow": {
+      "type":["object","null"],"additionalProperties":false,
+      "required":["deployment_id","crosswalk_config","state_directory","interval_seconds"],
+      "properties":{
+        "deployment_id":{"type":"string","pattern":"^[A-Za-z0-9_.:-]{1,120}$"},
+        "crosswalk_config":{"type":"string","minLength":1},
+        "state_directory":{"type":"string","pattern":"^/var/lib/"},
+        "interval_seconds":{"type":"integer","minimum":10,"maximum":3600},
+        "ibkr_config":{"$ref":"#/$defs/Path"},"risk_config":{"$ref":"#/$defs/Path"},
+        "bar_interval_seconds":{"type":["integer","null"],"enum":[null,60,300,900,1800,3600,86400]},
+        "decision_interval_seconds":{"type":["integer","null"],"minimum":300,"maximum":3600},
+        "current_bars_config":{"$ref":"#/$defs/Path"}
+      }
+    }
+  },
+  "not":{"properties":{"execution_stage":{"const":"LIVE"}},"required":["execution_stage"]},
+  "$defs":{
+    "Decimal":{"type":"string","pattern":"^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+    "Path":{"type":["string","null"],"minLength":1}
+  }
+}

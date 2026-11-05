@@ -1,0 +1,479 @@
+{
+  "schema_version": 1,
+  "kind": "TRADING212_EUR_RULE_VALIDATION_OBSERVATIONS",
+  "environment": "demo",
+  "broker_account_id": 52211463,
+  "observed_at": "2026-11-04T19:29:33.001860+00:00",
+  "review_status": "OBSERVED_PENDING_INDEPENDENT_ACCEPTANCE",
+  "passed": false,
+  "entry_authorized": false,
+  "reconciled_flat": true,
+  "broker_fills": 0,
+  "raw_reports": {
+    "var/eur-completion-20261104/rule-probes-v3/report.json": "b35b00492695f4f1177a0dbc69e9236a7616cb6663e8ce3dd12c44538a0567c3",
+    "var/eur-completion-20261104/increment-probes/report.json": "802527298e4a1b9113a8e1135bd43f2ae6885a56620366787f4168f3d35e27b8",
+    "var/eur-completion-20261104/precision-boundary-probes/report.json": "538c69389e7adea6945d32d425ea735f458003bac012ed3c51ec907a2fec227c"
+  },
+  "instruments": [
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "minimum_quantity_observed": "1",
+      "quantity_decimal_places_observed": 4,
+      "quantity_step_observed": "0.0001",
+      "fractional_limit_requests_at_or_above_one_share_accepted": true,
+      "price_tick": null
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "minimum_quantity_observed": "1",
+      "quantity_decimal_places_observed": 5,
+      "quantity_step_observed": "0.00001",
+      "fractional_limit_requests_at_or_above_one_share_accepted": true,
+      "price_tick": null
+    }
+  ],
+  "scope_limits": [
+    "Low-priced non-marketable buy LIMIT validation only; no fill, fractional sell or protective STOP fill proof.",
+    "Price values with nine fractional digits were accepted; this does not establish a minimum executable price tick.",
+    "Provider quantity precision can depend on instrument price; revalidate if its price band changes."
+  ],
+  "results": [
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "0.000001",
+      "limit_price": "1",
+      "http_status": 400,
+      "response": {
+        "type": "/api-errors/min-quantity-exceeded",
+        "title": "Error while placing the order",
+        "status": 400,
+        "detail": "must trade at least 1.00000000",
+        "traceId": "f3d476207c76a0275f3266ca6acc8403"
+      },
+      "terminally_cancelled": false
+    },
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "0.01",
+      "limit_price": "1",
+      "http_status": 400,
+      "response": {
+        "type": "/api-errors/min-quantity-exceeded",
+        "title": "Error while placing the order",
+        "status": 400,
+        "detail": "must trade at least 1.00000000",
+        "traceId": "486daa5df3c22989750d34e89e44f47a"
+      },
+      "terminally_cancelled": false
+    },
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "1",
+      "limit_price": "1.001",
+      "http_status": 200,
+      "response": {
+        "id": 57500731982,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "AIRp_EQ",
+        "quantity": 1,
+        "filledQuantity": 0,
+        "limitPrice": 1.001,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T20:58:50.985+02:00",
+        "instrument": {
+          "ticker": "AIRp_EQ",
+          "name": "Airbus",
+          "isin": "NL0000235190",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "1",
+      "limit_price": "1.0001",
+      "http_status": 200,
+      "response": {
+        "id": 57500731984,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "AIRp_EQ",
+        "quantity": 1,
+        "filledQuantity": 0,
+        "limitPrice": 1.0001,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T20:58:57.910+02:00",
+        "instrument": {
+          "ticker": "AIRp_EQ",
+          "name": "Airbus",
+          "isin": "NL0000235190",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "0.000001",
+      "limit_price": "1",
+      "http_status": 400,
+      "response": {
+        "type": "/api-errors/min-quantity-exceeded",
+        "title": "Error while placing the order",
+        "status": 400,
+        "detail": "must trade at least 1.00000000",
+        "traceId": "84117d25f4693ff497ddb83fce9d4058"
+      },
+      "terminally_cancelled": false
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "0.01",
+      "limit_price": "1",
+      "http_status": 400,
+      "response": {
+        "type": "/api-errors/min-quantity-exceeded",
+        "title": "Error while placing the order",
+        "status": 400,
+        "detail": "must trade at least 1.00000000",
+        "traceId": "98374fbbe5cb7f8007433887503972c6"
+      },
+      "terminally_cancelled": false
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "1",
+      "limit_price": "1.001",
+      "http_status": 200,
+      "response": {
+        "id": 57500731990,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "ASMLa_EQ",
+        "quantity": 1,
+        "filledQuantity": 0,
+        "limitPrice": 1.001,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T20:59:09.333+02:00",
+        "instrument": {
+          "ticker": "ASMLa_EQ",
+          "name": "ASML",
+          "isin": "NL0010273215",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "1",
+      "limit_price": "1.0001",
+      "http_status": 200,
+      "response": {
+        "id": 57500731992,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "ASMLa_EQ",
+        "quantity": 1,
+        "filledQuantity": 0,
+        "limitPrice": 1.0001,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T20:59:16.263+02:00",
+        "instrument": {
+          "ticker": "ASMLa_EQ",
+          "name": "ASML",
+          "isin": "NL0010273215",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "1.1",
+      "limit_price": "1",
+      "http_status": 200,
+      "response": {
+        "id": 57500732805,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "AIRp_EQ",
+        "quantity": 1.1,
+        "filledQuantity": 0,
+        "limitPrice": 1,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T21:15:06.087+02:00",
+        "instrument": {
+          "ticker": "AIRp_EQ",
+          "name": "Airbus",
+          "isin": "NL0000235190",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "1.0001",
+      "limit_price": "1",
+      "http_status": 200,
+      "response": {
+        "id": 57500732807,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "AIRp_EQ",
+        "quantity": 1.0001,
+        "filledQuantity": 0,
+        "limitPrice": 1,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T21:15:13.041+02:00",
+        "instrument": {
+          "ticker": "AIRp_EQ",
+          "name": "Airbus",
+          "isin": "NL0000235190",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "1.00001",
+      "limit_price": "1",
+      "http_status": 400,
+      "response": {
+        "type": "/api-errors/quantity-precision-mismatch",
+        "title": "Error while placing the order",
+        "status": 400,
+        "detail": "invalid quantity precision 4",
+        "traceId": "1d7f8c43d53d1c4adeb8d7444b26835e"
+      },
+      "terminally_cancelled": false
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "1.1",
+      "limit_price": "1",
+      "http_status": 200,
+      "response": {
+        "id": 57500732809,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "ASMLa_EQ",
+        "quantity": 1.1,
+        "filledQuantity": 0,
+        "limitPrice": 1,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T21:15:22.231+02:00",
+        "instrument": {
+          "ticker": "ASMLa_EQ",
+          "name": "ASML",
+          "isin": "NL0010273215",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "1.0001",
+      "limit_price": "1",
+      "http_status": 200,
+      "response": {
+        "id": 57500732815,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "ASMLa_EQ",
+        "quantity": 1.0001,
+        "filledQuantity": 0,
+        "limitPrice": 1,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T21:15:29.141+02:00",
+        "instrument": {
+          "ticker": "ASMLa_EQ",
+          "name": "ASML",
+          "isin": "NL0010273215",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "1.00001",
+      "limit_price": "1",
+      "http_status": 200,
+      "response": {
+        "id": 57500732819,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "ASMLa_EQ",
+        "quantity": 1.00001,
+        "filledQuantity": 0,
+        "limitPrice": 1,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T21:15:36.091+02:00",
+        "instrument": {
+          "ticker": "ASMLa_EQ",
+          "name": "ASML",
+          "isin": "NL0010273215",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "1.000001",
+      "limit_price": "1",
+      "http_status": 400,
+      "response": {
+        "type": "/api-errors/quantity-precision-mismatch",
+        "title": "Error while placing the order",
+        "status": 400,
+        "detail": "invalid quantity precision 4",
+        "traceId": "b78785027b6830fad2df2f1d3d8af894"
+      },
+      "terminally_cancelled": false
+    },
+    {
+      "ticker": "AIRp_EQ",
+      "isin": "NL0000235190",
+      "quantity": "1",
+      "limit_price": "1.000000001",
+      "http_status": 200,
+      "response": {
+        "id": 57500732860,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "AIRp_EQ",
+        "quantity": 1,
+        "filledQuantity": 0,
+        "limitPrice": 1.000000001,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T21:17:24.117+02:00",
+        "instrument": {
+          "ticker": "AIRp_EQ",
+          "name": "Airbus",
+          "isin": "NL0000235190",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "1.000001",
+      "limit_price": "1",
+      "http_status": 400,
+      "response": {
+        "type": "/api-errors/quantity-precision-mismatch",
+        "title": "Error while placing the order",
+        "status": 400,
+        "detail": "invalid quantity precision 5",
+        "traceId": "547b9d41c8d327b4e25bf5fc3e16da2c"
+      },
+      "terminally_cancelled": false
+    },
+    {
+      "ticker": "ASMLa_EQ",
+      "isin": "NL0010273215",
+      "quantity": "1",
+      "limit_price": "1.000000001",
+      "http_status": 200,
+      "response": {
+        "id": 57500732862,
+        "strategy": "QUANTITY",
+        "type": "LIMIT",
+        "ticker": "ASMLa_EQ",
+        "quantity": 1,
+        "filledQuantity": 0,
+        "limitPrice": 1.000000001,
+        "status": "NEW",
+        "currency": "EUR",
+        "extendedHours": false,
+        "initiatedFrom": "API",
+        "side": "BUY",
+        "timeInForce": "DAY",
+        "createdAt": "2026-11-04T21:17:33.260+02:00",
+        "instrument": {
+          "ticker": "ASMLa_EQ",
+          "name": "ASML",
+          "isin": "NL0010273215",
+          "currency": "EUR"
+        }
+      },
+      "terminally_cancelled": true
+    }
+  ]
+}

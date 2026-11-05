@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "assessment_id": "t212_ibkr_history_quote_compatibility_20261104",
+  "review_status": "SELF_REVIEW_NOT_INDEPENDENT_DEMO_RELEASE_APPROVAL",
+  "observed_at": "2026-11-04T18:26:20.805835Z",
+  "broker_environment": "demo",
+  "broker_account_id": 52211463,
+  "base_currency": "EUR",
+  "history_scope": {
+    "complete_paginated_history": true,
+    "pages": 1,
+    "history_rows": 5,
+    "distinct_orders": 5,
+    "trade_fills": 4,
+    "cancelled_without_fill": 1,
+    "all_four_fills_reported_otc": true,
+    "target_airbus_fills": 0,
+    "target_asml_fills": 0
+  },
+  "method": {
+    "source": "IBKR historical BID_ASK",
+    "contract_resolution": "Exact fill ISIN and instrument currency; SMART conId discovered from Gateway",
+    "reference_for_buy": "ASK",
+    "reference_for_sell": "BID",
+    "quote_selection": "Last returned valid book in the latest strictly preceding timestamp second, at most ten seconds old",
+    "timestamp_resolution": "ONE_SECOND",
+    "positive_bps_mean": "Fill worse than the side-appropriate reference",
+    "formula_buy": "10000 * (fill_price - ask) / ask",
+    "formula_sell": "10000 * (bid - fill_price) / bid",
+    "instrument_currency_used": true,
+    "wallet_fx_not_used_as_quote_price": true,
+    "simultaneous_live_quote_receipt_at_fill_proven": false
+  },
+  "smart_historical_controls": [
+    {
+      "order_id": "57500062553",
+      "fill_id": "57500062555",
+      "broker_ticker": "AAPL_US_EQ",
+      "isin": "US0378331005",
+      "currency": "USD",
+      "side": "SELL",
+      "fill_price": "330.48",
+      "fill_quantity": "-1.0",
+      "filled_at": "2026-11-03T16:14:33.000Z",
+      "trading_method": "OTC",
+      "ibkr_con_id": 265598,
+      "ibkr_primary_exchange": "NASDAQ",
+      "requested_quote_exchange": "SMART",
+      "historical_response_complete": true,
+      "historical_tick_count": 1019,
+      "comparison": {
+        "status": "HISTORICAL_BOOK_MATCHED",
+        "reference": "BID",
+        "quote": {
+          "observed_at_seconds": 1793722472,
+          "bid": "330.48",
+          "ask": "330.57",
+          "bid_size": "400",
+          "ask_size": "200",
+          "bid_past_low": false,
+          "ask_past_high": false
+        },
+        "quote_age_seconds": "1.0",
+        "adverse_price_difference_bps": "0",
+        "fill_inside_recorded_book": true,
+        "live_receipt_at_fill_time_proven": false,
+        "quote_observed_at": "2026-11-03T16:14:32Z"
+      },
+      "ibkr_error_codes": [
+        2188
+      ]
+    },
+    {
+      "order_id": "57500062513",
+      "fill_id": "57500062515",
+      "broker_ticker": "AAPL_US_EQ",
+      "isin": "US0378331005",
+      "currency": "USD",
+      "side": "BUY",
+      "fill_price": "330.44",
+      "fill_quantity": "1.0",
+      "filled_at": "2026-11-03T16:13:51.000Z",
+      "trading_method": "OTC",
+      "ibkr_con_id": 265598,
+      "ibkr_primary_exchange": "NASDAQ",
+      "requested_quote_exchange": "SMART",
+      "historical_response_complete": true,
+      "historical_tick_count": 1003,
+      "comparison": {
+        "status": "HISTORICAL_BOOK_MATCHED",
+        "reference": "ASK",
+        "quote": {
+          "observed_at_seconds": 1793722430,
+          "bid": "330.34",
+          "ask": "330.44",
+          "bid_size": "640",
+          "ask_size": "40",
+          "bid_past_low": false,
+          "ask_past_high": false
+        },
+        "quote_age_seconds": "1.0",
+        "adverse_price_difference_bps": "0",
+        "fill_inside_recorded_book": true,
+        "live_receipt_at_fill_time_proven": false,
+        "quote_observed_at": "2026-11-03T16:13:50Z"
+      },
+      "ibkr_error_codes": [
+        2188
+      ]
+    },
+    {
+      "order_id": "57500060557",
+      "fill_id": "57500060559",
+      "broker_ticker": "NOA3d_EQ",
+      "isin": "FI0009000681",
+      "currency": "EUR",
+      "side": "SELL",
+      "fill_price": "7.642",
+      "fill_quantity": "-1.0",
+      "filled_at": "2026-11-03T15:34:02.000Z",
+      "trading_method": "OTC",
+      "ibkr_con_id": 29816875,
+      "ibkr_primary_exchange": "HEX",
+      "requested_quote_exchange": "SMART",
+      "historical_response_complete": false,
+      "historical_tick_count": 0,
+      "comparison": {
+        "status": "HISTORICAL_DATA_UNAVAILABLE_OR_INCOMPLETE"
+      },
+      "ibkr_error_codes": [
+        10187
+      ]
+    },
+    {
+      "order_id": "57500060549",
+      "fill_id": "57500060551",
+      "broker_ticker": "NOA3d_EQ",
+      "isin": "FI0009000681",
+      "currency": "EUR",
+      "side": "BUY",
+      "fill_price": "7.65",
+      "fill_quantity": "1.0",
+      "filled_at": "2026-11-03T15:33:48.000Z",
+      "trading_method": "OTC",
+      "ibkr_con_id": 29816875,
+      "ibkr_primary_exchange": "HEX",
+      "requested_quote_exchange": "SMART",
+      "historical_response_complete": false,
+      "historical_tick_count": 0,
+      "comparison": {
+        "status": "HISTORICAL_DATA_UNAVAILABLE_OR_INCOMPLETE"
+      },
+      "ibkr_error_codes": [
+        10187
+      ]
+    }
+  ],
+  "eur_xetra_control": {
+    "ticker": "NOA3d_EQ",
+    "isin": "FI0009000681",
+    "currency": "EUR",
+    "broker_catalog_exchange_id": 41,
+    "broker_catalog_exchange_name": "Deutsche B\u00f6rse Xetra",
+    "broker_working_schedule_id": 54,
+    "ibkr_con_id": 29816875,
+    "explicit_quote_exchange": "IBIS",
+    "same_as_smart_source": false,
+    "query_count": 2,
+    "quote_samples_returned": 0,
+    "request_error_codes": [
+      10187,
+      10187
+    ],
+    "status": "HISTORICAL_DATA_PERMISSION_UNAVAILABLE",
+    "listing_source_manifest": "var/eur-first-run-checks/ibkr-shadow-capture-v5/manifest.json"
+  },
+  "assessment": {
+    "status": "PARTIAL_HISTORICAL_PRICE_ALIGNMENT_EUR_UNVERIFIED",
+    "aapl_usd_result": "Both one-share OTC fills equal the side-appropriate SMART book price observed one second earlier",
+    "matched_controls": 2,
+    "maximum_observed_absolute_price_difference_bps": "0",
+    "eur_smart_result": "No historical BID_ASK returned for Nokia; requests failed with 10187",
+    "eur_xetra_result": "Explicit Xetra requests also failed with 10187; no silent venue fallback",
+    "approved_eur_universe_result": "No AIRp_EQ or ASMLa_EQ executions exist in the complete account history",
+    "runtime_quote_gate": "UNCHANGED_BLOCKED",
+    "quote_path_independently_accepted": false,
+    "divergence_threshold_approved": false
+  },
+  "limitations": [
+    "Two USD fills in one small round trip do not establish a EUR execution-divergence bound",
+    "Nokia EUR historical quote permission was unavailable for both SMART and explicit Xetra",
+    "No fills exist for the approved Airbus or ASML listings",
+    "Historical reconstruction does not establish live quote availability or transport latency at the original order time",
+    "Broker history contains fill prices and OTC/TOTV classification, not a synchronized executable bid/ask book or a specific OTC execution venue",
+    "Round-trip price changes are not measured bid/ask spreads",
+    "IBKR warning 2188 accompanied the completed AAPL historical responses; no up-to-the-second historical API entitlement is inferred"
+  ],
+  "references": {
+    "trading212_schema": "https://docs.trading212.com/_bundle/api.json",
+    "ibkr_historical_ticks": "https://www.interactivebrokers.com/docs/tws-api/doc/md/historical-ticks",
+    "ibkr_error_codes": "https://www.interactivebrokers.com/docs/tws-api/doc/error/codes",
+    "prior_iex_assessment": "docs/evidence/trading212-quote-compatibility-2026-11-03.json",
+    "live_ibkr_probe": "docs/evidence/ibkr-smart-eur-assessment-2026-11-04.json"
+  },
+  "artifacts": [
+    {
+      "path": "var/eur-first-run-checks/t212-history-quote-review-20261104/manifest.json",
+      "sha256": "febb4ae9d7f730614827fa102c6ef52edf2eae1584151586941ea51b07dca3de"
+    },
+    {
+      "path": "var/eur-first-run-checks/t212-history-quote-review-20261104/history-page-000.json",
+      "sha256": "64a96a9ad9f98ee42bcede88d5917e96a3e256db96d48b706902317e2dc5a987"
+    },
+    {
+      "path": "var/eur-first-run-checks/t212-history-quote-review-20261104/ibkr-historical-smart-verified.json",
+      "sha256": "30c9d8cb163854b7f72cfd8bec15fba863a564875937043f91137f116b6d85f4"
+    },
+    {
+      "path": "var/eur-first-run-checks/t212-history-quote-review-20261104/ibkr-historical-xetra-control.json",
+      "sha256": "c539c35e1ca9eb9d654dc0fd67c2e518fd438899a6386343ff71770273cf313a"
+    },
+    {
+      "path": "var/eur-first-run-checks/t212-history-quote-review-20261104/probe-offline-tests.log",
+      "sha256": "6273232de4d3ef7acd4ecafa5c86beeeb974f56586b21089a2990b3f72facbe6"
+    },
+    {
+      "path": "var/eur-first-run-checks/ibkr-shadow-capture-v5/manifest.json",
+      "sha256": "680274168abc5ffa8f27e7f3600f7cf9c6f069b3966deceec2e03e70b2fa9e29"
+    },
+    {
+      "path": "var/eur-first-run-checks/t212-history-quote-review-20261104/quote-comparison.html",
+      "sha256": "edc15e2b5b1792f9ec94d4d5d6af8b285fde656720c78eada511d6ea8331c0eb"
+    }
+  ],
+  "probe_sources": [
+    {
+      "path": "scripts/probe-ibkr-historical-quotes.py",
+      "sha256": "899fc433bf8e167598a1bdae360a1c138578acdab3ea9a04be84d9b31aeaaa9f"
+    },
+    {
+      "path": "scripts/test-ibkr-historical-quotes.py",
+      "sha256": "0d794c9b63f8b744e267c216bcf5bba9ab3b46e3dda8df475035492aed027a00"
+    },
+    {
+      "path": "scripts/probe-ibkr-smart.py",
+      "sha256": "77048077f15e671524e964041d5029052a71412ef77cf12397920c3e36b585a1"
+    }
+  ],
+  "offline_probe_tests_passed": 5,
+  "runtime_configuration_changed": false,
+  "broker_mutations": 0,
+  "entry_authorized": false,
+  "live_enabled": false
+}

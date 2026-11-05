@@ -1,0 +1,31 @@
+{
+  "config_version": 1,
+  "enabled": false,
+  "base_currency": "EUR",
+  "authority": "SHADOW_QUOTES_ONLY",
+  "python_path": "/opt/trady/ibkr-sdk/bin/python",
+  "script_path": "/opt/trady/scripts/probe-ibkr-smart.py",
+  "script_sha256": "77048077f15e671524e964041d5029052a71412ef77cf12397920c3e36b585a1",
+  "sdk_version": "10.50.2",
+  "sdk_archive_sha256": "673129e5cba58c4d77bc40647265f84ea42f605eccf88fa4c1221d62d12454f3",
+  "port": 4002,
+  "client_id": 910050,
+  "capture_seconds": 5,
+  "timeout_seconds": 50,
+  "bindings": {
+    "AIR_PA_EQ": {
+      "con_id": 29612256,
+      "isin": "NL0000235190",
+      "broker_ticker": "AIRp_EQ",
+      "primary_exchange": "SBF",
+      "exchange_mic": "XPAR"
+    },
+    "ASML_AS_EQ": {
+      "con_id": 117589399,
+      "isin": "NL0010273215",
+      "broker_ticker": "ASMLa_EQ",
+      "primary_exchange": "AEB",
+      "exchange_mic": "XAMS"
+    }
+  }
+}

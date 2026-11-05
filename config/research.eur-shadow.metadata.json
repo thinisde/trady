@@ -1,0 +1,50 @@
+{
+  "config_version": 1,
+  "max_pages": 1,
+  "page_size": 5,
+  "lookback_seconds": 86400,
+  "overlap_seconds": 120,
+  "sources": [
+    {
+      "id": "ecb_eur_press_rss", "kind": "PUBLISHER_RSS", "enabled": true,
+      "url": "https://www.ecb.europa.eu/rss/press.html", "allowed_hosts": ["www.ecb.europa.eu"],
+      "credential_env": null, "interval_seconds": 900, "daily_request_limit": 96,
+      "query": null, "x_account": null,
+      "rights": {"store_content": true, "llm_processing": true, "retention_hours": 72,
+        "terms_reference": "docs/evidence/eur-shadow-review-2026-11-04/README.md#rss"}
+    },
+    {
+      "id": "x_eur_airbus", "kind": "X_TIMELINE", "enabled": true,
+      "url": "https://api.x.com/2/", "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN", "interval_seconds": 86400, "daily_request_limit": 1,
+      "query": null,
+      "x_account": {"person": "Airbus", "handle": "Airbus", "user_id": "15425377",
+        "verified_at": "2026-11-04T12:57:26.836681Z",
+        "ownership_reference": "https://www.airbus.com/en/investors/share-price-and-information",
+        "priority": 0, "scope": ["AIR_PA_EQ", "METADATA_ONLY", "SHADOW"]},
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24,
+        "terms_reference": "OFFICIAL_API_METADATA_ONLY_NO_POST_TEXT_OR_MODEL_PROCESSING"}
+    },
+    {
+      "id": "x_eur_ecb", "kind": "X_TIMELINE", "enabled": true,
+      "url": "https://api.x.com/2/", "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN", "interval_seconds": 86400, "daily_request_limit": 1,
+      "query": null,
+      "x_account": {"person": "European Central Bank", "handle": "ecb", "user_id": "83466368",
+        "verified_at": "2026-11-04T12:57:46.201293Z",
+        "ownership_reference": "https://www.ecb.europa.eu/services/socialmedia/html/index.en.html",
+        "priority": 0, "scope": ["EUR", "METADATA_ONLY", "SHADOW"]},
+      "rights": {"store_content": false, "llm_processing": false, "retention_hours": 24,
+        "terms_reference": "OFFICIAL_API_METADATA_ONLY_NO_POST_TEXT_OR_MODEL_PROCESSING"}
+    }
+  ],
+  "x_budget": {
+    "enabled": true, "billing_scope": "iex30_x_balance", "version": 1,
+    "cycle_start": "2026-11-02T00:00:00Z", "cycle_end": "2026-12-02T00:00:00Z",
+    "ceiling_microusd": 1900000, "ordinary_microusd": 1750000, "support_microusd": 150000,
+    "post_read_microusd": 5000, "user_read_microusd": 10000, "recent_counts_microusd": 5000,
+    "burst_margin_percent": 100, "approval_reference": "owner_instruction_2026-11-02",
+    "entitlement_reference": "owner_stated_remaining_balance_1_90_usd",
+    "provider_limit_reference": "x_developer_pricing_2026-11-02"
+  }
+}

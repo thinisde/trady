@@ -1,0 +1,11 @@
+[Unit]
+Description=Trady EUR weekly reconciliation and review bundle
+
+[Timer]
+OnCalendar=Sat *-*-* 08:00:00 Europe/Berlin
+Persistent=yes
+AccuracySec=1min
+Unit=trady-eur-weekly-report.service
+
+[Install]
+WantedBy=timers.target

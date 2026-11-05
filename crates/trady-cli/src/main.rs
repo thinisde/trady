@@ -1,10 +1,14 @@
-mod account;
-mod alpaca;
 mod api_health;
 mod autonomous;
 mod broker_read;
-mod entry_demo;
 mod eur;
+mod eur_decision;
+mod eur_execute;
+mod eur_operation;
+mod eur_paper;
+mod eur_replay;
+mod eur_shadow;
+mod eur_workflow;
 mod financial;
 mod finbert;
 mod inputs_service;
@@ -15,7 +19,6 @@ mod opencode;
 mod release;
 mod stock_report;
 mod telegram;
-mod watchdog;
 mod weekly;
 mod yfinance;
 
@@ -31,7 +34,7 @@ use trady_application::{Clock, ExecutionRepository, FoundationConfig, reconcile_
 use trady_domain::*;
 use trady_storage::PgExecutionRepository;
 
-const HELP: &str = "Trady\n\n  trady analyst|executor|gateway --once [--config FILE]\n  trady demo\n  trady demo-postgres\n  trady migrate\n  trady credentials init|status\n  trady t212 snapshot --config FILE\n  trady validate-json model|results|envelope|artifact|artifact-result FILE\n\nService probes validate configuration and service-specific database roles.\nThe autonomous command runs enabled demo/live execution or records real-data shadow proposals.\nLive execution requires independently reviewed release evidence and a separately managed analyst.\nBroker environment selects matching demo/live API credentials; shadow uses only the read-only broker interface.\nCredentials use environment overrides or config/credentials.local.json; TRADY_CREDENTIALS_FILE selects another private file.\nCredential status prints names and availability, never values.\n";
+const HELP: &str = "Trady\n\n  trady analyst|executor|gateway --once [--config FILE]\n  trady demo\n  trady demo-postgres\n  trady migrate\n  trady credentials init|status\n  trady t212 snapshot --config FILE\n  trady validate-json model|results|envelope|artifact|artifact-result FILE\n\nService probes validate configuration and service-specific database roles.\nThe autonomous service accepts only EUR configurations; SHADOW never submits orders.\nDEMO entries require exact release evidence and owner approval; LIVE remains blocked.\nBroker environment selects matching demo/live API credentials; shadow uses only the read-only broker interface.\nCredentials use environment overrides or config/credentials.local.json; TRADY_CREDENTIALS_FILE selects another private file.\nCredential status prints names and availability, never values.\n";
 
 fn print_help() {
     println!(
@@ -50,10 +53,6 @@ fn print_help() {
     print!("{}", stock_report::HELP);
     print!("{}", financial::HELP);
     print!("{}", intelligence::HELP);
-    print!("{}", alpaca::HELP);
-    print!("{}", entry_demo::HELP);
-    print!("{}", account::HELP);
-    print!("{}", watchdog::HELP);
     print!("{}", yfinance::HELP);
     print!("{}", eur::HELP);
 }
@@ -92,7 +91,6 @@ fn run() -> Result<()> {
         "credentials" if args.len() == 2 && args[1] == "status" => {
             output(json!({"credentials":CredentialStore::load()?.status()?}))
         }
-        "account" => output(account::run(&args[1..])?),
         "telegram" => output(telegram::run(&args[1..])?),
         "autonomous" => output(autonomous::run(&args[1..])?),
         "weekly" => output(weekly::run(&args[1..])?),
@@ -104,7 +102,6 @@ fn run() -> Result<()> {
         "api-health" => output(api_health::run(&args[1..])?),
         "research-report" => output(stock_report::run(&args[1..])?),
         "intelligence" => output(intelligence::run(&args[1..])?),
-        "alpaca" => output(alpaca::run(&args[1..])?),
         "sentiment" => output(finbert::run(&args[1..])?),
         "t212" if args.len() == 4 && args[1] == "snapshot" && args[2] == "--config" => {
             trading212_snapshot(&args[3])
@@ -117,13 +114,16 @@ fn run() -> Result<()> {
         "analyst" | "executor" | "gateway" => service(command, &args[1..]),
         "migrate" if args.len() == 1 => {
             trady_storage::migrate(&secret("TRADY_MIGRATOR_DSN")?)?;
-            output(json!({"migration":15,"status":"applied_or_verified"}))
+            output(
+                json!({"migration":trady_storage::LATEST_MIGRATION,"status":"applied_or_verified"}),
+            )
         }
         "demo" if args.len() == 1 => demo_memory(),
-        "demo-entry" => output(entry_demo::run(&args[1..])?),
-        "watchdog" => output(watchdog::run(&args[1..])?),
         "yfinance" => output(yfinance::run(&args[1..])?),
         "eur" => output(eur::run(&args[1..])?),
+        "universe" => output(eur::universe_command(&args[1..])?),
+        "gate" => output(eur::gate_command(&args[1..])?),
+        "replay" => output(eur::replay_command(&args[1..])?),
         "demo-postgres" if args.len() == 1 => demo_postgres(),
         "validate-json" if args.len() == 3 => {
             let contract = match args[1].as_str() {

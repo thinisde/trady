@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "record_type": "OWNER_DELEGATED_DEMO_IMPLEMENTATION_AUTHORITY",
+  "recorded_on": "2026-11-04",
+  "owner_reference": "Repository owner in the current user conversation",
+  "statement": "Proceed to resolve all the blockers, I here by grant you the highest permission, since you are using demo broker account, this won't affect my actual account with real money. You can do anything you want. Keep surprising me",
+  "broker_account_id": 52211463,
+  "broker_environment": "demo",
+  "base_currency": "EUR",
+  "authorized_scope": [
+    "Implement, test and deploy the non-mutating SHADOW runtime",
+    "Deliver runtime notifications to the configured private owner Telegram chat",
+    "Capture provider inputs within existing entitlements and budgets",
+    "Build offline replay and independent capability evidence",
+    "Perform bounded demo capability tests after the shadow and replay prerequisites",
+    "Prepare supported demo activation under the enforced policy and release evidence"
+  ],
+  "policy_constraints_preserved": true,
+  "independent_evidence_still_required": true,
+  "source_entitlements_granted": false,
+  "new_paid_subscription_authorized": false,
+  "actual_demo_orders_submitted_by_this_record": 0,
+  "live_enabled": false
+}

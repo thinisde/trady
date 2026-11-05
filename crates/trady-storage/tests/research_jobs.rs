@@ -56,6 +56,231 @@ fn policy() -> JobPolicy {
         enabled: true,
     }
 }
+
+fn notification_job(gateway: &mut PgResearchJobs, p: &JobPolicy, update: i64) -> ResearchJob {
+    gateway
+        .accept_gateway(
+            &request(
+                p,
+                update,
+                GatewayCommand::Research(Some("stock_fixture".into())),
+            ),
+            Some(Work::Research {
+                instrument_id: Some("stock_fixture".into()),
+            }),
+            "",
+            now(),
+        )
+        .unwrap();
+    gateway
+        .recent_jobs(&p.scope, 10)
+        .unwrap()
+        .into_iter()
+        .find(|job| job.status == JobStatus::Queued)
+        .unwrap()
+}
+
+#[test]
+#[ignore = "requires isolated PostgreSQL; run through root disposable PostgreSQL runner"]
+fn expired_retry_cleanup_and_policy_failures_commit_with_one_notification() {
+    isolated();
+    let mut p = policy();
+    p.bot_id = now().timestamp_micros();
+    let mut analyst = PgResearchJobs::connect_analyst(&dsn("trady_analyst")).unwrap();
+    let mut gateway = PgResearchJobs::connect_gateway(&dsn("trady_gateway")).unwrap();
+    analyst.install_policy(&p).unwrap();
+    let exhausted = notification_job(&mut gateway, &p, 1);
+    let mut raw = Client::connect(&dsn("trady_analyst"), NoTls).unwrap();
+    for attempt in 1..=3 {
+        let lease = analyst.claim(&p.scope, "worker", 30).unwrap().unwrap();
+        assert_eq!(lease.job.attempts, attempt);
+        raw.execute("UPDATE control.research_work SET lease_until=clock_timestamp()-interval '1 second' WHERE job_id=$1", &[&exhausted.id]).unwrap();
+    }
+    assert!(analyst.claim(&p.scope, "worker", 30).unwrap().is_none());
+    let mut restarted = PgResearchJobs::connect_analyst(&dsn("trady_analyst")).unwrap();
+    let terminal = restarted.get_job(&p.scope, &exhausted.id).unwrap().unwrap();
+    assert_eq!(terminal.status, JobStatus::Failed);
+    assert_eq!(
+        terminal.error_code.as_deref(),
+        Some("RETRY_BUDGET_EXHAUSTED")
+    );
+    assert!(restarted.claim(&p.scope, "worker", 30).unwrap().is_none());
+    assert_eq!(gateway.pending_deliveries(p.bot_id, 50).unwrap().len(), 1);
+
+    let revoked = notification_job(&mut gateway, &p, 2);
+    p.enabled = false;
+    restarted.install_policy(&p).unwrap();
+    assert!(restarted.claim(&p.scope, "worker", 30).unwrap().is_none());
+    let terminal = restarted.get_job(&p.scope, &revoked.id).unwrap().unwrap();
+    assert_eq!(
+        terminal.error_code.as_deref(),
+        Some("POLICY_CHANGED_OR_REVOKED")
+    );
+    assert_eq!(gateway.pending_deliveries(p.bot_id, 50).unwrap().len(), 2);
+
+    p.enabled = true;
+    restarted.install_policy(&p).unwrap();
+    notification_job(&mut gateway, &p, 3);
+    let lease = restarted.claim(&p.scope, "worker", 30).unwrap().unwrap();
+    p.enabled = false;
+    restarted.install_policy(&p).unwrap();
+    restarted.fail(&lease, "PROVIDER_UNAVAILABLE").unwrap();
+    assert_eq!(gateway.pending_deliveries(p.bot_id, 50).unwrap().len(), 3);
+}
+
+#[test]
+#[ignore = "requires isolated PostgreSQL; run through root disposable PostgreSQL runner"]
+fn stale_failure_cannot_overwrite_a_reclaimed_generation_while_waiting_on_a_row() {
+    isolated();
+    let p = policy();
+    let mut analyst = PgResearchJobs::connect_analyst(&dsn("trady_analyst")).unwrap();
+    analyst.install_policy(&p).unwrap();
+    analyst
+        .enqueue(
+            &p.scope,
+            "failure_race",
+            &Work::Research {
+                instrument_id: Some("stock_fixture".into()),
+            },
+        )
+        .unwrap();
+    let old = analyst.claim(&p.scope, "old_worker", 30).unwrap().unwrap();
+    let mut guard = Client::connect(&dsn("trady_analyst"), NoTls).unwrap();
+    let mut observer = Client::connect(&dsn("trady_analyst"), NoTls).unwrap();
+    let mut tx = guard.transaction().unwrap();
+    tx.query_one(
+        "SELECT job_id FROM control.research_work WHERE job_id=$1 FOR UPDATE",
+        &[&old.job.id],
+    )
+    .unwrap();
+    let app = new_id("stale_failure");
+    let worker_dsn = format!("{} application_name={app}", dsn("trady_analyst"));
+    let stale = old.clone();
+    let worker = thread::spawn(move || {
+        let mut repo = PgResearchJobs::connect_analyst(&worker_dsn).unwrap();
+        repo.fail(&stale, "STALE_PROVIDER_FAILURE")
+    });
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        let blocked: bool = observer.query_one("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name=$1 AND wait_event_type='Lock')", &[&app]).unwrap().get(0);
+        if blocked {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "stale failure did not reach the row lock"
+        );
+        thread::sleep(std::time::Duration::from_millis(5));
+    }
+    // Publish a new worker generation while the old path is waiting. At READ
+    // COMMITTED the old predicate must be checked against this committed row.
+    tx.execute("UPDATE control.research_work SET lease_worker='new_worker',lease_generation=lease_generation+1,lease_until=clock_timestamp()+interval '30 seconds' WHERE job_id=$1", &[&old.job.id]).unwrap();
+    tx.commit().unwrap();
+    assert!(worker.join().unwrap().is_err());
+    let current = analyst.get_job(&p.scope, &old.job.id).unwrap().unwrap();
+    assert_eq!(current.status, JobStatus::Running);
+    assert_eq!(current.generation, old.generation + 1);
+    assert!(current.error_code.is_none());
+    assert!(analyst.fail(&old, "STALE_PROVIDER_FAILURE").is_err());
+    analyst
+        .fail(
+            &JobLease {
+                generation: current.generation,
+                job: current,
+                worker_id: "new_worker".into(),
+            },
+            "CURRENT_WORKER_FAILURE",
+        )
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated PostgreSQL; run through root disposable PostgreSQL runner"]
+fn concurrent_gateway_claims_are_exclusive_and_interrupted_sends_are_never_replayed() {
+    use trady_storage::research_jobs::GatewayDeliveryOutcome;
+    isolated();
+    let mut p = policy();
+    p.bot_id = now().timestamp_micros();
+    let mut analyst = PgResearchJobs::connect_analyst(&dsn("trady_analyst")).unwrap();
+    let mut gateway = PgResearchJobs::connect_gateway(&dsn("trady_gateway")).unwrap();
+    analyst.install_policy(&p).unwrap();
+    notification_job(&mut gateway, &p, 1);
+    let lease = analyst.claim(&p.scope, "worker", 30).unwrap().unwrap();
+    analyst
+        .complete(&lease, &json!({"fixture":"never sends Telegram"}))
+        .unwrap();
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
+    let workers: Vec<_> = (0..2)
+        .map(|_| {
+            let barrier = barrier.clone();
+            let bot = p.bot_id;
+            let dsn = dsn("trady_gateway");
+            thread::spawn(move || {
+                let mut gateway = PgResearchJobs::connect_gateway(&dsn).unwrap();
+                barrier.wait();
+                gateway.claim_delivery(bot).unwrap()
+            })
+        })
+        .collect();
+    let claims: Vec<_> = workers
+        .into_iter()
+        .filter_map(|t| t.join().unwrap())
+        .collect();
+    assert_eq!(claims.len(), 1);
+    let claim = &claims[0];
+    let mut wrong = claim.clone();
+    wrong.token = new_id("delivery_claim");
+    assert!(
+        gateway
+            .finish_delivery(&wrong, GatewayDeliveryOutcome::Sent)
+            .is_err()
+    );
+    // A process death after send but before completion leaves the durable
+    // SENDING marker. A new connection must not acquire it or repeat the send.
+    let mut restarted = PgResearchJobs::connect_gateway(&dsn("trady_gateway")).unwrap();
+    assert!(restarted.claim_delivery(p.bot_id).unwrap().is_none());
+    assert!(
+        restarted
+            .pending_deliveries(p.bot_id, 50)
+            .unwrap()
+            .is_empty()
+    );
+    restarted
+        .finish_delivery(claim, GatewayDeliveryOutcome::Unknown)
+        .unwrap();
+    assert!(restarted.claim_delivery(p.bot_id).unwrap().is_none());
+    assert!(
+        restarted
+            .finish_delivery(claim, GatewayDeliveryOutcome::Sent)
+            .is_err()
+    );
+    let mut raw = Client::connect(&dsn("trady_gateway"), NoTls).unwrap();
+    assert!(
+        raw.execute(
+            "UPDATE control.gateway_outbox SET delivered_at=clock_timestamp() WHERE delivery_id=$1",
+            &[&claim.delivery.id]
+        )
+        .is_err()
+    );
+    for (update, outcome, status) in [
+        (2, GatewayDeliveryOutcome::Sent, "SENT"),
+        (3, GatewayDeliveryOutcome::Suppressed, "SUPPRESSED"),
+    ] {
+        notification_job(&mut gateway, &p, update);
+        let lease = analyst.claim(&p.scope, "worker", 30).unwrap().unwrap();
+        analyst.complete(&lease, &json!({})).unwrap();
+        let claim = restarted.claim_delivery(p.bot_id).unwrap().unwrap();
+        restarted.finish_delivery(&claim, outcome).unwrap();
+        let actual: String = raw
+            .query_one(
+                "SELECT delivery_status FROM control.gateway_outbox WHERE delivery_id=$1",
+                &[&claim.delivery.id],
+            )
+            .unwrap()
+            .get(0);
+        assert_eq!(actual, status);
+    }
+}
 fn request(p: &JobPolicy, update_id: i64, command: GatewayCommand) -> GatewayRequest {
     GatewayRequest {
         bot_id: p.bot_id,

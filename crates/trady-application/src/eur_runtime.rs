@@ -29,12 +29,37 @@ use trady_policy::intraday::{
 };
 use trady_policy::{EntryCosts, InstrumentRules};
 
+/// Broker environment is deliberately separate from the four runtime modes.
+/// `SHADOW` can read a demo account while remaining mutation-free.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EurBrokerEnvironment {
+    Demo,
+    Live,
+}
+
+impl EurBrokerEnvironment {
+    pub fn is_demo(self) -> bool {
+        matches!(self, Self::Demo)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EurBrokerConfig {
+    pub environment: EurBrokerEnvironment,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EurRuntimeConfig {
     pub config_version: u32,
     pub enabled: bool,
     pub execution_stage: trady_domain::ExecutionStage,
+    /// Structural kill switch. This must remain false in every target build;
+    /// a live release is intentionally unavailable.
+    pub live_enabled: bool,
+    pub broker: EurBrokerConfig,
     pub account_id: AccountId,
     pub base_currency: trady_domain::Currency,
     pub owner_id: String,
@@ -56,6 +81,10 @@ pub struct EurRuntimeConfig {
     pub trading212_config: Option<String>,
     #[serde(default)]
     pub opencode_config: Option<String>,
+    #[serde(default)]
+    pub shadow: Option<crate::eur_shadow::ShadowSettings>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operation_config: Option<String>,
     #[serde(default)]
     pub notes: Vec<String>,
 }
@@ -83,16 +112,30 @@ impl EurRuntimeConfig {
         require(
             self.config_version == 1
                 && self.base_currency.as_str() == "EUR"
-                && self.account_id.as_str().starts_with("paper_")
+                && self.execution_stage.is_target_mode()
+                && self.account_id_namespace_is_valid()
                 && !self.owner_id.is_empty()
                 && self.owner_id.len() <= 160
                 && valid_id(&self.approved_universe_snapshot_id)
                 && self.opencode_model == "deepseek-v4.1-flash"
-                && self.trading212_only,
+                && self.trading212_only
+                && self.broker.environment.is_demo()
+                && !self.live_enabled,
             "invalid EUR runtime authority configuration",
+        )?;
+        require(
+            !matches!(self.execution_stage, trady_domain::ExecutionStage::Live),
+            "LIVE mode is structurally blocked for the EUR runtime",
+        )?;
+        require(
+            !self.contains_legacy_authority_reference(),
+            "mixed IEX30/Alpaca and EUR authorities are not permitted",
         )?;
         self.policy.validate()?;
         self.eligibility.validate()?;
+        if let Some(settings) = &self.shadow {
+            settings.validate()?;
+        }
         require(
             !self.session_deadlines.is_empty()
                 && self.session_deadlines.iter().all(|deadline| {
@@ -114,11 +157,73 @@ impl EurRuntimeConfig {
             "EUR runtime requires reviewed exchange-local flatten deadlines",
         )?;
         require(
-            !matches!(self.execution_stage, trady_domain::ExecutionStage::Live) || !self.enabled,
-            "live EUR execution is disabled until reviewed Trading 212 protection evidence exists",
+            self.policy.max_daily_entries == 1
+                && self.policy.max_open_positions == 1
+                && self.policy.no_overnight
+                && self.policy.max_initial_loss_fraction <= rust_decimal::Decimal::new(2, 2)
+                && self.policy.min_reward_to_risk >= rust_decimal::Decimal::new(15, 1),
+            "EUR runtime policy exceeds the first-run loss, reward-to-risk, or entry-slot limits",
         )?;
         let _ = now;
         Ok(())
+    }
+
+    fn account_id_namespace_is_valid(&self) -> bool {
+        match self.execution_stage {
+            trady_domain::ExecutionStage::Replay => self.account_id.as_str().starts_with("replay_"),
+            trady_domain::ExecutionStage::Shadow | trady_domain::ExecutionStage::Demo => {
+                self.account_id.as_str().starts_with("paper_")
+            }
+            trady_domain::ExecutionStage::Live => false,
+            // `is_target_mode` is checked above. Keep this branch explicit so
+            // a future enum extension cannot silently inherit demo authority.
+            _ => false,
+        }
+    }
+
+    fn contains_legacy_authority_reference(&self) -> bool {
+        let references = [
+            self.universe_config.as_deref(),
+            self.yfinance_config.as_deref(),
+            self.research_config.as_deref(),
+            self.trading212_config.as_deref(),
+            self.opencode_config.as_deref(),
+        ];
+        references.into_iter().flatten().any(|value| {
+            let lower = value.to_ascii_lowercase();
+            lower.contains("iex30") || lower.contains("alpaca")
+        })
+    }
+
+    pub fn permits_broker_mutation(&self) -> bool {
+        // Configuration alone never proves release, owner or sequential-stop
+        // acceptance. The explicit protocol driver verifies those separately;
+        // mode selection and metadata flags cannot enable it.
+        false
+    }
+
+    pub fn requires_real_inputs(&self) -> bool {
+        self.execution_stage.uses_real_inputs()
+    }
+
+    /// Bind a reviewed universe snapshot to this runtime authority before any
+    /// provider or broker call. This is the canonical mixed-authority check for
+    /// callers that already loaded the snapshot from PostgreSQL or a replay.
+    pub fn validate_universe(
+        &self,
+        universe: &EurUniverseSnapshot,
+        now: DateTime<Utc>,
+    ) -> Result<()> {
+        self.validate(now)?;
+        universe.validate(now)?;
+        require(
+            universe.snapshot_id == self.approved_universe_snapshot_id
+                && universe
+                    .members
+                    .iter()
+                    .all(|member| member.currency.as_str() == "EUR"),
+            "EUR runtime and universe authority differ",
+        )
     }
 }
 
@@ -150,6 +255,37 @@ pub enum ReadinessBlocker {
     DailyEntryLimit,
     DeadlineInvalid,
     IdempotencyConflict,
+    ReleaseEvidenceMissing,
+    OwnerApprovalMissing,
+    ProtectionProtocolUnavailable,
+    SnapshotUnavailable,
+    QuantityPrecision,
+    PricePrecision,
+    OrderValueOrPriceRange,
+    FractionalUnsupported,
+    BuyingPower,
+    SpreadTooWide,
+}
+
+/// Shared configuration portion of the gate. Diagnostics without an order
+/// snapshot remain blocked and say so explicitly.
+pub fn configuration_readiness(
+    config: &EurRuntimeConfig,
+    now: DateTime<Utc>,
+) -> Result<Vec<ReadinessBlocker>> {
+    config.validate(now)?;
+    let mut blockers = vec![
+        ReadinessBlocker::ReleaseEvidenceMissing,
+        ReadinessBlocker::OwnerApprovalMissing,
+        ReadinessBlocker::ProtectionProtocolUnavailable,
+    ];
+    if !config.enabled {
+        blockers.push(ReadinessBlocker::RuntimeDisabled);
+    }
+    if !config.execution_stage.permits_target_mutation() {
+        blockers.push(ReadinessBlocker::ExecutionStageBlocked);
+    }
+    Ok(blockers)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -176,6 +312,44 @@ pub enum OrderReadiness {
     Blocked { blockers: Vec<ReadinessBlocker> },
 }
 
+/// Immutable inputs shared by diagnostics and offline gate replay. The caller
+/// supplies a clock; recorded timestamps never refresh provider observations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OrderGateSnapshot {
+    pub account: AccountSnapshot,
+    pub universe: EurUniverseSnapshot,
+    pub binding: EurInstrumentBinding,
+    pub quote: VenueQuote,
+    pub session: SessionWindow,
+    pub capabilities: Capabilities,
+    pub selection: SelectionRun,
+    pub plan: IntradayTradePlan,
+    pub daily_entry_count: u8,
+}
+
+impl OrderGateSnapshot {
+    pub fn evaluate(
+        &self,
+        config: &EurRuntimeConfig,
+        now: DateTime<Utc>,
+    ) -> Result<OrderReadiness> {
+        evaluate_order_readiness(
+            config,
+            &self.account,
+            &self.universe,
+            &self.binding,
+            &self.quote,
+            &self.session,
+            &self.capabilities,
+            &self.selection,
+            &self.plan,
+            self.daily_entry_count,
+            now,
+        )
+    }
+}
+
 /// The one application-owned target order gate. CLI diagnostics and execution
 /// both call this function; no adapter or model gets a second authority path.
 #[allow(clippy::too_many_arguments)]
@@ -193,13 +367,7 @@ pub fn evaluate_order_readiness(
     now: DateTime<Utc>,
 ) -> Result<OrderReadiness> {
     config.validate(now)?;
-    let mut blockers = Vec::new();
-    if !config.enabled {
-        blockers.push(ReadinessBlocker::RuntimeDisabled);
-    }
-    if !config.execution_stage.permits_broker_mutation() {
-        blockers.push(ReadinessBlocker::ExecutionStageBlocked);
-    }
+    let mut blockers = configuration_readiness(config, now)?;
     if account.account_id != config.account_id {
         blockers.push(ReadinessBlocker::AccountMismatch);
     }
@@ -218,11 +386,57 @@ pub fn evaluate_order_readiness(
     if universe.validate(now).is_err() {
         blockers.push(ReadinessBlocker::UniverseExpired);
     }
-    if universe.member(&binding.instrument_id).is_none() {
-        blockers.push(ReadinessBlocker::InstrumentNotInUniverse);
+    match universe.member(&binding.instrument_id) {
+        None => blockers.push(ReadinessBlocker::InstrumentNotInUniverse),
+        Some(member) if member != binding => {
+            blockers.push(ReadinessBlocker::InstrumentCrosswalkMismatch)
+        }
+        _ => {}
     }
     if binding.validate(now).is_err() {
         blockers.push(ReadinessBlocker::InstrumentCrosswalkMismatch);
+    }
+    if plan.quantity < binding.minimum_quantity
+        || plan.quantity.checked_rem(binding.quantity_step) != Some(rust_decimal::Decimal::ZERO)
+    {
+        blockers.push(ReadinessBlocker::QuantityPrecision);
+    }
+    if binding
+        .entry_minimum_quantity(plan.entry_price)
+        .map_or(true, |minimum| plan.quantity < minimum)
+        || binding.value_rules.as_ref().is_some_and(|rules| {
+            [plan.entry_price, plan.stop_price]
+                .iter()
+                .any(|price| *price < rules.price_floor || *price > rules.price_ceiling)
+        })
+    {
+        blockers.push(ReadinessBlocker::OrderValueOrPriceRange);
+    }
+    if plan.quantity.fract() != rust_decimal::Decimal::ZERO
+        && (!binding.fractional_orders || !capabilities.fractional_orders.usable(now))
+    {
+        blockers.push(ReadinessBlocker::FractionalUnsupported);
+    }
+    if [plan.entry_price, plan.stop_price, plan.target_price]
+        .iter()
+        .any(|price| price.checked_rem(binding.price_tick) != Some(rust_decimal::Decimal::ZERO))
+    {
+        blockers.push(ReadinessBlocker::PricePrecision);
+    }
+    if plan.acquisition_cost.currency != account.spendable_cash.currency
+        || account
+            .spendable_cash
+            .amount
+            .checked_mul(rust_decimal::Decimal::new(98, 2))
+            .is_none_or(|budget| plan.acquisition_cost.amount > budget)
+    {
+        blockers.push(ReadinessBlocker::BuyingPower);
+    }
+    if quote
+        .spread_bps()
+        .is_ok_and(|spread| spread > binding.liquidity_threshold.maximum_spread_bps)
+    {
+        blockers.push(ReadinessBlocker::SpreadTooWide);
     }
     if !binding.maps_quote(quote) {
         blockers.push(ReadinessBlocker::InstrumentCrosswalkMismatch);
@@ -232,6 +446,11 @@ pub fn evaluate_order_readiness(
         .is_err()
     {
         blockers.push(ReadinessBlocker::QuoteUnavailable);
+    }
+    if now.signed_duration_since(quote.observed_at).num_seconds()
+        > config.eligibility.quote_max_age_seconds
+    {
+        blockers.push(ReadinessBlocker::QuoteStale);
     }
     if quote.quality != QuoteQuality::Executable {
         blockers.push(ReadinessBlocker::QuoteQuality);
@@ -253,6 +472,14 @@ pub fn evaluate_order_readiness(
     if session.validate(now).is_err() {
         blockers.push(ReadinessBlocker::SessionMismatch);
     } else {
+        if session.exchange_mic != binding.exchange_mic
+            || session.timezone != binding.session_timezone
+            || selection.started_at < session.opens_at
+            || selection.completed_at > now
+            || plan.created_at < selection.completed_at
+        {
+            blockers.push(ReadinessBlocker::SessionMismatch);
+        }
         if let Some(deadline) = config
             .session_deadlines
             .iter()
@@ -290,6 +517,7 @@ pub fn evaluate_order_readiness(
         );
     }
     if selection.validate(now).is_err()
+        || selection.account_id != config.account_id.as_str()
         || selection.universe_snapshot_id != config.approved_universe_snapshot_id
         || selection.selected_instrument_id.as_ref() != Some(&binding.instrument_id)
         || selection.failure.is_some()
@@ -399,7 +627,7 @@ pub fn analyst_select_candidate<A: EurResearchAnalyst>(
         "EUR analyst selection requires deterministic eligibility survivors",
     )?;
     let response = analyst.select(request)?;
-    response.validate(request, now)?;
+    response.validate(request, Utc::now().max(now))?;
     response.into_selection_run(request.run.clone(), fallback_attempts)
 }
 
@@ -701,6 +929,10 @@ mod tests {
             config_version: 1,
             enabled: false,
             execution_stage: trady_domain::ExecutionStage::Shadow,
+            live_enabled: false,
+            broker: EurBrokerConfig {
+                environment: EurBrokerEnvironment::Demo,
+            },
             account_id: AccountId::new("paper_eur").expect("account"),
             base_currency: trady_domain::Currency::new("EUR").expect("currency"),
             owner_id: "owner".into(),
@@ -720,6 +952,8 @@ mod tests {
             research_config: Some("config/research.eur.json".into()),
             trading212_config: Some("config/trading212.demo.example.json".into()),
             opencode_config: Some("config/opencode/llm.json".into()),
+            shadow: None,
+            operation_config: None,
             notes: vec![],
         }
     }
@@ -813,6 +1047,293 @@ mod tests {
     }
 
     #[test]
+    fn runtime_modes_are_explicit_and_live_is_structurally_blocked() {
+        let mut replay = config();
+        replay.execution_stage = trady_domain::ExecutionStage::Replay;
+        replay.account_id = AccountId::new("replay_eur").expect("account");
+        assert!(replay.validate(now()).is_ok());
+
+        let mut demo = config();
+        demo.enabled = true;
+        demo.execution_stage = trady_domain::ExecutionStage::Demo;
+        assert!(!demo.permits_broker_mutation());
+        assert!(demo.validate(now()).is_ok());
+
+        let mut live = config();
+        live.execution_stage = trady_domain::ExecutionStage::Live;
+        live.live_enabled = true;
+        assert!(live.validate(now()).is_err());
+    }
+
+    #[test]
+    fn mixed_iex_authority_is_rejected_before_provider_access() {
+        let mut mixed = config();
+        mixed.universe_config = Some("config/iex30.universe.json".into());
+        assert!(mixed.validate(now()).is_err());
+    }
+
+    #[test]
+    fn demo_toggle_cannot_clear_the_shared_gate_and_stale_or_rebound_quotes_are_explained() {
+        let mut config = config();
+        config.enabled = true;
+        config.execution_stage = trady_domain::ExecutionStage::Demo;
+        let mut universe: EurUniverseSnapshot = serde_json::from_str(include_str!(
+            "../../../config/eur_equity_universe.example.json"
+        ))
+        .unwrap();
+        universe.snapshot_id = config.approved_universe_snapshot_id.clone();
+        let binding = universe.members[0].clone();
+        let quote:VenueQuote=serde_json::from_value(serde_json::json!({
+            "quote_id":"fixture_quote","instrument_id":binding.instrument_id,
+            "broker_instrument_id":binding.broker_instrument_id,"isin":binding.isin,
+            "exchange_mic":"XPAR","currency":"EUR","yahoo_symbol":"AIR.PA",
+            "bid":"100","ask":"100.01","last":"100","bid_size":"100","ask_size":"100","volume":"100000",
+            "observed_at":now()-Duration::seconds(61),"received_at":now(),
+            "market_state":"REGULAR","source":"recorded_yfinance","quality":"EXECUTABLE"
+        })).unwrap();
+        let plan = IntradayTradePlan {
+            plan_id: "plan_fixture".into(),
+            cost_model: None,
+            policy_revision: config.policy.revision.clone(),
+            account_id: config.account_id.to_string(),
+            instrument_id: binding.instrument_id.clone(),
+            currency: trady_domain::Currency::new("EUR").unwrap(),
+            entry_price: Decimal::new(10001, 2),
+            quantity: Decimal::new(15, 1),
+            acquisition_cost: trady_domain::Money {
+                amount: Decimal::from(150),
+                currency: trady_domain::Currency::new("EUR").unwrap(),
+            },
+            stop_price: Decimal::from(99),
+            target_price: Decimal::from(103),
+            target_net_fraction: Decimal::new(3, 2),
+            planned_loss_fraction: Decimal::new(1, 2),
+            reward_to_risk: Decimal::from(2),
+            created_at: now(),
+            flatten_deadline: now() + Duration::hours(3),
+            evidence_snapshot_ids: vec!["fixture_evidence".into()],
+            stop_revision: 0,
+        };
+        let snapshot = OrderGateSnapshot {
+            account: AccountSnapshot {
+                snapshot_id: "fixture_account".into(),
+                account_id: config.account_id.clone(),
+                mode: trady_domain::Mode::Paper,
+                spendable_cash: trady_domain::Money {
+                    amount: Decimal::from(10000),
+                    currency: config.base_currency.clone(),
+                },
+                positions: vec![],
+                orders: vec![],
+                observed_at: now(),
+            },
+            universe,
+            binding,
+            quote,
+            plan,
+            capabilities: Capabilities::default(),
+            selection: selection(),
+            daily_entry_count: 0,
+            session: SessionWindow {
+                session_id: selection().session_id,
+                exchange_mic: "XPAR".into(),
+                timezone: "Europe/Paris".into(),
+                opens_at: now() - Duration::hours(1),
+                closes_at: now() + Duration::hours(4),
+                flatten_at: now() + Duration::hours(4) - Duration::minutes(15),
+                observed_at: now() - Duration::hours(2),
+                source: "reviewed_session".into(),
+            },
+        };
+        let diagnostic = snapshot.evaluate(&config, now()).unwrap();
+        let executor = evaluate_order_readiness(
+            &config,
+            &snapshot.account,
+            &snapshot.universe,
+            &snapshot.binding,
+            &snapshot.quote,
+            &snapshot.session,
+            &snapshot.capabilities,
+            &snapshot.selection,
+            &snapshot.plan,
+            0,
+            now(),
+        )
+        .unwrap();
+        assert_eq!(diagnostic, executor);
+        let OrderReadiness::Blocked { blockers } = diagnostic else {
+            panic!("demo must stay blocked")
+        };
+        for reason in [
+            ReadinessBlocker::QuoteStale,
+            ReadinessBlocker::FractionalUnsupported,
+            ReadinessBlocker::QuantityPrecision,
+            ReadinessBlocker::ReleaseEvidenceMissing,
+            ReadinessBlocker::OwnerApprovalMissing,
+            ReadinessBlocker::ProtectionProtocolUnavailable,
+        ] {
+            assert!(blockers.contains(&reason), "{reason:?}: {blockers:?}");
+        }
+        let mut boundary = snapshot.clone();
+        // Other release/source blockers are intentional in this fixture. A
+        // consistent plan must not add RiskPlanInvalid, and each economic
+        // mutation must add it independently of those unrelated blockers.
+        let mut economics = snapshot.clone();
+        economics.plan.entry_price = Decimal::from(100);
+        economics.plan.quantity = Decimal::ONE;
+        economics.plan.acquisition_cost.amount = Decimal::from(100);
+        economics.plan.stop_price = Decimal::from(99);
+        economics.plan.target_price = Decimal::from(102);
+        economics.plan.target_net_fraction = Decimal::new(2, 2);
+        economics.plan.planned_loss_fraction = Decimal::new(1, 2);
+        economics.plan.reward_to_risk = Decimal::from(2);
+        let zero = trady_domain::Money {
+            amount: Decimal::ZERO,
+            currency: config.base_currency.clone(),
+        };
+        economics.plan.cost_model = Some(trady_policy::intraday::IntradayCostModel {
+            entry: EntryCosts {
+                fixed: zero.clone(),
+                rate: Decimal::ZERO,
+                uncertainty: zero.clone(),
+                fx: None,
+            },
+            exit: ExitCosts {
+                fixed: zero.clone(),
+                rate: Decimal::ZERO,
+                uncertainty: zero,
+                fx: None,
+            },
+        });
+        assert!(
+            matches!(economics.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+            if !blockers.contains(&ReadinessBlocker::RiskPlanInvalid))
+        );
+        for field in [
+            "entry_price",
+            "stop_price",
+            "target_price",
+            "quantity",
+            "acquisition_cost",
+            "target_net_fraction",
+            "planned_loss_fraction",
+            "reward_to_risk",
+            "policy_revision",
+            "cost_currency",
+            "cost_inputs",
+        ] {
+            let mut invalid = economics.clone();
+            match field {
+                "entry_price" => invalid.plan.entry_price += Decimal::ONE,
+                "stop_price" => invalid.plan.stop_price = Decimal::from(50),
+                "target_price" => invalid.plan.target_price += Decimal::ONE,
+                "quantity" => invalid.plan.quantity += Decimal::ONE,
+                "acquisition_cost" => invalid.plan.acquisition_cost.amount += Decimal::ONE,
+                "target_net_fraction" => invalid.plan.target_net_fraction += Decimal::new(1, 3),
+                "planned_loss_fraction" => invalid.plan.planned_loss_fraction += Decimal::new(1, 3),
+                "reward_to_risk" => invalid.plan.reward_to_risk += Decimal::ONE,
+                "policy_revision" => invalid.plan.policy_revision = "different_policy".into(),
+                "cost_currency" => {
+                    invalid.plan.acquisition_cost.currency =
+                        trady_domain::Currency::new("USD").unwrap()
+                }
+                _ => invalid.plan.cost_model = None,
+            }
+            assert!(
+                matches!(invalid.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+                if blockers.contains(&ReadinessBlocker::RiskPlanInvalid)),
+                "{field}"
+            );
+        }
+        for (quantity, blocked) in [(98, false), (100, true)] {
+            let mut allocation = economics.clone();
+            allocation.plan.quantity = Decimal::from(quantity);
+            allocation.plan.acquisition_cost.amount = Decimal::from(quantity * 100);
+            assert!(allocation.plan.validate(now(), &config.policy).is_ok());
+            let OrderReadiness::Blocked { blockers } = allocation.evaluate(&config, now()).unwrap()
+            else {
+                panic!("fixture still lacks release authority")
+            };
+            assert_eq!(blockers.contains(&ReadinessBlocker::BuyingPower), blocked);
+        }
+        boundary.session.session_id = "XPAR_physical_session".into();
+        assert!(
+            matches!(boundary.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+            if !blockers.contains(&ReadinessBlocker::SessionMismatch))
+        );
+        for case in ["prior_session", "future_selection", "plan_before_selection"] {
+            let mut invalid = boundary.clone();
+            match case {
+                "prior_session" => {
+                    invalid.selection.started_at = invalid.session.opens_at - Duration::seconds(1)
+                }
+                "future_selection" => invalid.selection.completed_at = now() + Duration::seconds(1),
+                _ => {
+                    invalid.plan.created_at = invalid.selection.completed_at - Duration::seconds(1)
+                }
+            }
+            assert!(
+                matches!(invalid.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+                if blockers.contains(&ReadinessBlocker::SessionMismatch)),
+                "{case}"
+            );
+        }
+        boundary.binding.value_rules = Some(trady_domain::eur::EurOrderValueRules {
+            minimum_trade_value: Decimal::ONE,
+            minimum_remaining_position_value: Decimal::ONE,
+            price_floor: Decimal::from(100),
+            price_ceiling: Decimal::from(110),
+        });
+        // The entry is within the reviewed band, but its native stop is not.
+        assert!(
+            matches!(boundary.evaluate(&config, now()).unwrap(), OrderReadiness::Blocked { blockers }
+            if blockers.contains(&ReadinessBlocker::OrderValueOrPriceRange))
+        );
+        boundary.plan.stop_price = Decimal::from(100);
+        boundary.binding.minimum_quantity = Decimal::new(1, 4);
+        boundary.binding.quantity_step = Decimal::new(1, 4);
+        boundary.plan.quantity = Decimal::new(50, 4);
+        // Static precision passes; the EUR1 entry-value minimum still fails.
+        assert!(
+            matches!(boundary.evaluate(&config, now()).unwrap(), OrderReadiness::Blocked { blockers }
+            if blockers.contains(&ReadinessBlocker::OrderValueOrPriceRange))
+        );
+        let mut rebound = snapshot;
+        rebound.binding.isin = "NL0010273215".into();
+        assert!(
+            matches!(rebound.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+            if blockers.contains(&ReadinessBlocker::InstrumentCrosswalkMismatch))
+        );
+    }
+
+    #[test]
+    fn checked_in_eur_example_and_schema_agree_and_never_authorize_mutations() {
+        let text = include_str!("../../../config/eur-demo.example.json");
+        let document: serde_json::Value = serde_json::from_str(text).unwrap();
+        let schema: serde_json::Value =
+            serde_json::from_str(include_str!("../../../schemas/eur-config.v1.json")).unwrap();
+        assert!(
+            jsonschema::validator_for(&schema)
+                .unwrap()
+                .is_valid(&document)
+        );
+        let config: EurRuntimeConfig = serde_json::from_str(text).unwrap();
+        assert!(config.validate(now()).is_ok());
+        assert!(!config.enabled && !config.live_enabled && !config.permits_broker_mutation());
+        let mut mixed = document.clone();
+        mixed["alpaca_market_data"] = serde_json::json!({"enabled":true});
+        assert!(serde_json::from_value::<EurRuntimeConfig>(mixed).is_err());
+        let mut non_eur = document;
+        non_eur["base_currency"] = serde_json::json!("USD");
+        assert!(
+            serde_json::from_value::<EurRuntimeConfig>(non_eur)
+                .unwrap()
+                .validate(now())
+                .is_err()
+        );
+    }
+
+    #[test]
     fn coordinator_resume_replays_events_and_holding_deadline_is_hard() {
         let at = now();
         let mut coordinator = EurCoordinator::new(
@@ -859,6 +1380,7 @@ mod tests {
         let eur = trady_domain::Currency::new("EUR").expect("currency");
         let mut plan = IntradayTradePlan {
             plan_id: "plan_1".into(),
+            cost_model: None,
             policy_revision: "eur_intraday_v1".into(),
             account_id: "paper_eur".into(),
             instrument_id: InstrumentId::new("AIR_PA_EQ").expect("instrument"),

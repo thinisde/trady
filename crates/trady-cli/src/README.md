@@ -1,386 +1,68 @@
 # CLI commands and wiring
 
-## Overview
+[main.rs](./main.rs) routes the binary's private modules. The
+[EUR service entrypoint](./autonomous.rs) accepts only `autonomous check|run
+--config EUR_CONFIG [--once]`. Legacy shapes and retired actions fail before
+credential loading. It delegates configured SHADOW work to
+[eur_shadow.rs](./eur_shadow.rs); there is no older execution fallback.
 
-[main.rs](./main.rs) contains private command handlers composing public package boundaries.
-[autonomous.rs](./autonomous.rs) composes the gated autonomous executor separately
-from the foundation startup probes and paper demonstrations. Its private
-[analyst worker](./autonomous_worker.rs) runs screening and native inference in a
-separate child process.
+The [retirement record](../../../docs/eur-legacy-retirement-2026-11-05.md)
+identifies the removed runner, Alpaca/watchdog and account/cold-start paths.
+Historical guides and hash-sensitive lab fixtures are retained separately.
 
-These handlers belong to the binary's private module tree. Their `pub`,
-`pub(crate)` and `pub(super)` items support internal composition; the crate
-declares the `trady` binary and no library target (`[main.rs:run]`).
+## EUR workflow
 
-## Interface
+- [eur.rs](./eur.rs): exact CLI options, config diagnostics, universe/gate
+  commands and replay routing.
+- [eur_shadow.rs](./eur_shadow.rs): immutable provider observations, analyst
+  requests, SHADOW coordination, export capsules and private-owner outbox.
+- [eur_decision.rs](./eur_decision.rs): registered-strategy survivors, durable
+  analyst selection, refreshed executable books and Rust risk calculation.
+- [eur_execute.rs](./eur_execute.rs): exact release/owner/dependency checks and
+  durable native protocol transport/recovery.
+- [eur_operation.rs](./eur_operation.rs): finite DEMO supervision, session
+  preflight and account-wide economic reconciliation.
+- [eur_paper.rs](./eur_paper.rs): bounded simulation on actual live SMART books,
+  with no broker transport and no manufactured positive lifecycle.
+- [eur_replay.rs](./eur_replay.rs): frozen input/source/risk/ledger validation;
+  credential-free paper checking cannot replace missing evidence.
+- [eur_workflow.rs](./eur_workflow.rs): dated reports and independently reviewed
+  offline handoffs.
 
-`[entry_demo.rs:run]` exposes `demo-entry --directory ABSOLUTE_DIRECTORY`.
-It calls the native limit calculator with bundled synthetic inputs and a fixed
-fixture clock, then submits only to the recording-only `ShadowBroker`. Its
-`Unsupported` response is required before success. Results carry
-`SIMULATION_ONLY`, `FIXTURE`, `production_approved=false` and
-`entry_authorized=false`; credentials, HTTP clients and databases are unused.
-Private immutable observation/proposal files live under `simulation-only`;
-identical reruns reuse the proposal digest without adding a duplicate intent.
-Relative paths and extra runtime/broker options are rejected. See the
-[simulation guide](../../../docs/autonomous.md#simulated-entry).
+The analyst owns model credentials, executor owns account/transport credentials,
+and gateway owns Telegram delivery. Provider timestamps remain separate from
+receipt times. Current IBKR candles and executable type-1 bid/ask are different
+inputs; Yahoo/Alpha remain historical/news research without quote fallback.
+See [execution and release](../../../docs/eur-execution-and-release.md).
 
-- `[intelligence.rs:run]`: `intelligence status`, `assess`, `tax-scenarios`,
-  `replay`, `import`, `read`, `invalidate` and `purge`. Assess/replay are offline;
-  database operations require the analyst role and migrations through 11. Replay reports
-  accepted and rejected events explicitly. Tax remains ephemeral and owner-only.
-- `[opencode/mod.rs:chat]` accepts `--intelligence-config FILE`. Enabled non-tax
-  tools use a new ephemeral conversation and reject `--session`/`--resume`;
-  ordinary chat remains durable. See the [IEX30 audit](../../../docs/iex30-audit.md)
-  for the focused runtime boundary.
+## Shared diagnostics and research
 
-`[api_health.rs:run]` exposes `api-health [--online] [--provider NAME]`, with
-metadata-only default behavior and explicit bounded GET diagnostics.
-`[stock_report.rs:run]` exposes `research-report FILE [--as-of RFC3339]` over
-bounded strict JSON. Both return `entry_authorized=false`; the latter has no
-network or database effects. See [health checks](../../../docs/api-health.md)
-and [stock reports](../../../docs/stock-reports.md).
+[broker_read.rs](./broker_read.rs) supplies bounded retries for read-only broker
+observations. Order submissions never use that retry path. Foundation role
+probes and fake-account/database demonstrations remain in `main.rs` to check
+storage isolation and unknown-outcome recovery; their output grants no entry.
 
-`[weekly.rs:run]` exposes real `weekly check|run|export|forecast|bridge` commands;
-`arithmetic-bridge` and `formula-bridge` support executable Lean/Rust parity. `[release.rs:run]`
-exposes candidate, independent verification, scoped evidence, explicit owner
-approval, compare-and-swap advancement, inspection and ACTIVE formula export.
-`[weekly.rs:read]`, `option`, `exact_options` and `parse_time` are crate-visible
-bounded JSON, exact-option and RFC3339 helpers shared by command modules.
+[news.rs](./news.rs), [financial.rs](./financial.rs),
+[intelligence.rs](./intelligence.rs), [stock_report.rs](./stock_report.rs),
+[api_health.rs](./api_health.rs) and [yfinance.rs](./yfinance.rs) expose explicitly
+configured research or diagnostics. X content rights remain separately gated.
 
-`[financial.rs:run]` exposes reviewed provider collection, rights-aware snapshots
-and status through the [financial-data contract](../../../docs/financial-data.md).
+[OpenCode](./opencode/README.md), [Telegram](./telegram/README.md) and
+[FinBERT](./finbert/README.md) retain their scoped research interfaces.
+[inputs_service.rs](./inputs_service.rs) handles reviewed immutable imports and
+bounded loopback serving; [model_lab.rs](./model_lab.rs) handles offline model
+evaluation. They do not create an order authority.
 
-`[yfinance.rs:run]` exposes the read-only `yfinance quote --config FILE
---instrument ID` command. It validates the explicit Euronext mapping, fetches a
-Yahoo snapshot and always reports `entry_authorized=false`.
+[weekly.rs](./weekly.rs) and [release.rs](./release.rs) retain prospective
+forecasts, pinned offline helpers, formula/parity bridges and separate
+research-release identities. The EUR transport still requires its own exact
+bundle, complete evidence and owner approval.
 
-`[inputs_service.rs:HELP]`, `run(args: &[String]) -> Result<Value>` expose local
-`inputs-service check/import/review/inspect/export-universe/deadline/prune` and
-explicit `serve`. `[model_lab.rs:HELP]`, `run` expose offline
-`model-lab fit/evaluate/inspect/bundle/offline-infer`; see the
-[operator contract](../../../services/inputs/README.md). Both reject unknown or
-duplicate options. The HTTP server uses `TRADY_INPUTS_SERVICE_TOKEN` through the
-central credential loader and binds loopback only. Import/review/output commands
-write private immutable files, evaluation durably consumes the sealed interval,
-and explicit pruning removes expired licensed content. Fit/evaluate do not approve
-or deploy a model; TEST ONLY artifacts cannot receive production approval.
+## Validation
 
-`[finbert/mod.rs:HELP]` and `[finbert/mod.rs:run]` add `sentiment status --config FILE`
-and `sentiment score --config FILE --input FILE`; see the
-[component contract](./finbert/README.md). The
-[FinBERT guide](../../../docs/v1/finbert/README.md) defines source-item input, optional
-confidence features, dormant deployment and the distinction between a preview and
-persisted automated plan integration.
-
-`[opencode/mod.rs:HELP]`, `run` add `chat`, `sessions list/show/close` and
-`skill-manifest`; see the [component contract](./opencode/README.md).
-The [OpenCode guide](../../../docs/opencode/README.md) describes the approved bundle,
-model configuration, environment credentials, follow-ups, recovery and context files.
-
-`[news.rs:HELP]` and `[news.rs:run]` add `news status`, bounded `news collect --once`,
-`news read`, `news x`, `news resolve-x` and offline `news parse-feed`. The [news guide](../../../docs/news.md)
-documents flags, registry review, environment references and source coverage limits.
-
-`[news.rs:run]` also exposes `counts-x`, `budget-x`, `reconcile-x FILE` and
-`export-x [--as-of UTC] [--limit 1..100]`. `[news.rs:client]` composes `MeteredHttp`
-with the shared analyst cost repository; existing X commands use the same gate.
-
-`[telegram/mod.rs:HELP]`, `run` expose `telegram discover`, `check --config FILE`
-and `run|worker --config FILE [--once]`; see the [component contract](./telegram/README.md).
-Expanded run uses the gateway identity; worker separately handles analyst
-research/dialogue jobs (`[telegram/gateway.rs:Gateway::open]`,
-`[telegram/gateway.rs:worker]`).
-
-`[autonomous.rs:HELP]`, `run(args: &[String]) -> Result<Value>` expose:
-
-```text
-trady autonomous check --config FILE
-trady autonomous run --config FILE [--once]
-trady autonomous analyst-service --config FILE
-trady autonomous holding --config FILE --position ID
-trady autonomous review-holding --config FILE --request FILE
-trady autonomous recover-order --config FILE --intent ID --broker-order ID
-```
-
-`[autonomous.rs:RuntimeConfig]` requires `config_version`, `enabled`,
-`interval_seconds`, `trading`, `broker`, `inputs`, `universe`, `models`, `controls`.
-Each model entry has `manifest` and `artifact_path`; artifact paths resolve from
-the deployment file's directory. The shipped
-[example](../../../config/autonomous.example.json) is disabled and has no approved artifacts.
-`[autonomous.rs:configuration_check]` validates configuration/artifacts and reports
-disabled runtime/universe, empty model/skill registries, an empty owner instrument
-allowlist and missing/invalid active formula as blockers. It returns
-`configuration_ready`, `required_actions`, `entry_controls_enabled` and
-`order_submission_policy`; configuration checks always report `entry_authorized=false`.
-It also reports `approved_input_service_unconfigured` for a placeholder input
-endpoint and `live_release_expired` when time-sensitive trading validation fails
-(`[autonomous.rs:configuration_check]`).
-It reports `entry_capabilities_unverified` and lists each unusable cash-account,
-instrument, protective-order or quote capability in `unverified_entry_capabilities`.
-These match the policy's unconditional entry capability checks; fractional-order
-support is checked separately when sizing requires it. Evidence must be verified,
-nonempty and unexpired. The command does not make broker capability probes.
-Optional fields are `analyst_socket`, `shadow_directory` and `release_candidate`.
-The focused IEX30 config also reports `iex_watchdog_runtime_unwired` until the
-long-running executor consumes and persists the watchdog ticks; the CLI schedule
-is currently the operator boundary.
-Live requires the socket and exact release candidate; local native model hashes
-must match its model map. Expired native artifacts are excluded from inference.
-
-`[autonomous_shadow.rs:run]` applies the same preflight before loading credentials
-or constructing broker/input clients. An incomplete deployment returns
-`shadow_blocked` with zero market cycles, all required actions and a private
-immutable configuration audit. Shadow retains its recording-only broker path.
-
-`[autonomous.rs:run]` routes `check` through `configuration_check`; the shadow
-runner also calls that preflight. Broker-bound run and recovery enter the
-executor path directly, with new-entry gates enforced by `AutonomousTrader`.
-
-`[broker_read.rs:snapshot]` wraps only `Trading212Reader` observations for both
-native `t212 snapshot` and shadow runs. It retries only known rate-limit failures,
-at most three attempts with at most thirty total seconds of backoff. It respects
-`Retry-After`, stops on shutdown and does not retry other errors or unknown outcomes.
-Broker mutation clients do not use this helper.
-
-`[autonomous.rs:holding_advice]` uses `TRADY_ANALYST_DSN`. `holding --position ID`
-reads an executor-attested holding. `review-holding --request FILE` reads at most
-4 MiB of UTF-8 JSON with exactly `context`, `proposed`, `research`, `screening`
-and `review_reason`; unknown fields fail. The position reference comes from
-`context.scenario.binding.arguments.position_id`, and the calculation identity
-is checked against the current holding. Review persists screening, dossier and
-context, performs/persists native assessment and review, then queues a
-`HoldingUpdate` for later executor activation checks. It does not activate the plan.
-
-`[autonomous_worker.rs:IsolatedInputs]` implements `TradingInputs` using the
-read-only `MarketInputs` for session/quote/cost reads and a lazy analyst child for
-`candidate`. The internal `autonomous analyst-worker` entrypoint accepts only its
-bounded stdin protocol; it is not a deployment command. `Boot` contains reviewed
-configuration, the absolute deployment configuration file path, analyst DSN and
-optional service token.
-Each subsequent request is an `AccountSnapshot`; `Reply` returns that snapshot ID,
-a failure flag and an optional candidate. Both directions use one JSON line per
-message with a 4 MiB limit, including the newline. `Reply` can also carry
-`ModelIdentity` with `revision_id` and
-`artifact_sha256` (`[autonomous_worker.rs:Boot]`, `[autonomous_worker.rs:Reply]`,
-`[autonomous_worker.rs:ModelIdentity]`).
-
-`[main.rs:HELP]` and `[main.rs:run]` define:
-
-```text
-trady analyst|executor|gateway --once [--config FILE]
-trady demo
-trady demo-postgres
-trady migrate
-trady credentials init|status
-trady t212 snapshot --config FILE
-trady validate-json model|results|envelope|artifact|artifact-result FILE
-```
-
-`--help`, `help` and `-h` display help. `[main.rs:service]` uses
-`TRADY_ANALYST_DSN`, `TRADY_EXECUTOR_DSN` or `TRADY_GATEWAY_DSN` when present.
-Migration requires `TRADY_MIGRATOR_DSN`; the database demo requires the executor DSN.
-All credential names resolve through the [central store](../../../docs/credentials.md)
-with environment overrides. `credentials init` creates a blank private file;
-`credentials status` prints names and availability without values or network calls.
-`[main.rs:trading212_snapshot]` selects `TRADY_T212_DEMO_API_KEY` /
-`TRADY_T212_DEMO_API_SECRET` or `TRADY_T212_LIVE_API_KEY` /
-`TRADY_T212_LIVE_API_SECRET` from the config's explicit `environment`.
-The file contains only a non-secret `Trading212Config`.
-See the [Trading 212 guide](../../../docs/trading212.md).
-
-## Invariants
-
-`[weekly.rs:run]` invokes `run_weekly` with `PgWeeklyStore`, pinned `HelperLab` and a
-durable holdout claim/finish wrapper. The database start time survives restart.
-Weekly decisions never authorize trading. Release verification executes a pinned
-independent helper and resolves real pinned evidence files; no raw model flag is
-accepted as an approval. Release roles have separate DSNs and owner scope binds
-account/mode, policy, candidate/model/source hashes and expiry.
-`[weekly.rs:exact_options]` rejects duplicate/unknown options;
-`[weekly.rs:read]` accepts bounded UTF-8 JSON from a file or `-` stdin, with a
-4 MiB limit. Weekly leases must be 1–3,600 seconds and strictly exceed twice the
-longest helper timeout plus thirty seconds (`[weekly.rs:run]`).
-`[release.rs:IndependentReleaseVerification::validate]` requires PRODUCTION
-FORMULA_V1 evidence, the ten named checks and matching pinned artifact hashes.
-
-`[financial.rs:run]` requires `collect --once`, source selection for
-snapshot/signals/features/import, and limits 1–500. `[financial.rs:bounded]`
-bounds file input to 2 MiB. `[model_lab.rs:run]` reports offline inference as
-diagnostic with `deployment_eligible:false`.
-
-- `[news.rs:run]` inspects disabled pilot status offline. Counts require a selected
-  search source; billing reconciliation requires a bounded provider-evidence file.
-  `[news.rs:client]` requires a shared durable cost policy for paid X reads.
-- `export-x` uses stored, rights-checked evidence and no source client. Its output
-  denies training permission and identifies missing verification/feature availability.
-
-- `[finbert/mod.rs:run]` bounds file reads, requires explicit enabled configuration
-  for scoring and always reports `entry_authorized=false`. `status` makes no
-  network request. Optional thresholds use supplied features and default policy;
-  these are unverified previews, not completed readiness or an active plan update.
-  Flags must appear in the documented exact order; only score includes
-  `evidence_verified=false`, while status omits it.
-
-- `[opencode/mod.rs:binding]` requires an explicit local owner and validated paper
-  account/policy. `[opencode/mod.rs:chat]` loads a reviewed skill manifest, binds
-  the configured provider and permits one question/file/resume action.
-- `[news.rs:run]` requires explicit source selection for lookup/resolve/offline parsing;
-  validates registry/flags; reserves source allowance before provider requests; and
-  rejects disabled X sources. Offline parsing does not require source enablement.
-  Collection/read results grant no entry authority; successful identity resolution
-  instead reports `identity_approved=false` for operator review.
-- `news read --for-model` applies storage/model-processing rights and retention.
-  Unavailable sources return explicit statuses instead of fabricated post/article text.
-  `news x` returns persisted, redacted records. Explicit post-unavailability failures
-  invalidate known copies and remove stored expanded quotations.
-
-- `[main.rs:service]` validates paper configuration and schemas. Supplied DSNs must
-  use the matching restricted role; absent DSNs yield `not_configured`.
-- `[main.rs:begin_demo]` uses prepared paper buy fixtures and reports duplicate
-  reservation behavior; it does not assert the second reservation's result.
-  `[main.rs:demo_postgres]` closes/reopens its connection and recovers one durable intent.
-- `[main.rs:finish_demo]` reports unresolved broker responses and unprotected filled
-  positions without submission/protection claims. All entry authority remains blocked.
-- `[main.rs:main]` returns a failure exit code on invalid input or operational failure.
-- `[main.rs:trading212_snapshot]` permits information reads from an explicitly bound
-  demo/live account and reports `entry_authorized=false`. It exposes no order command.
-- `[autonomous.rs:RuntimeConfig::validate]` requires version 1, a 5–30-second
-  interval, matching currency, validated input/universe
-  configuration and at most 32 models. Shadow may use a distinct trading account;
-  matching broker/trading account and mode are required in the broker-bound
-  execution branch. Configuration is a regular UTF-8 file
-  bounded to 2 MiB; model artifacts are bounded to 16 MiB and checked against
-  approved native model manifests/hashes/runtime/format.
-- `[autonomous.rs:run]` requires `enabled=true` for run/recovery. The demo/paper
-  and live executor paths need broker environment credentials plus
-  `TRADY_EXECUTOR_DSN`; run additionally needs
-  `TRADY_ANALYST_DSN` only for the child compatibility path. The external analyst
-  service loads its own DSN. Optional input authentication uses
-  `TRADY_TRADING_INPUTS_TOKEN`, all through the central credential loader.
-  Database-backed paths require migrations 1–11; startup does not migrate. Database transport
-  uses verified remote TLS or explicit local plaintext with restricted roles.
-- `[autonomous.rs:run]` wires Trading 212 demo/paper or live. Shadow uses a
-  separate namespace and read-only broker reader, without an executor DSN,
-  execution journal or executor lease. Its child compatibility path alone needs
-  the analyst DSN. New entries need an approved formula,
-  skills, model artifacts, finalized dossier, screening and fresh session/quote/
-  account facts. Deployments must supply approved universe rights/provider and
-  input-service data; neither is replaced by a built-in constituent/data fallback.
-  The analyst/executor/gateway probes do not supply that input service.
-- `[autonomous.rs:run]` check performs no credential, broker or database access and
-  reports `entry_authorized=false`; it does not establish operational readiness.
-  Demo/paper and live runs, including `--once`, can submit real broker orders. Unknown outcomes
-  remain blocked until exact-ID observation/recovery; they are not replayed.
-- `[autonomous_shadow.rs:run]` requires an absolute shadow journal path and checks
-  Unix directory permissions. `[autonomous_shadow.rs:record]` exclusively creates
-  immutable cycle files with mode 0600 on Unix.
-- `[autonomous_worker.rs:WorkerProcess]` starts the current executable with a
-  cleared environment and anonymous pipes. The child receives the analyst DSN
-  and service token, with no broker/executor credential or credential-store load.
-  Pipe readers/writers use bounded queues. `[autonomous_worker.rs:WorkerProcess::exchange]`
-  starts its 30-second monotonic reply deadline after process launch, I/O-thread
-  setup and request enqueue; remaining child initialization shares that wait.
-  Shutdown cancels the wait.
-  Timeout, malformed output or a mismatched snapshot terminates and reaps the
-  child before a later cycle can start a replacement. Entry validation still
-  checks the current quote, FX, account, formula, evidence and release gates.
-  The engine invokes candidate analysis only while flat; holdings use market
-  reads and never wait for inference. The child inherits the executor's OS identity
-  and filesystem access. Live uses `[autonomous_worker.rs:serve_external]` under
-  a separate identity, with a private `0660` Unix socket and bounded I/O.
-  That I/O deadline does not preempt the external server's synchronous analysis
-  (`[autonomous_worker.rs:serve_external]`).
-- `[main.rs:HELP]` distinguishes bounded foundation probes from the explicitly
-  configured autonomous demo/live execution and read-only shadow paths.
-
-## Side Effects
-
-`[weekly.rs:run]` reads private lab credentials and invokes offline helpers;
-ledger/release commands use their narrowly selected PostgreSQL roles. Formula
-bridges compute in process without database, market-provider or broker access.
-Owner approval records approval evidence; the separate releaser must advance
-the state and satisfy twenty real sessions plus fresh readiness before ACTIVE.
-Weekly store lease release is attempted after `run_weekly` returns, including its
-error path (`[weekly.rs:run]`).
-
-`[intelligence.rs:run]` and `[intelligence.rs:repository]` use analyst PostgreSQL
-for import, read, invalidate and purge. Invalidation requests content erasure for
-deletion or rights/entitlement changes; purge removes expired content.
-`[intelligence.rs:replay]` uses an in-memory repository, while assessment consumes
-local input without provider access.
-
-`[financial.rs:run]` status inspects the central credential store without network
-access. Every non-status financial command connects as the analyst and
-synchronizes the registry before its specific work.
-
-Explicit `sentiment score` reads files/time and posts permitted normalized text to
-the configured FinBERT service. It prints JSON and makes no database or broker writes.
-
-OpenCode chat performs model HTTP calls. Durable chat writes analyst-owned
-sessions; enabled intelligence tools instead require a fresh in-memory session
-(`[opencode/mod.rs:chat]`). Durable sessions can be listed/read/closed without
-model credentials; closure retains audit history.
-
-News commands can perform read-only provider HTTPS calls and analyst-role PostgreSQL
-writes/reads/content purges. `status` and offline `parse-feed` need neither credentials
-nor database access; input file and response sizes are bounded.
-`[news.rs:sync_registry]` can write registry state before `news read` fetches items
-and before `export-x` reads evidence (`[news.rs:run]`).
-
-`[telegram/mod.rs:run]` discover/run resolve credentials and contact Telegram.
-Run also locks/writes local inbox/offset/outbox state, sends authorized replies
-and can read broker information. Check only reads/validates local configuration.
-
-Reads files/environment/time/process ID and prints JSON or errors. The memory demo
-mutates memory. The database demo creates a timestamp-named paper account and durable
-fixture records. Migration applies database DDL through the dedicated role.
-The Trading 212 snapshot command performs authenticated HTTPS GETs without database writes.
-
-The demo/paper and live executor paths in `[autonomous.rs:run]` load deployment
-configuration and credentials, acquire a
-120-second executor lease, read broker state and configured market services,
-and persist executor state/audit/outbox records. The analyst child loads model
-artifacts, reads input/universe services and persists analyst research.
-It can submit Day limit buys, GTC protective stops, market exits and cancellations
-through the configured demo/live broker. A separate analyst retention connection
-purges every 50 seconds with a 10-second statement timeout, including during analysis.
-Linux socket connections verify the peer UID; all socket ancestors must be trusted
-directories without symlinks. Replies bind the actual persisted native model hash
-to the live deployment release. Deployment must also run
-retention cleanup when the runtime/child is absent. Recovery reads exact broker facts and updates the journal
-without submitting an order or requiring analyst credentials/model loading.
-
-`[autonomous_worker.rs:RetentionWorker::start]` purges before accepting work;
-startup purge failure aborts worker construction. Service loops also check that
-the retention worker remains alive.
-
-Continuous demo/paper and live execution prints cycle failures, renews its fence and retries
-after the configured interval; renewal failure terminates it. `--once` attempts
-one cycle and propagates cycle errors. Argument and setup validation precedes
-lease acquisition; runtime cleanup attempts lease release and stops the child. Shutdown's
-`broker_protection_retained=true` field is unconditional and does not prove that
-a newly submitted entry was filled or protected before a once-mode stop.
-
-`[autonomous_shadow.rs:run]` instead writes immutable local cycle/proposal files
-and uses only a broker information reader. Cycle errors are recorded as
-`cycle.result.status="blocked"`; when persistence/output succeeds, `--once`
-returns success with `status="shadow_stopped"`. Automation must inspect the cycle
-result to distinguish a blocked shadow cycle. Shadow never submits/cancels orders
-or writes an executor journal; setup, persistence and output errors still propagate.
-Each cycle and recorded intent carries the verified authority-integrity binding
-alongside configuration, source-snapshot and quote-freshness hashes, so later
-shadow evidence cannot be detached from the registered formula or data snapshot.
-An immutable account/session slot is reserved before recording the proposal;
-failure after that reservation can consume the session's slot
-(`[autonomous_shadow.rs:run]`).
-
-## Verification
-
-Run `cargo test -p trady-cli --test weekly_cli --locked` for arithmetic CLI and malformed
-input gates, plus the root disposable PostgreSQL checks for durable lifecycle
-semantics. No proof or historical performance is inferred from these fixtures.
-
-Run `cargo test -p trady-cli --locked`; the disposable database script also runs all
-three role-specific startup probes and the PostgreSQL demonstration.
-Run `cargo test --workspace --locked` from the repository root for workspace verification.
+Run `cargo test --workspace --locked`, strict Clippy and
+`python3 scripts/test-postgres.py`. The retired child-process test target was
+removed with its implementation; current EUR routing, packet/model, journal,
+protection/recovery and role-isolation checks remain. The ignored native DEMO
+probe requires explicit scoped authorization and is never part of ordinary
+test execution.

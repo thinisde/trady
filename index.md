@@ -1,29 +1,37 @@
 # Trady implementation entry point
 
-Use this file as the starting brief for the coding agent implementing Trady v1. Follow the linked specifications, deliver the project in the documented stages, and keep the implementation, documentation and validation evidence consistent.
+Use this file to find the current EUR implementation and the retained v1
+specifications. Preserve existing changes and keep code, documentation and
+validation evidence consistent.
 
 ## Current state and specification authority
 
-[OpenCode Go conversations](./docs/opencode/README.md) now implement model calls,
-persistent sessions, approved skill loading and bounded tool/context management.
+The current runtime is EUR SHADOW research with a separately gated Trading 212
+DEMO protocol. Start with the [root README](./README.md),
+[documentation index](./docs/README.md),
+[EUR implementation plan](./docs/trady-bot-implementation-plan.md),
+[source policy](./docs/eur-data-sources.md) and
+[execution/recovery guide](./docs/eur-execution-and-release.md).
+The [bounded DEMO month handoff](./docs/eur-demo-month-2026-11.md) records the
+prepared behavior and outstanding acceptance. LIVE remains rejected.
 
-The repository contains the specifications, 52 Trady runtime skills and an initial
-offline Rust foundation. The [implementation record](./docs/foundation.md) lists
-implemented contracts, commands and validation evidence. Cargo workspace, JSON
-validation, fake adapters and local PostgreSQL recovery exist; trained models,
-listeners, full research readiness, provider integrations, protective orders and
-live execution remain future work. The later-stage package/tool/table descriptions
-remain requirements unless that record explicitly marks their implementation.
-
-Read applicable `AGENTS.md` instructions before working. Inspect the workspace and
-preserve existing changes. Use the [IEX30 deployment guide](./docs/iex30.md) and
-[focused audit](./docs/iex30-audit.md) as the implementation entry points; shared
-contracts remain under `docs/v1/` for compatibility tests. Resolve material
-contradictions explicitly instead of silently changing policy.
+Provider adapters, durable protocol recovery, native STOP handling, research
+services and offline model workflows are implemented. This does not establish
+broker acceptance or authorize deployment. The [legacy retirement record](./docs/eur-legacy-retirement-2026-11-05.md)
+documents the removed IEX30/Alpaca runtime and account CLI. IEX30 guides and
+`docs/v1/` remain historical/shared contracts, not current deployment instructions.
+Read applicable `AGENTS.md` instructions and resolve material contradictions
+against the current EUR authority explicitly.
 
 The files under [skills](./skills/README.md) are instructions for Trady's runtime LLM. Implement their loading, versioning and validation through the approved catalog; they do not replace the coding agent's repository instructions.
 
-## Read in this order
+## Historical v1 specification map
+
+The remainder of this file describes the original v1 design. Its S&P 500
+universe, target ranges, X account policy, service commands and delivery stages
+do not override the current EUR configuration or release gates. Generic service
+probes remain available for role checks; use the EUR service templates for
+runtime deployment.
 
 | Order | Read | Purpose |
 |---|---|---|

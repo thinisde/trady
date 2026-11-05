@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily private Trady database backup
+
+[Timer]
+OnCalendar=*-*-* 02:10:00 Europe/Berlin
+Persistent=yes
+AccuracySec=1min
+Unit=trady-postgres-backup.service
+
+[Install]
+WantedBy=timers.target

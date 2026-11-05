@@ -8,45 +8,27 @@
     {
       "id": "alpha_eur_news_sentiment",
       "kind": "ALPHA_VANTAGE",
-      "enabled": true,
+      "enabled": false,
       "url": "https://www.alphavantage.co/query",
       "allowed_hosts": ["www.alphavantage.co"],
-      "credential_env": "TRADY_ALPHA_VANTAGE_KEY",
-      "interval_seconds": 900,
-      "daily_request_limit": 100,
-      "query": "AIR,ASML,ABI,EDP",
+      "credential_env": "TRADY_ALPHA_VANTAGE_API_KEY",
+      "interval_seconds": 4320,
+      "daily_request_limit": 20,
+      "query": null,
       "x_account": null,
       "rights": {
-        "store_content": true,
-        "llm_processing": true,
+        "store_content": false,
+        "llm_processing": false,
         "retention_hours": 168,
-        "terms_reference": "owner_review_alpha_vantage_eur_2026-11-03"
+        "terms_reference": "docs/evidence/eur-shadow-review-2026-11-04/README.md#alpha-vantage"
       }
     },
     {
-      "id": "google_eur_news_rss",
-      "kind": "GOOGLE_NEWS_RSS",
-      "enabled": true,
-      "url": "https://news.google.com/rss/search",
-      "allowed_hosts": ["news.google.com"],
-      "credential_env": null,
-      "interval_seconds": 900,
-      "daily_request_limit": 96,
-      "query": "Euronext EUR equities",
-      "x_account": null,
-      "rights": {
-        "store_content": true,
-        "llm_processing": true,
-        "retention_hours": 72,
-        "terms_reference": "owner_review_google_news_rss_eur_2026-11-03"
-      }
-    },
-    {
-      "id": "publisher_eur_rss",
+      "id": "ecb_eur_press_rss",
       "kind": "PUBLISHER_RSS",
       "enabled": true,
-      "url": "https://feeds.reuters.com/reuters/businessNews",
-      "allowed_hosts": ["feeds.reuters.com"],
+      "url": "https://www.ecb.europa.eu/rss/press.html",
+      "allowed_hosts": ["www.ecb.europa.eu"],
       "credential_env": null,
       "interval_seconds": 900,
       "daily_request_limit": 96,
@@ -56,8 +38,95 @@
         "store_content": true,
         "llm_processing": true,
         "retention_hours": 72,
-        "terms_reference": "owner_review_publisher_rss_registry_eur_2026-11-03"
+        "terms_reference": "docs/evidence/eur-shadow-review-2026-11-04/README.md#rss"
+      }
+    },
+    {
+      "id": "airbus_eur_press_rss",
+      "kind": "PUBLISHER_RSS",
+      "enabled": false,
+      "url": "https://www.airbus.com/en/rss-press-releases-feeds",
+      "allowed_hosts": ["www.airbus.com"],
+      "credential_env": null,
+      "interval_seconds": 900,
+      "daily_request_limit": 96,
+      "query": null,
+      "x_account": null,
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 72,
+        "terms_reference": "docs/evidence/eur-shadow-review-2026-11-04/README.md#rss"
+      }
+    },
+    {
+      "id": "x_eur_airbus",
+      "kind": "X_TIMELINE",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 86400,
+      "daily_request_limit": 1,
+      "query": null,
+      "x_account": {
+        "person": "Airbus",
+        "handle": "Airbus",
+        "user_id": "15425377",
+        "verified_at": "2026-11-04T12:57:26.836681Z",
+        "ownership_reference": "https://www.airbus.com/en/investors/share-price-and-information",
+        "priority": 0,
+        "scope": ["AIR_PA_EQ", "issuer_research", "SHADOW"]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": "docs/evidence/eur-shadow-review-2026-11-04/README.md#x"
+      }
+    },
+    {
+      "id": "x_eur_ecb",
+      "kind": "X_TIMELINE",
+      "enabled": false,
+      "url": "https://api.x.com/2/",
+      "allowed_hosts": ["api.x.com"],
+      "credential_env": "TRADY_X_BEARER_TOKEN",
+      "interval_seconds": 86400,
+      "daily_request_limit": 1,
+      "query": null,
+      "x_account": {
+        "person": "European Central Bank",
+        "handle": "ecb",
+        "user_id": "83466368",
+        "verified_at": "2026-11-04T12:57:46.201293Z",
+        "ownership_reference": "https://www.ecb.europa.eu/services/socialmedia/html/index.en.html",
+        "priority": 0,
+        "scope": ["EUR", "macro_research", "SHADOW"]
+      },
+      "rights": {
+        "store_content": false,
+        "llm_processing": false,
+        "retention_hours": 24,
+        "terms_reference": "docs/evidence/eur-shadow-review-2026-11-04/README.md#x"
       }
     }
-  ]
+  ],
+  "x_budget": {
+    "enabled": true,
+    "billing_scope": "iex30_x_balance",
+    "version": 1,
+    "cycle_start": "2026-11-02T00:00:00Z",
+    "cycle_end": "2026-12-02T00:00:00Z",
+    "ceiling_microusd": 1900000,
+    "ordinary_microusd": 1750000,
+    "support_microusd": 150000,
+    "post_read_microusd": 5000,
+    "user_read_microusd": 10000,
+    "recent_counts_microusd": 5000,
+    "burst_margin_percent": 100,
+    "approval_reference": "owner_instruction_2026-11-02",
+    "entitlement_reference": "owner_stated_remaining_balance_1_90_usd",
+    "provider_limit_reference": "x_developer_pricing_2026-11-02"
+  }
 }

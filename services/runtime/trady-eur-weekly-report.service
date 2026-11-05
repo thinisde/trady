@@ -1,0 +1,31 @@
+[Unit]
+Description=Trady EUR reconciled weekly artifacts and pending review
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=trady-analyst
+Group=trady-analyst
+ExecStart=/opt/trady/bin/trady eur weekly --config /etc/trady/runtime/eur-shadow.json
+Environment=TRADY_CREDENTIALS_FILE=%d/credentials.json
+LoadCredential=credentials.json:/etc/trady/secrets/reviewer.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/opt/trady /etc/trady/runtime
+InaccessiblePaths=-/var/lib/trady/sealed -/etc/trady/evaluator -/var/lib/trady-evaluator /etc/trady/secrets
+StateDirectory=trady-analyst
+UMask=0077
+TimeoutStartSec=120

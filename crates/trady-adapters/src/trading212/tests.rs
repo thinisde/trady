@@ -138,6 +138,12 @@ impl Server {
             reader: self.reader(),
         }
     }
+    fn euro_executor(&self) -> Trading212Executor<FakeClock> {
+        let mut executor = self.executor();
+        executor.reader.config.environment = Environment::Demo;
+        executor.reader.config.account_id = AccountId::new("paper_t212_test").unwrap();
+        executor
+    }
 }
 impl Drop for Server {
     fn drop(&mut self) {
@@ -185,7 +191,7 @@ fn request(kind: OrderKind, side: Side) -> BrokerOrderRequest {
 fn euro_request() -> BrokerOrderRequest {
     BrokerOrderRequest {
         intent_id: IntentId::new("eur_local_intent").unwrap(),
-        account_id: config().account_id,
+        account_id: AccountId::new("paper_t212_test").unwrap(),
         instrument_id: InstrumentId::new("demo_air_pa").unwrap(),
         instrument_currency: Currency::new("EUR").unwrap(),
         side: Side::Buy,
@@ -209,6 +215,7 @@ fn euro_binding() -> EurInstrumentBinding {
         price_tick: Decimal::new(1, 2),
         quantity_step: Decimal::ONE,
         fractional_orders: false,
+        value_rules: None,
         effective_from: now() - chrono::Duration::days(1),
         expires_at: Some(now() + chrono::Duration::days(1)),
         liquidity_threshold: trady_domain::eur::LiquidityThreshold {
@@ -268,6 +275,192 @@ fn limit() -> OrderKind {
 }
 
 #[test]
+fn account_wide_month_history_requires_complete_scoped_pagination() {
+    for continuation in [
+        json!(null),
+        json!("/api/v0/equity/history/orders?limit=50&cursor=10"),
+        json!("https://live.trading212.com/api/v0/equity/history/orders?limit=50&cursor=10"),
+    ] {
+        let safe = continuation.is_null() || continuation.as_str().unwrap().starts_with('/');
+        let mut replies = vec![
+            ok(json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}})),
+            ok(json!({"items":[],"nextPagePath":continuation})),
+        ];
+        if safe && !continuation.is_null() {
+            replies.push(ok(json!({"items":[],"nextPagePath":null})));
+        }
+        let server = Server::new(replies);
+        let mut reader = server.euro_executor().reader;
+        reader.config.broker_account_id = 52211463;
+        let result = reader.eur_month_order_history(|| Ok(()));
+        assert_eq!(result.is_ok(), safe);
+        if let Ok(value) = result {
+            assert_eq!(value["complete"], true);
+        }
+        assert!(server.requests().iter().all(|r| r.line.starts_with("GET ")));
+    }
+    let server = Server::new(vec![
+        ok(json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}})),
+        ok(json!({"items":[]})),
+    ]);
+    let mut reader = server.euro_executor().reader;
+    reader.config.broker_account_id = 52211463;
+    assert!(
+        reader.eur_month_order_history(|| Ok(())).is_err(),
+        "omitted continuation cannot prove full fill coverage"
+    );
+}
+
+#[test]
+fn native_cash_collector_pages_with_a_fence_and_rejects_unsafe_continuations() {
+    for next in [
+        "/api/v0/equity/history/transactions?limit=50&cursor=2",
+        "https://other.example/api/v0/equity/history/transactions?cursor=2",
+        "/api/v0/equity/history/dividends?cursor=2",
+    ] {
+        let safe = next.starts_with("/api/v0/equity/history/transactions?");
+        let mut replies = vec![
+            ok(json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}})),
+            ok(json!({"items":[],"nextPagePath":next})),
+        ];
+        if safe {
+            replies.extend([
+                ok(json!({"items":[],"nextPagePath":null})),
+                ok(json!({"items":[],"nextPagePath":null})),
+            ]);
+        }
+        let server = Server::new(replies);
+        let mut reader = server.euro_executor().reader;
+        reader.config.broker_account_id = 52211463;
+        let mut fence_calls = 0;
+        let result = reader.eur_cash_events(now(), || {
+            fence_calls += 1;
+            Ok(())
+        });
+        assert_eq!(result.is_ok(), safe);
+        assert!(
+            server.requests()[1]
+                .line
+                .starts_with("GET /api/v0/equity/history/transactions?limit=50 ")
+        );
+        assert_eq!(
+            server
+                .requests()
+                .iter()
+                .filter(|r| r.line.starts_with("POST "))
+                .count(),
+            0
+        );
+        assert!(fence_calls >= 2);
+        if let Ok(value) = result {
+            assert_eq!(
+                value["sources"]["transactions"]["pages"]
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                2
+            );
+            assert_eq!(value["sources"]["dividends"]["complete"], true);
+        }
+    }
+    let server = Server::new(vec![ok(
+        json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}}),
+    )]);
+    let mut reader = server.euro_executor().reader;
+    reader.config.broker_account_id = 52211463;
+    assert!(reader.eur_cash_events(now(), || Err(invalid())).is_err());
+    assert_eq!(
+        server.requests().len(),
+        1,
+        "lost fence must prevent history reads"
+    );
+}
+
+#[test]
+fn short_restart_reuses_exact_entry_catalog_without_metadata_or_unsafe_post() {
+    use trady_application::eur_protocol::driver::ProtocolBroker;
+    let mut request = euro_request();
+    request.side = Side::Sell;
+    request.kind = OrderKind::Stop {
+        price: Decimal::from(98),
+        time_in_force: TimeInForce::Day,
+    };
+    let server = Server::new(vec![
+        ok(json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}})),
+        ok(
+            json!([{"instrument":{"ticker":"demo_air_pa","currency":"EUR"},"quantity":1,"quantityAvailableForTrading":1}]),
+        ),
+        ok(serde_json::from_str(&euro_response_for(&request)).unwrap()),
+    ]);
+    let mut executor = server.euro_executor();
+    executor.reader.config.broker_account_id = 52211463;
+    let Reply::Json(_, text, _) = euro_metadata() else {
+        panic!("fixture")
+    };
+    let raw: Value = serde_json::from_str(&text).unwrap();
+    executor
+        .information()
+        .seed_protocol_catalog(&raw, now() - chrono::Duration::seconds(1))
+        .unwrap();
+    let mut broker = eur_protocol::Trading212ProtocolBroker::new(executor, euro_binding());
+    broker
+        .submit(&request, now() + chrono::Duration::seconds(5))
+        .unwrap();
+    assert!(
+        server
+            .requests()
+            .iter()
+            .all(|r| !r.line.contains("metadata/instruments"))
+    );
+    assert_eq!(
+        server
+            .requests()
+            .iter()
+            .filter(|r| r.line.starts_with("POST "))
+            .count(),
+        1
+    );
+    assert!(
+        broker
+            .executor
+            .information()
+            .seed_protocol_catalog(&raw, now() - chrono::Duration::seconds(540))
+            .is_err()
+    );
+    assert!(
+        broker
+            .executor
+            .information()
+            .seed_protocol_catalog(&raw, now() + chrono::Duration::seconds(1))
+            .is_err()
+    );
+}
+
+#[test]
+fn revoked_entry_authority_after_preparation_prevents_the_actual_post() {
+    let server = Server::new(vec![summary(), euro_metadata()]);
+    let mut executor = server.euro_executor();
+    let mut checked = false;
+    let result = executor.submit_eur_bound_guarded(
+        &euro_request(),
+        &euro_binding(),
+        Some(now() + chrono::Duration::seconds(10)),
+        || {
+            checked = true;
+            Err(invalid())
+        },
+    );
+    assert!(checked && result.is_err());
+    assert_eq!(server.requests().len(), 2);
+    assert!(
+        server
+            .requests()
+            .iter()
+            .all(|r| !r.line.starts_with("POST "))
+    );
+}
+
+#[test]
 fn expired_entry_authority_after_information_reads_never_sends_a_post() {
     use trady_application::autonomous::ExecutionBroker;
     let server = Server::new(vec![summary(), metadata()]);
@@ -320,7 +513,7 @@ fn exact_eur_crosswalk_can_submit_without_iex_ticker_inference() {
     ]);
     let request = euro_request();
     let binding = euro_binding();
-    let result = server.executor().submit_eur_bound_before(
+    let result = server.euro_executor().submit_eur_bound_before(
         &request,
         &binding,
         Some(now() + chrono::Duration::minutes(5)),
@@ -341,7 +534,7 @@ fn eur_crosswalk_rejects_internal_or_currency_identity_mismatch_before_post() {
     let mut request = euro_request();
     request.instrument_id = InstrumentId::new("AIR_PA_EQ").unwrap();
     let error = server
-        .executor()
+        .euro_executor()
         .submit_eur_bound_before(
             &request,
             &euro_binding(),
@@ -350,6 +543,41 @@ fn eur_crosswalk_rejects_internal_or_currency_identity_mismatch_before_post() {
         .expect_err("mismatched EUR identity");
     assert_eq!(error.kind, BrokerFailureKind::Unsupported);
     assert!(server.requests().is_empty());
+}
+
+#[test]
+fn eur_catalog_isin_fractional_and_tick_changes_never_reach_post() {
+    for variant in 0..3 {
+        let server = Server::new(vec![summary(), euro_metadata()]);
+        let mut binding = euro_binding();
+        let mut request = euro_request();
+        match variant {
+            0 => binding.isin = "NL0010273215".into(),
+            1 => request.quantity = Decimal::new(15, 1),
+            _ => {
+                request.kind = OrderKind::Limit {
+                    price: Decimal::new(123451, 3),
+                    time_in_force: TimeInForce::Day,
+                }
+            }
+        }
+        assert!(
+            server
+                .euro_executor()
+                .submit_eur_bound_before(
+                    &request,
+                    &binding,
+                    Some(now() + chrono::Duration::minutes(1))
+                )
+                .is_err()
+        );
+        assert!(
+            server
+                .requests()
+                .iter()
+                .all(|request| request.line.starts_with("GET "))
+        );
+    }
 }
 
 #[test]
@@ -919,4 +1147,432 @@ fn malformed_or_value_orders_fail_and_unknown_statuses_stay_unknown() {
     value["instrument"]["ticker"] = json!("BRK.B_US_EQ");
     let server = Server::new(vec![summary(), ok(json!([value]))]);
     assert!(server.reader().pending_orders().is_err());
+}
+
+#[test]
+fn eur_protocol_observer_requires_exact_stop_shape_and_terminal_history() {
+    use trady_application::eur_protocol::{
+        OrderLeg, ProtocolContext, ProtocolInput, ProtocolState, driver::ProtocolBroker,
+    };
+    let context = ProtocolContext {
+        runtime_mode: trady_domain::ExecutionStage::Demo,
+        policy_revision: "eur_intraday_v1".into(),
+        intent_id: "eur_protocol_http_test".into(),
+        account_id: "paper_t212_test".into(),
+        broker_account_id: 52211463,
+        instrument_id: "AIR_PA_EQ".into(),
+        broker_ticker: "AIRp_EQ".into(),
+        isin: "NL0000235190".into(),
+        policy_hash: "a".repeat(64),
+        configuration_hash: "b".repeat(64),
+        evidence_ids: vec!["fixture_only".into()],
+        quantity: Decimal::from(2),
+        entry_limit: Decimal::from(100),
+        initial_stop: Decimal::from(98),
+        target: Decimal::from(103),
+        created_at: now(),
+        flatten_at: now() + chrono::Duration::hours(1),
+        max_unprotected_seconds: 10,
+        entry_valid_until: None,
+    };
+    let mut state = ProtocolState::new(context).unwrap();
+    for (i, input) in [
+        ProtocolInput::Reserve,
+        ProtocolInput::DispatchEntry,
+        ProtocolInput::Acknowledged {
+            leg: OrderLeg::Entry,
+            broker_id: "1001".into(),
+        },
+        ProtocolInput::Observed {
+            leg: OrderLeg::Entry,
+            broker_id: "1001".into(),
+            broker_ticker: "AIRp_EQ".into(),
+            quantity: Decimal::from(2),
+            filled: Decimal::from(2),
+            status: OrderStatus::Filled,
+            holding_quantity: Decimal::from(2),
+            pending_present: false,
+            history_complete: true,
+            stop_price: None,
+        },
+        ProtocolInput::DispatchProtection,
+        ProtocolInput::Acknowledged {
+            leg: OrderLeg::Protection,
+            broker_id: "1002".into(),
+        },
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        state = state
+            .transition(format!("fixture_{i}"), input, now())
+            .unwrap()
+            .state;
+    }
+    let entry = json!({"id":1001,"ticker":"AIRp_EQ","strategy":"QUANTITY","type":"LIMIT","quantity":2,"filledQuantity":2,"side":"BUY","status":"FILLED","limitPrice":100,"timeInForce":"DAY","extendedHours":false});
+    let stop = json!({"id":1002,"ticker":"AIRp_EQ","strategy":"QUANTITY","type":"STOP","quantity":2,"filledQuantity":0,"side":"SELL","status":"NEW","stopPrice":98,"timeInForce":"DAY","extendedHours":false});
+    for case in [
+        "working",
+        "missing_history",
+        "wrong_stop",
+        "terminal_tif_omitted",
+        "pending_tif_omitted",
+        "missing_fill_time",
+        "wrong_confirmation",
+        "wrong_confirmation_tif",
+        "wrong_confirmation_holding",
+        "older_history",
+        "split_fills",
+        "incomplete_fill_total",
+        "duplicate_fill",
+        "conflicting_fill",
+        "missing_fill_id",
+    ] {
+        let mut observed_stop = stop.clone();
+        let mut observed_entry = entry.clone();
+        if case == "terminal_tif_omitted" {
+            observed_entry
+                .as_object_mut()
+                .unwrap()
+                .remove("timeInForce");
+        }
+        if case == "pending_tif_omitted" {
+            observed_stop.as_object_mut().unwrap().remove("timeInForce");
+        }
+        if case == "wrong_stop" {
+            observed_stop["stopPrice"] = json!(97);
+        }
+        let pending = if case == "missing_history" {
+            json!([])
+        } else {
+            json!([observed_stop])
+        };
+        let mut confirmed_stop = stop.clone();
+        if case == "wrong_confirmation" {
+            confirmed_stop["stopPrice"] = json!(97);
+        }
+        if case == "wrong_confirmation_tif" {
+            confirmed_stop
+                .as_object_mut()
+                .unwrap()
+                .remove("timeInForce");
+        }
+        let mut fill = json!({"id":7001,"quantity":2,"filledAt":if case == "missing_fill_time" { serde_json::Value::Null } else { json!(now()) }});
+        if matches!(
+            case,
+            "split_fills" | "incomplete_fill_total" | "duplicate_fill" | "conflicting_fill"
+        ) {
+            fill["quantity"] = json!(1);
+        }
+        if case == "missing_fill_id" {
+            fill.as_object_mut().unwrap().remove("id");
+        }
+        let mut items = vec![json!({"order":observed_entry,"fill":fill})];
+        if matches!(case, "split_fills" | "duplicate_fill" | "conflicting_fill") {
+            let mut another = items[0].clone();
+            if case == "split_fills" {
+                another["fill"]["id"] = json!(7002);
+            }
+            if case == "conflicting_fill" {
+                another["fill"]["quantity"] = json!(2);
+            }
+            items.push(another);
+        }
+        if case == "older_history" {
+            for id in 2000..2049 {
+                let mut old = entry.clone();
+                old["id"] = json!(id);
+                items.push(json!({"order":old,"fill":null}));
+            }
+        }
+        let next = if case == "older_history" {
+            json!("/api/v0/equity/history/orders?limit=50&ticker=AIRp_EQ&cursor=1234")
+        } else {
+            serde_json::Value::Null
+        };
+        let server = Server::new(vec![
+            ok(json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}})),
+            ok(
+                json!([{"instrument":{"ticker":"AIRp_EQ","currency":"EUR"},"quantity":2,"quantityAvailableForTrading":0}]),
+            ),
+            ok(pending),
+            ok(json!({"items":items,"nextPagePath":next})),
+            ok(confirmed_stop),
+            ok(
+                json!([{"instrument":{"ticker":"AIRp_EQ","currency":"EUR"},"quantity":if case == "wrong_confirmation_holding" {1} else {2},"quantityAvailableForTrading":0}]),
+            ),
+        ]);
+        let mut executor = server.euro_executor();
+        executor.reader.config.broker_account_id = 52211463;
+        let mut binding = euro_binding();
+        binding.broker_instrument_id = "AIRp_EQ".into();
+        binding.isin = "NL0000235190".into();
+        let mut port = eur_protocol::Trading212ProtocolBroker::new(executor, binding);
+        let result = port.observe(&state);
+        match case {
+            "working"
+            | "terminal_tif_omitted"
+            | "wrong_confirmation"
+            | "wrong_confirmation_tif"
+            | "wrong_confirmation_holding" => {
+                let v = result.unwrap();
+                assert!(v.history_complete);
+                assert_eq!(v.exact_orders.len(), 2);
+                assert_eq!(v.pending_order_ids, vec!["1002"]);
+                let confirmation = port.confirm_protection(&state);
+                if case.starts_with("wrong_confirmation") {
+                    assert!(confirmation.is_err());
+                } else {
+                    let confirmation = confirmation.unwrap().unwrap();
+                    assert_eq!(confirmation.order.broker_order_id, "1002");
+                    assert_eq!(confirmation.stop_price, Decimal::from(98));
+                }
+            }
+            "older_history" | "split_fills" => {
+                assert!(result.unwrap().history_complete);
+                assert_eq!(
+                    server.requests().len(),
+                    4,
+                    "unrelated old history must not be scanned"
+                );
+            }
+            "missing_history" | "incomplete_fill_total" | "duplicate_fill" => {
+                assert!(!result.unwrap().history_complete)
+            }
+            _ => assert!(result.is_err()),
+        }
+    }
+}
+
+#[test]
+fn eur_protocol_cancel_reuses_recent_broker_identity_without_summary_rate_limit() {
+    use trady_application::eur_protocol::driver::ProtocolBroker;
+    let server = Server::new(vec![
+        ok(json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}})),
+        ok(json!({})),
+    ]);
+    let mut executor = server.euro_executor();
+    executor.reader.config.broker_account_id = 52211463;
+    executor.information().spendable_cash().unwrap();
+    let mut port = eur_protocol::Trading212ProtocolBroker::new(executor, euro_binding());
+    let receipt = port
+        .cancel(&AccountId::new("paper_t212_test").unwrap(), "1002")
+        .unwrap();
+    assert_eq!(receipt.broker_order_id, "1002");
+    let requests = server.requests();
+    assert_eq!(requests.len(), 2);
+    assert!(
+        requests[1]
+            .line
+            .starts_with("DELETE /api/v0/equity/orders/1002 ")
+    );
+}
+
+#[test]
+fn protection_cancel_refreshes_near_expiry_catalog_before_any_delete() {
+    use trady_application::eur_protocol::{OrderLeg, ProtocolState, driver::ProtocolBroker};
+    for available in [true, false] {
+        let mut responses = vec![ok(
+            json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}}),
+        )];
+        responses.push(if available {
+            euro_metadata()
+        } else {
+            Reply::Json(503, "{}".into(), vec![])
+        });
+        if available {
+            responses.push(ok(json!({})));
+        }
+        let server = Server::new(responses);
+        let mut executor = server.euro_executor();
+        executor.reader.config.broker_account_id = 52211463;
+        executor.reader.metadata = Some((
+            std::time::Instant::now() - std::time::Duration::from_secs(599),
+            Default::default(),
+            vec![],
+        ));
+        let mut broker = eur_protocol::Trading212ProtocolBroker::new(executor, euro_binding());
+        let context = serde_json::from_value(json!({"runtime_mode":"DEMO","policy_revision":"eur_intraday_v1","intent_id":"catalog_headroom_fixture","account_id":"paper_t212_test","broker_account_id":52211463,
+            "instrument_id":"AIR_PA_EQ","broker_ticker":"demo_air_pa","isin":"FR0000120404","policy_hash":"a".repeat(64),"configuration_hash":"b".repeat(64),"evidence_ids":["synthetic_fixture_only"],
+            "quantity":"1","entry_limit":"100","initial_stop":"98","target":"103","created_at":now(),"flatten_at":now()+chrono::Duration::hours(1),"max_unprotected_seconds":10})).unwrap();
+        let state = ProtocolState::new(context).unwrap();
+        assert_eq!(
+            broker.prepare_cancel(&state, OrderLeg::Protection).is_ok(),
+            available
+        );
+        if available {
+            broker
+                .cancel(&AccountId::new("paper_t212_test").unwrap(), "1002")
+                .unwrap();
+        }
+        let requests = server.requests();
+        assert!(requests[1].line.contains("metadata/instruments"));
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|r| r.line.starts_with("DELETE "))
+                .count(),
+            usize::from(available)
+        );
+    }
+}
+
+#[test]
+fn eur_protocol_stop_uses_fresh_binding_and_rechecks_available_quantity_once() {
+    use trady_application::eur_protocol::driver::ProtocolBroker;
+    let mut request = euro_request();
+    request.side = Side::Sell;
+    request.kind = OrderKind::Stop {
+        price: Decimal::from(98),
+        time_in_force: TimeInForce::Day,
+    };
+    for age_seconds in [None, Some(0), Some(2)] {
+        let fresh = age_seconds == Some(0);
+        let mut responses = vec![ok(
+            json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}}),
+        )];
+        if !fresh {
+            responses.push(ok(json!([{"instrument":{"ticker":"demo_air_pa","currency":"EUR"},"quantity":1,"quantityAvailableForTrading":1}])));
+        }
+        responses.push(euro_metadata());
+        responses.push(ok(
+            serde_json::from_str(&euro_response_for(&request)).unwrap()
+        ));
+        let server = Server::new(responses);
+        let mut executor = server.euro_executor();
+        executor.reader.config.broker_account_id = 52211463;
+        executor.information().spendable_cash().unwrap();
+        let mut port = eur_protocol::Trading212ProtocolBroker::new(executor, euro_binding());
+        port.observed_sellable = age_seconds.map(|seconds| {
+            (
+                "demo_air_pa".into(),
+                Decimal::ONE,
+                now() - chrono::Duration::seconds(seconds),
+            )
+        });
+        port.submit(&request, now() + chrono::Duration::seconds(10))
+            .unwrap();
+        assert!(
+            port.observed_sellable.is_none(),
+            "one observation may authorize only one dispatch"
+        );
+        let requests = server.requests();
+        assert_eq!(requests.len(), if fresh { 3 } else { 4 });
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|r| r.line.contains("account/summary"))
+                .count(),
+            1
+        );
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|r| r.line.contains("GET /api/v0/equity/positions"))
+                .count(),
+            if fresh { 0 } else { 1 }
+        );
+        assert!(
+            requests
+                .last()
+                .unwrap()
+                .line
+                .starts_with("POST /api/v0/equity/orders/stop ")
+        );
+    }
+}
+
+#[test]
+fn expired_eur_binding_allows_only_recovery_market_sell() {
+    for (side, kind, accepted) in [
+        (
+            Side::Sell,
+            OrderKind::Market {
+                extended_hours: false,
+            },
+            true,
+        ),
+        (Side::Buy, limit(), false),
+        (
+            Side::Sell,
+            OrderKind::Stop {
+                price: Decimal::from(98),
+                time_in_force: TimeInForce::Day,
+            },
+            false,
+        ),
+    ] {
+        let mut binding = euro_binding();
+        binding.expires_at = Some(now() - chrono::Duration::seconds(1));
+        let mut request = euro_request();
+        request.side = side;
+        request.kind = kind;
+        let mut responses = vec![];
+        if accepted {
+            responses.extend([
+                summary(),
+                euro_metadata(),
+                ok(json!([{"instrument":{"ticker":"demo_air_pa","currency":"EUR"},"quantity":1,"quantityAvailableForTrading":1}])),
+                ok(serde_json::from_str(&euro_response_for(&request)).unwrap()),
+            ]);
+        }
+        let server = Server::new(responses);
+        let result = server.euro_executor().submit_eur_bound_before(
+            &request,
+            &binding,
+            Some(now() + chrono::Duration::seconds(10)),
+        );
+        assert_eq!(result.is_ok(), accepted);
+        assert_eq!(
+            server
+                .requests()
+                .iter()
+                .filter(|r| r.line.starts_with("POST "))
+                .count(),
+            usize::from(accepted)
+        );
+    }
+}
+
+#[test]
+fn eur_order_value_guard_keeps_the_quantity_step_separate() {
+    for (quantity, accepted) in [(Decimal::new(50, 4), false), (Decimal::new(51, 4), true)] {
+        let mut binding = euro_binding();
+        binding.quantity_step = Decimal::new(1, 4);
+        binding.minimum_quantity = binding.quantity_step;
+        binding.fractional_orders = true;
+        binding.value_rules = Some(trady_domain::eur::EurOrderValueRules {
+            minimum_trade_value: Decimal::ONE,
+            minimum_remaining_position_value: Decimal::ONE,
+            price_floor: Decimal::from(190),
+            price_ceiling: Decimal::from(210),
+        });
+        let mut request = euro_request();
+        request.quantity = quantity;
+        request.kind = OrderKind::Limit {
+            price: Decimal::new(19840, 2),
+            time_in_force: TimeInForce::Day,
+        };
+        let mut responses = vec![summary(), euro_metadata()];
+        if accepted {
+            responses.push(ok(
+                serde_json::from_str(&euro_response_for(&request)).unwrap()
+            ));
+        }
+        let server = Server::new(responses);
+        let result = server.euro_executor().submit_eur_bound_before(
+            &request,
+            &binding,
+            Some(now() + chrono::Duration::seconds(10)),
+        );
+        assert_eq!(result.is_ok(), accepted);
+        assert_eq!(
+            server
+                .requests()
+                .iter()
+                .filter(|r| r.line.starts_with("POST "))
+                .count(),
+            usize::from(accepted)
+        );
+    }
 }

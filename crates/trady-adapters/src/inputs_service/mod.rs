@@ -10,7 +10,7 @@ pub use calendar::{CalendarDocument, CalendarSession, ClosedDate};
 pub use http::{HttpServer, HttpServiceResponse};
 pub use store::ImportStore;
 
-use crate::autonomous::{AnalystPacket, CostsPacket, PredictionRequest, SessionPacket};
+use crate::input_documents::{AnalystPacket, CostsPacket, PredictionRequest, SessionPacket};
 use crate::screening::UniverseDocument;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

@@ -272,6 +272,14 @@ pub fn resolve_exit(
             price_source: DonchianExecutionPriceSource::HoldingBarOpen,
         }));
     }
+    if bar.open >= plan.target {
+        return Ok(Some(DonchianExitDecision {
+            holding_session,
+            executable_price: bar.open,
+            reason: DonchianExitReason::Target,
+            price_source: DonchianExecutionPriceSource::HoldingBarOpen,
+        }));
+    }
     if bar.low <= plan.stop && bar.high >= plan.target {
         return Ok(Some(DonchianExitDecision {
             holding_session,

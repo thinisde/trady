@@ -1,0 +1,35 @@
+[Unit]
+Description=Trady EUR SHADOW provider capture (analyst role)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=trady-analyst
+Group=trady-analyst
+ExecStart=/opt/trady/bin/trady eur capture --config /etc/trady/runtime/eur-shadow.json
+Environment=TRADY_CREDENTIALS_FILE=%d/credentials.json
+LoadCredential=credentials.json:/etc/trady/secrets/analyst.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/opt/trady /etc/trady/runtime
+StateDirectory=trady-analyst
+UMask=0077
+MemoryMax=1G
+TasksMax=48
+TimeoutStopSec=15
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

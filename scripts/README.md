@@ -38,13 +38,51 @@ operational PostgreSQL credential-rotation utility.
 
 ## Interface
 
+- [run-eur-demo-capability.py](./run-eur-demo-capability.py): explicitly
+  authorized, bounded DEMO experiments using the durable Rust driver. A second
+  process recovers protection and exits; failures invoke exact-ID cleanup.
+  This command supplies no release authority and is excluded from ordinary tests.
+- [cleanup-eur-demo-probe.py](./cleanup-eur-demo-probe.py): cancels only retained
+  acknowledged probe IDs, requires terminal history, then liquidates only the
+  actual scoped holding. Unresolved mutations and unrelated activity stop it.
+- [watch-ibkr-eur-evidence.py](./watch-ibkr-eur-evidence.py): bounded read-only
+  exact-ISIN SMART capture using the approved outgoing-message allowlist, synced
+  provider-timed books, market-data types and separate receipt times.
+- [capture-ibkr-current-bars.py](./capture-ibkr-current-bars.py): read-only
+  two-day regular-session SMART TRADES capture with exact contract discovery,
+  raw candles, native coverage and separate receipt clocks. Its outgoing
+  allowlist contains no order API; current candles never replace bid/ask books.
+- [analyze-eur-demo-evidence.py](./analyze-eur-demo-evidence.py): offline fill,
+  preceding-quote and wallet arithmetic. Conflicting fills, absent fees, delayed
+  data and post-fill receipts cannot become successful observations. It creates
+  pending review artifacts, never acceptance or owner approval.
+
+- [probe-trading212-eur-rules.py](./probe-trading212-eur-rules.py): bounded,
+  write-before-send DEMO limit validation for exact Airbus/ASML identities.
+  Accepted probes are cancelled by exact ID and checked against terminal history.
+  `--increments-only` and `--precision-boundary-only` narrow follow-up probes.
+  No mutation is retried. Request acceptance is distinct from fill capability.
+- [probe-eur-fractional-residual.py](./probe-eur-fractional-residual.py): bounded,
+  one-time authorized DEMO probes for value-dependent entry minimums, quantity
+  precision, real-price request validation, fractional native stops and residual
+  liquidation. Records before sending, never retries mutations and cleans up
+  exact acknowledged IDs. Manually reduced holdings are not native partial fills.
+- [renew-eur-shadow-identity.py](./renew-eur-shadow-identity.py): revalidate
+  unchanged broker/ISIN/schedule and Yahoo listing identities with fresh reads,
+  producing a separate 24-hour SHADOW review without editing the sealed original.
+- [verify-eur-release.py](./verify-eur-release.py): assemble a content-addressed
+  candidate, verify artifact hashes and evidence coverage, and write an activation
+  receipt only with root-owned private approval bound to the exact manifest hash.
+  Missing real broker/paper evidence blocks activation. See
+  [EUR execution and release](../docs/eur-execution-and-release.md).
+
 - [verify-assets.py](./verify-assets.py): `verify_schemas`, `verify_catalog` and
   `verify_markdown`, `heading_anchors`; compares canonical JSON copies, checks the
   52 skill records including 11 sector/25 group mappings, and verifies local Markdown
   links, heading anchors and fences.
 - [test-postgres.py](./test-postgres.py): `main`; provisions a new disposable
   PostgreSQL 18.3 container and runs ignored storage integration tests plus the
-  CLI `opencode`, `autonomous_cli` and `telegram_jobs_cli` integration targets
+  CLI `opencode`, `telegram_jobs_cli` and EUR workflow integration targets
   and service probes/demo.
   The latter verifies the actual analyst child with restricted PostgreSQL access,
   no inherited credentials and absent formula authority; it performs no broker calls.
@@ -205,11 +243,19 @@ its disposable-database environment:
 
 - `cargo test --locked -p trady-storage --tests -- --ignored --nocapture`
 - `cargo test --locked -p trady-cli --test opencode -- --ignored --nocapture`
-- `cargo test --locked -p trady-cli --test autonomous_cli -- --ignored --nocapture`
 - `cargo test --locked -p trady-cli --test telegram_jobs_cli -- --ignored --nocapture`
+- `cargo test --locked -p trady-cli --bin trady durable_intraday_cursor_resumes_and_expires_without_repeating_model_calls -- --ignored --nocapture`
+- `cargo test --locked -p trady-cli --bin trady month_record_window_and_unsubmitted_restart_are_fenced -- --ignored --nocapture`
 - `cargo run --locked --quiet --bin trady -- analyst --once`
 - `cargo run --locked --quiet --bin trady -- executor --once`
 - `cargo run --locked --quiet --bin trady -- gateway --once`
 - `cargo run --locked --quiet --bin trady -- demo-postgres`
 - `cargo run --locked --quiet --bin trady -- news collect --once`
 - `cargo run --locked --quiet --bin trady -- news read --limit 5 --for-model`
+
+EUR continuation verification also binds a required forward EUR cost model,
+per-instrument quote ceilings and complete scoped native protocol chains.
+`analyze-eur-demo-evidence.py --final-snapshot FILE` retains a new final broker
+snapshot without replacing older evidence. Paper release checks invoke the
+bundled binary with `replay paper-day-check`, which performs the normal source
+and ledger checks without credentials or database persistence.

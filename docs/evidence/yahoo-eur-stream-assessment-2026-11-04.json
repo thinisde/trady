@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "assessment_id": "yahoo_eur_stream_20261104",
+  "review_status": "SELF_REVIEW_NOT_INDEPENDENT_RELEASE_APPROVAL",
+  "purpose": "Historical SHADOW provider diagnostic; never entry authority",
+  "library": {"name": "yfinance-rs", "version": "0.9.1", "feature": "stream", "method": "Websocket"},
+  "documentation": [
+    "https://docs.rs/yfinance-rs/0.9.1/yfinance_rs/stream/struct.StreamBuilder.html#method.start",
+    "https://github.com/gramistella/yfinance-rs/blob/main/src/stream/mod.rs"
+  ],
+  "sdk_capture": {
+    "started_at": "2026-11-04T14:58:01.250129836Z",
+    "received_at": "2026-11-04T14:58:14.547880281Z",
+    "status": "LAST_TRADE_UPDATES",
+    "update_count": 25,
+    "bid_ask_exposed_in_quote_update": false,
+    "artifact": "var/eur-first-run-checks/yahoo-sdk-stream-book.json",
+    "sha256": "a7e0995e7b9ee9d43f649e03c5b318a05021cc85df1d601340fe2d0e390edc70"
+  },
+  "independent_wire_capture": {
+    "meaning_of_independent": "Separate transport and decoding from the SDK; not an independent reviewer",
+    "started_at": "2026-11-04T14:55:07.487522766Z",
+    "received_at": "2026-11-04T14:55:23.754767554Z",
+    "endpoint": "wss://streamer.finance.yahoo.com/?version=2",
+    "origin": "https://finance.yahoo.com",
+    "http_status": 101,
+    "frame_count": 32,
+    "browser_cookies_required": false,
+    "artifacts": [
+      {"path": "var/eur-first-run-checks/yahoo-browser-origin-wire.json", "sha256": "cb0de4e76d18b35480fb9586d08458e783125d2441d9f5c2eeeee41a4d95afea"},
+      {"path": "var/eur-first-run-checks/yahoo-browser-origin-decoded.json", "sha256": "49e477d92f1c09b5303ad4f2b961d6e2e36faef700836815d44d130aa79d1164"}
+    ],
+    "observations": [
+      {"symbol": "ASML.AS", "venue_code": "AMS", "broker_ticker": "ASMLa_EQ", "frame_count": 13, "last_event_age_seconds": 901.755, "bid_field_present": false, "ask_field_present": false},
+      {"symbol": "AIR.PA", "venue_code": "PAR", "broker_ticker": "AIRp_EQ", "frame_count": 6, "last_event_age_seconds": 902.577, "bid_field_present": false, "ask_field_present": false},
+      {"symbol": "ASML", "venue_code": "NMS", "purpose": "US control only; excluded from EUR authority", "frame_count": 13, "last_event_age_seconds": 2.086, "bid_field_present": false, "ask_field_present": false}
+    ]
+  },
+  "interpretation": {
+    "websocket_connectivity": "SUPPORTED_AND_OBSERVED",
+    "eur_last_trade_research": "SUPPORTED_BUT_OBSERVED_DELAYED",
+    "observed_eur_executable_book": "UNSUPPORTED_BY_THIS_CAPTURE",
+    "broker_venue_compatibility": "UNACCEPTED",
+    "freshness_target_seconds": 10,
+    "absolute_service_bound_seconds": 60,
+    "transport_change_removes_provider_delay": false,
+    "absence_is_limited_to_observed_symbols_and_capture_window": true,
+    "regular_market_time_is_last_trade_time_not_proven_book_time": true
+  },
+  "broker_mutations": 0,
+  "entry_authorized": false,
+  "live_enabled": false
+}

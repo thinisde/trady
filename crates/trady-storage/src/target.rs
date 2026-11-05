@@ -7,6 +7,7 @@
 use chrono::{DateTime, Utc};
 use postgres::Client;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections::BTreeMap;
 
 use trady_application::{
@@ -53,7 +54,11 @@ impl TargetRecord {
                 value.decided_at.timestamp_millis()
             ),
             Self::OrderIntent(value) => value.intent_id.clone(),
-            Self::OrderAcknowledgement(value) => format!("ack_{}", value.order.broker_order_id),
+            Self::OrderAcknowledgement(value) => format!(
+                "ack_{}_{}",
+                value.order.broker_order_id,
+                value.acknowledged_at.timestamp_micros()
+            ),
             Self::Telegram(value) => value.event_id.clone(),
             Self::DailyReport(value) => value.report_id.clone(),
             Self::WeeklyReport(value) => value.report_id.clone(),
@@ -279,7 +284,7 @@ pub struct PgTargetStore {
     client: Client,
     owner_id: String,
     account_id: String,
-    pending_intents: BTreeMap<String, OrderIntentRecord>,
+    fence: Option<(String, i64)>,
 }
 
 impl PgTargetStore {
@@ -296,27 +301,195 @@ impl PgTargetStore {
             client,
             owner_id,
             account_id,
-            pending_intents: BTreeMap::new(),
+            fence: None,
         })
     }
 
     pub fn append_record(&mut self, record: &TargetRecord, now: DateTime<Utc>) -> Result<bool> {
         record.validate(now)?;
         let document = encode_record(record)?;
+        self.append_document(record.kind(), &record.id(), &document)
+    }
+
+    /// Persist a bounded, scoped provider/coordination document through the
+    /// same server-enforced hash and fence checks as typed records.
+    pub fn append_document(
+        &mut self,
+        kind: &str,
+        id: &str,
+        document: &serde_json::Value,
+    ) -> Result<bool> {
         let canonical = serde_json::to_string(&document)
             .map_err(|_| Error("target record encoding failed".into()))?;
         let hash = content_hash(&canonical);
+        let (worker, generation) = self.fence.clone().unwrap_or_default();
         self.client
             .query_one(
-                "SELECT target.append_record($1,$2,$3,$4,$5,$6)",
+                "SELECT target.append_scoped_record($1,$2,$3,$4,$5,$6,$7,$8,$9)",
                 &[
-                    &record.kind(),
-                    &record.id(),
+                    &kind,
+                    &id,
                     &self.owner_id,
                     &self.account_id,
                     &document,
+                    &canonical,
                     &hash,
+                    &worker,
+                    &generation,
                 ],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+
+    pub fn acquire_executor_lease(&mut self, worker_id: &str, ttl_seconds: i32) -> Result<i64> {
+        require(
+            valid_id(worker_id) && (1..=3600).contains(&ttl_seconds),
+            "invalid EUR executor lease request",
+        )?;
+        let generation = self
+            .client
+            .query_one(
+                "SELECT target.acquire_executor_lease($1,$2,$3)",
+                &[&self.account_id, &worker_id, &ttl_seconds],
+            )
+            .map_err(crate::db)?
+            .get(0);
+        self.fence = Some((worker_id.to_owned(), generation));
+        Ok(generation)
+    }
+
+    pub fn assert_executor_lease(&mut self, worker_id: &str, generation: i64) -> Result<()> {
+        require(
+            valid_id(worker_id) && generation > 0,
+            "invalid EUR executor fence",
+        )?;
+        self.client
+            .query_one(
+                "SELECT target.assert_executor_lease($1,$2,$3)",
+                &[&self.account_id, &worker_id, &generation],
+            )
+            .map_err(crate::db)
+            .map(|_| ())
+    }
+
+    pub fn renew_executor_lease(&mut self, ttl_seconds: i32) -> Result<()> {
+        let (worker, generation) = self
+            .fence
+            .as_ref()
+            .ok_or_else(|| Error("EUR executor has no fence".into()))?;
+        self.client
+            .query_one(
+                "SELECT target.renew_executor_lease($1,$2,$3,$4)",
+                &[&self.account_id, &worker, &generation, &ttl_seconds],
+            )
+            .map_err(crate::db)?;
+        Ok(())
+    }
+
+    pub fn release_executor_lease(&mut self) -> Result<()> {
+        if let Some((worker, generation)) = &self.fence {
+            self.client
+                .query_one(
+                    "SELECT target.release_executor_lease($1,$2,$3)",
+                    &[&self.account_id, &worker, &generation],
+                )
+                .map_err(crate::db)?;
+            self.fence = None;
+        }
+        Ok(())
+    }
+
+    pub fn read_document(&mut self, kind: &str, id: &str) -> Result<Option<serde_json::Value>> {
+        self.client
+            .query_one(
+                "SELECT target.read_record($1,$2,$3,$4)",
+                &[&kind, &id, &self.owner_id, &self.account_id],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+
+    pub fn daily_entry_count(&mut self, day: chrono::NaiveDate) -> Result<i64> {
+        self.client
+            .query_one(
+                "SELECT target.daily_entry_count($1,$2,$3)",
+                &[&self.owner_id, &self.account_id, &day],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+    pub fn list_documents(
+        &mut self,
+        kind: &str,
+        since: DateTime<Utc>,
+        limit: i32,
+    ) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT target.list_records($1,$2,$3,$4,$5)",
+                &[&kind, &self.owner_id, &self.account_id, &since, &limit],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+    pub fn list_record_window(
+        &mut self,
+        kind: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        after: Option<DateTime<Utc>>,
+        after_id: Option<&str>,
+    ) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT target.list_record_window($1,$2,$3,$4,$5,$6,$7,64)",
+                &[
+                    &kind,
+                    &self.owner_id,
+                    &self.account_id,
+                    &start,
+                    &end,
+                    &after,
+                    &after_id,
+                ],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+    pub fn read_review_artifact(&mut self, id: &str) -> Result<Option<serde_json::Value>> {
+        self.client
+            .query_one(
+                "SELECT target.read_review_artifact($1,$2,$3)",
+                &[&self.owner_id, &self.account_id, &id],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+    pub fn append_review_artifact(&mut self, id: &str, value: &serde_json::Value) -> Result<bool> {
+        let canonical = serde_json::to_string(value)
+            .map_err(|_| Error("review bundle encoding failed".into()))?;
+        self.client
+            .query_one(
+                "SELECT target.append_review_artifact($1,$2,$3,$4,$5,$6)",
+                &[
+                    &self.owner_id,
+                    &self.account_id,
+                    &id,
+                    &value,
+                    &canonical,
+                    &content_hash(&canonical),
+                ],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+
+    pub fn telegram_delivery_summary(&mut self, deployment_id: &str) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT target.telegram_delivery_summary($1,$2,$3)",
+                &[&deployment_id, &self.owner_id, &self.account_id],
             )
             .map_err(crate::db)
             .map(|row| row.get(0))
@@ -324,6 +497,194 @@ impl PgTargetStore {
 
     pub fn append_telegram(&mut self, event: &LifecycleEvent, now: DateTime<Utc>) -> Result<bool> {
         self.append_record(&TargetRecord::Telegram(event.clone()), now)
+    }
+
+    /// Queue a delivery through the PostgreSQL outbox. The SQL function uses
+    /// `event_id + notification_kind` as the idempotency key and rejects a
+    /// changed payload under an existing key.
+    pub fn enqueue_telegram_delivery(
+        &mut self,
+        deployment_id: &str,
+        event: &LifecycleEvent,
+        notification_kind: &str,
+        chat_id: i64,
+        now: DateTime<Utc>,
+    ) -> Result<bool> {
+        event.validate(now)?;
+        require(
+            event.account_id.as_str() == self.account_id,
+            "EUR lifecycle event belongs to another account",
+        )?;
+        require(
+            !notification_kind.is_empty()
+                && notification_kind.len() <= 64
+                && notification_kind
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || b"_.:-".contains(&byte))
+                && chat_id > 0,
+            "invalid Telegram outbox scope",
+        )?;
+        let payload = json!({
+            "event_id": event.event_id,
+            "kind": event.kind,
+            "account_id": event.account_id,
+            "session_id": event.session_id,
+            "instrument_id": event.instrument_id,
+            "evidence_ids": event.evidence_ids,
+            "text": event.render(),
+            "occurred_at": event.occurred_at,
+        });
+        let canonical = serde_json::to_string(&payload)
+            .map_err(|_| Error("Telegram outbox payload encoding failed".into()))?;
+        let hash = content_hash(&canonical);
+        let (worker, generation) = self
+            .fence
+            .as_ref()
+            .ok_or_else(|| Error("EUR lifecycle sink requires the executor fence".into()))?;
+        self.client
+            .query_one(
+                "SELECT target.enqueue_telegram($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+                &[
+                    &deployment_id,
+                    &event.event_id,
+                    &notification_kind,
+                    &chat_id,
+                    &self.owner_id,
+                    &self.account_id,
+                    &payload,
+                    &canonical,
+                    &hash,
+                    &worker,
+                    &generation,
+                ],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
+
+    /// Commit the lifecycle journal record and every configured delivery in one
+    /// transaction. A restart cannot leave a committed event without its outbox.
+    pub fn publish_lifecycle(
+        &mut self,
+        deployment_id: &str,
+        event: &LifecycleEvent,
+        chats: &[i64],
+        now: DateTime<Utc>,
+    ) -> Result<()> {
+        require(
+            !chats.is_empty() && chats.len() <= 32,
+            "EUR lifecycle delivery chats are missing",
+        )?;
+        let kind = serde_json::to_value(event.kind)
+            .map_err(|_| Error("EUR lifecycle kind encoding failed".into()))?;
+        let kind = kind
+            .as_str()
+            .ok_or_else(|| Error("invalid EUR lifecycle kind".into()))?;
+        self.client.batch_execute("BEGIN").map_err(crate::db)?;
+        let result = (|| {
+            self.append_telegram(event, now)?;
+            for chat in chats {
+                self.enqueue_telegram_delivery(deployment_id, event, kind, *chat, now)?;
+            }
+            Ok(())
+        })();
+        match result {
+            Ok(()) => self.client.batch_execute("COMMIT").map_err(crate::db),
+            Err(error) => {
+                let _ = self.client.batch_execute("ROLLBACK");
+                Err(error)
+            }
+        }
+    }
+}
+
+impl trady_application::eur_protocol::ProtocolJournal for PgTargetStore {
+    fn record_protection_confirmation(
+        &mut self,
+        context: &trady_application::eur_protocol::ProtocolContext,
+        view: &trady_application::eur_protocol::driver::ProtectionConfirmation,
+    ) -> Result<()> {
+        require(
+            context.account_id == self.account_id,
+            "protection confirmation account differs",
+        )?;
+        self.append_document(
+            "protocol_protection_confirmation",
+            &trady_application::harness::new_id("stop_confirmation"),
+            &serde_json::json!({"intent_id":context.intent_id,"confirmation":view}),
+        )?;
+        Ok(())
+    }
+    fn record_observation(
+        &mut self,
+        context: &trady_application::eur_protocol::ProtocolContext,
+        view: &trady_application::eur_protocol::driver::BrokerObservation,
+    ) -> Result<()> {
+        require(
+            context.account_id == self.account_id,
+            "broker observation account differs",
+        )?;
+        self.append_document(
+            "protocol_broker_observation",
+            &trady_application::harness::new_id("broker_view"),
+            &serde_json::json!({"intent_id":context.intent_id,"observation":view}),
+        )?;
+        Ok(())
+    }
+    fn load(
+        &mut self,
+        intent_id: &str,
+    ) -> Result<Vec<trady_application::eur_protocol::ProtocolRecord>> {
+        let value: serde_json::Value = self
+            .client
+            .query_one(
+                "SELECT target.protocol_history($1,$2,$3)",
+                &[&self.owner_id, &self.account_id, &intent_id],
+            )
+            .map_err(crate::db)?
+            .get(0);
+        serde_json::from_value(value)
+            .map_err(|_| Error("invalid durable EUR protocol history".into()))
+    }
+    fn append(
+        &mut self,
+        expected_revision: u64,
+        record: &trady_application::eur_protocol::ProtocolRecord,
+    ) -> Result<()> {
+        require(
+            record.state.context.account_id == self.account_id,
+            "protocol account differs from journal scope",
+        )?;
+        let (worker, generation) = self
+            .fence
+            .clone()
+            .ok_or_else(|| Error("protocol dispatch requires an executor fence".into()))?;
+        let value = serde_json::to_value(record)
+            .map_err(|_| Error("protocol record encoding failed".into()))?;
+        let canonical =
+            serde_json::to_string(record).map_err(|_| Error("protocol encoding failed".into()))?;
+        let state = serde_json::to_string(&record.state)
+            .map_err(|_| Error("protocol state encoding failed".into()))?;
+        let expected = i64::try_from(expected_revision)
+            .map_err(|_| Error("protocol revision overflow".into()))?;
+        self.client
+            .query_one(
+                "SELECT target.append_protocol_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+                &[
+                    &self.owner_id,
+                    &self.account_id,
+                    &record.state.context.intent_id,
+                    &expected,
+                    &value,
+                    &canonical,
+                    &content_hash(&canonical),
+                    &state,
+                    &worker,
+                    &generation,
+                ],
+            )
+            .map_err(crate::db)?;
+        Ok(())
     }
 }
 
@@ -355,8 +716,6 @@ impl EurExecutionJournal for PgTargetStore {
             broker_order: None,
             recorded_at: at,
         };
-        self.pending_intents
-            .insert(record.intent_id.clone(), record.clone());
         self.append_record(&TargetRecord::OrderIntent(record), at)
             .map(|_| ())
     }
@@ -367,10 +726,20 @@ impl EurExecutionJournal for PgTargetStore {
             .as_ref()
             .map(|intent| intent.to_string())
             .ok_or_else(|| Error("broker order lacks target intent identity".into()))?;
-        let intent = self
-            .pending_intents
-            .get(&intent_id)
-            .ok_or_else(|| Error("broker order lacks a reserved target intent".into()))?;
+        let record: TargetRecord =
+            serde_json::from_value(self.read_document("order_intent", &intent_id)?.ok_or_else(
+                || Error("broker order lacks a durable reserved target intent".into()),
+            )?)
+            .map_err(|_| Error("invalid stored EUR order intent".into()))?;
+        let TargetRecord::OrderIntent(intent) = record else {
+            return Err(Error("invalid stored EUR order intent kind".into()));
+        };
+        require(
+            order.instrument_id == intent.request.instrument_id
+                && order.quantity == intent.request.quantity
+                && order.side == intent.request.side,
+            "EUR broker observation differs from the durable intent",
+        )?;
         let status = match order.status {
             trady_domain::OrderStatus::Filled => "FILLED",
             trady_domain::OrderStatus::Rejected => "REJECTED",
@@ -399,6 +768,89 @@ impl EurExecutionJournal for PgTargetStore {
 impl EurLifecycleSink for PgTargetStore {
     fn emit(&mut self, event: &LifecycleEvent) -> Result<()> {
         self.append_telegram(event, event.occurred_at).map(|_| ())
+    }
+}
+
+/// Gateway-only delivery claims survive process death. A claim whose send was
+/// interrupted remains SENDING/UNKNOWN and needs operator review before retry.
+pub struct PgTargetOutbox {
+    client: Client,
+    deployment_id: String,
+    allowed_chats: Vec<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TargetDelivery {
+    pub event_id: String,
+    pub notification_kind: String,
+    pub chat_id: i64,
+    pub payload: serde_json::Value,
+    pub payload_hash: String,
+    #[serde(skip)]
+    token: String,
+}
+
+impl PgTargetOutbox {
+    pub fn connect(dsn: &str, deployment_id: String, allowed_chats: Vec<i64>) -> Result<Self> {
+        require(
+            valid_id(&deployment_id)
+                && !allowed_chats.is_empty()
+                && allowed_chats.len() <= 32
+                && allowed_chats.iter().all(|id| *id > 0),
+            "invalid EUR gateway delivery scope",
+        )?;
+        let mut client = crate::connect_local(dsn)?;
+        crate::verify_role(&mut client, "trady_gateway")?;
+        Ok(Self {
+            client,
+            deployment_id,
+            allowed_chats,
+        })
+    }
+
+    pub fn claim(&mut self) -> Result<Option<TargetDelivery>> {
+        let token = trady_application::harness::new_id("delivery");
+        let value: Option<serde_json::Value> = self
+            .client
+            .query_one(
+                "SELECT target.claim_telegram($1,$2,$3)",
+                &[&self.deployment_id, &self.allowed_chats, &token],
+            )
+            .map_err(crate::db)?
+            .get(0);
+        value
+            .map(|value| {
+                let mut delivery: TargetDelivery = serde_json::from_value(value)
+                    .map_err(|_| Error("invalid persisted EUR delivery".into()))?;
+                let canonical = serde_json::to_string(&delivery.payload)
+                    .map_err(|_| Error("invalid persisted EUR delivery encoding".into()))?;
+                require(
+                    self.allowed_chats.contains(&delivery.chat_id)
+                        && delivery.payload_hash == content_hash(&canonical),
+                    "EUR delivery hash or chat scope differs",
+                )?;
+                delivery.token = token;
+                Ok(delivery)
+            })
+            .transpose()
+    }
+
+    pub fn finish(&mut self, delivery: &TargetDelivery, sent: bool) -> Result<()> {
+        self.client
+            .query_one(
+                "SELECT target.finish_telegram($1,$2,$3,$4,$5,$6)",
+                &[
+                    &self.deployment_id,
+                    &delivery.event_id,
+                    &delivery.notification_kind,
+                    &delivery.chat_id,
+                    &delivery.token,
+                    &sent,
+                ],
+            )
+            .map_err(crate::db)?;
+        Ok(())
     }
 }
 

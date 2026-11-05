@@ -1,0 +1,18 @@
+[Unit]
+Description=Private backup of the persistent Trady demo database
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/python3 /opt/trady/scripts/backup-eur-postgres.py
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+StateDirectory=trady-eur-backups
+StateDirectoryMode=0700
+ReadWritePaths=/var/lib/trady-eur-backups
+UMask=0077
+TimeoutStartSec=5min

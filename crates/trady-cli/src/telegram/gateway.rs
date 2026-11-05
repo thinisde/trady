@@ -253,10 +253,15 @@ impl Gateway {
         stopped: &AtomicBool,
     ) -> std::result::Result<u64, StepError> {
         let mut sent = 0;
-        for delivery in self.repository.pending_deliveries(self.config.bot_id, 20)? {
+        use trady_storage::research_jobs::GatewayDeliveryOutcome;
+        for _ in 0..20 {
             if stopped.load(std::sync::atomic::Ordering::Relaxed) {
                 break;
             }
+            let Some(claim) = self.repository.claim_delivery(self.config.bot_id)? else {
+                break;
+            };
+            let delivery = &claim.delivery;
             let eligible = access.allowed_user_ids.contains(&delivery.owner_user_id)
                 && access.allowed_chat_ids.contains(&delivery.chat_id)
                 && self
@@ -269,11 +274,21 @@ impl Gateway {
                         && p.telegram_user_id == delivery.owner_user_id
                 });
             if eligible {
-                api.send_message(delivery.chat_id, &delivery.text)?;
+                if let Err(error) = api.send_message(delivery.chat_id, &delivery.text) {
+                    self.repository
+                        .finish_delivery(&claim, GatewayDeliveryOutcome::Unknown)?;
+                    return Err(error.into());
+                }
                 sent += 1;
             }
-            self.repository
-                .acknowledge_delivery(self.config.bot_id, &delivery.id)?;
+            self.repository.finish_delivery(
+                &claim,
+                if eligible {
+                    GatewayDeliveryOutcome::Sent
+                } else {
+                    GatewayDeliveryOutcome::Suppressed
+                },
+            )?;
         }
         Ok(sent)
     }
