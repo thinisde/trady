@@ -88,6 +88,42 @@ fn flipping_enabled_and_demo_never_authorizes_an_order_or_reports_a_cycle() {
             .success()
     );
 }
+
+#[test]
+fn eur_source_policy_rejects_yahoo_quote_fallback_before_credentials() {
+    let scratch = Scratch::new();
+    let path = scratch.0.join("shadow.json");
+    let mut config: Value =
+        serde_json::from_str(include_str!("../../../config/eur-shadow.example.json")).unwrap();
+    config["enabled"] = json!(true);
+    config["shadow"]["ibkr_config"] = Value::Null;
+    fs::write(&path, config.to_string()).unwrap();
+    let output = run(&["eur", "daily", "--config", path.to_str().unwrap(), "--once"]);
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("IBKR SMART Live configuration is required")
+    );
+}
+
+#[test]
+fn protocol_driver_rejects_missing_release_before_any_provider_operation() {
+    let output = run(&[
+        "eur",
+        "protocol-drive",
+        "--config",
+        "config/eur-demo.example.json",
+        "--bundle",
+        "/missing-release-bundle",
+        "--owner-approval",
+        "/missing-approval",
+        "--intent",
+        "rejected_intent",
+        "--once",
+    ]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).is_empty());
+}
 #[test]
 fn input_integrity_check_is_offline_detects_tampering_and_does_not_certify_a_paper_day() {
     let scratch = Scratch::new();

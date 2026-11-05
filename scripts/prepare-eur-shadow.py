@@ -16,6 +16,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_FILES = [
+    "config/ibkr-smart.eur-shadow.example.json",
     "config/yfinance.eur-shadow.reviewed.json", "config/research.eur-shadow.metadata.json",
     "config/trading212.eur-demo.example.json", "config/opencode/llm.json",
     "docs/evidence/eur-shadow-review-2026-11-04/crosswalk.json",
@@ -81,6 +82,7 @@ def main():
     for name in ("yfinance_config", "research_config", "trading212_config", "opencode_config"):
         config[name] = str(Path("/opt/trady") / config[name])
     config["shadow"]["crosswalk_config"] = str(Path("/opt/trady") / config["shadow"]["crosswalk_config"])
+    config["shadow"]["ibkr_config"] = str(Path("/opt/trady") / config["shadow"]["ibkr_config"])
     Path("/etc/trady/secrets").mkdir(parents=True, exist_ok=True, mode=0o700)
     for role, values in scopes.items():
         write_new(Path("/etc/trady/secrets") / (role + ".json"), {"config_version": 1, "credentials": values}, 0o600)

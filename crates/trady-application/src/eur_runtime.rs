@@ -83,6 +83,8 @@ pub struct EurRuntimeConfig {
     pub opencode_config: Option<String>,
     #[serde(default)]
     pub shadow: Option<crate::eur_shadow::ShadowSettings>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operation_config: Option<String>,
     #[serde(default)]
     pub notes: Vec<String>,
 }
@@ -194,9 +196,9 @@ impl EurRuntimeConfig {
     }
 
     pub fn permits_broker_mutation(&self) -> bool {
-        // Neither native attached protection nor an independently accepted
-        // sequential protocol is implemented by this target executor. Mode
-        // selection and metadata capability flags cannot enable that path.
+        // Configuration alone never proves release, owner or sequential-stop
+        // acceptance. The explicit protocol driver verifies those separately;
+        // mode selection and metadata flags cannot enable it.
         false
     }
 
@@ -259,6 +261,7 @@ pub enum ReadinessBlocker {
     SnapshotUnavailable,
     QuantityPrecision,
     PricePrecision,
+    OrderValueOrPriceRange,
     FractionalUnsupported,
     BuyingPower,
     SpreadTooWide,
@@ -398,6 +401,17 @@ pub fn evaluate_order_readiness(
     {
         blockers.push(ReadinessBlocker::QuantityPrecision);
     }
+    if binding
+        .entry_minimum_quantity(plan.entry_price)
+        .map_or(true, |minimum| plan.quantity < minimum)
+        || binding.value_rules.as_ref().is_some_and(|rules| {
+            [plan.entry_price, plan.stop_price]
+                .iter()
+                .any(|price| *price < rules.price_floor || *price > rules.price_ceiling)
+        })
+    {
+        blockers.push(ReadinessBlocker::OrderValueOrPriceRange);
+    }
     if plan.quantity.fract() != rust_decimal::Decimal::ZERO
         && (!binding.fractional_orders || !capabilities.fractional_orders.usable(now))
     {
@@ -456,7 +470,9 @@ pub fn evaluate_order_readiness(
     } else {
         if session.exchange_mic != binding.exchange_mic
             || session.timezone != binding.session_timezone
-            || session.session_id != selection.session_id
+            || selection.started_at < session.opens_at
+            || selection.completed_at > now
+            || plan.created_at < selection.completed_at
         {
             blockers.push(ReadinessBlocker::SessionMismatch);
         }
@@ -607,7 +623,7 @@ pub fn analyst_select_candidate<A: EurResearchAnalyst>(
         "EUR analyst selection requires deterministic eligibility survivors",
     )?;
     let response = analyst.select(request)?;
-    response.validate(request, now)?;
+    response.validate(request, Utc::now().max(now))?;
     response.into_selection_run(request.run.clone(), fallback_attempts)
 }
 
@@ -933,6 +949,7 @@ mod tests {
             trading212_config: Some("config/trading212.demo.example.json".into()),
             opencode_config: Some("config/opencode/llm.json".into()),
             shadow: None,
+            operation_config: None,
             notes: vec![],
         }
     }
@@ -1152,6 +1169,49 @@ mod tests {
         ] {
             assert!(blockers.contains(&reason), "{reason:?}: {blockers:?}");
         }
+        let mut boundary = snapshot.clone();
+        boundary.session.session_id = "XPAR_physical_session".into();
+        assert!(
+            matches!(boundary.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+            if !blockers.contains(&ReadinessBlocker::SessionMismatch))
+        );
+        for case in ["prior_session", "future_selection", "plan_before_selection"] {
+            let mut invalid = boundary.clone();
+            match case {
+                "prior_session" => {
+                    invalid.selection.started_at = invalid.session.opens_at - Duration::seconds(1)
+                }
+                "future_selection" => invalid.selection.completed_at = now() + Duration::seconds(1),
+                _ => {
+                    invalid.plan.created_at = invalid.selection.completed_at - Duration::seconds(1)
+                }
+            }
+            assert!(
+                matches!(invalid.evaluate(&config,now()).unwrap(),OrderReadiness::Blocked{blockers}
+                if blockers.contains(&ReadinessBlocker::SessionMismatch)),
+                "{case}"
+            );
+        }
+        boundary.binding.value_rules = Some(trady_domain::eur::EurOrderValueRules {
+            minimum_trade_value: Decimal::ONE,
+            minimum_remaining_position_value: Decimal::ONE,
+            price_floor: Decimal::from(100),
+            price_ceiling: Decimal::from(110),
+        });
+        // The entry is within the reviewed band, but its native stop is not.
+        assert!(
+            matches!(boundary.evaluate(&config, now()).unwrap(), OrderReadiness::Blocked { blockers }
+            if blockers.contains(&ReadinessBlocker::OrderValueOrPriceRange))
+        );
+        boundary.plan.stop_price = Decimal::from(100);
+        boundary.binding.minimum_quantity = Decimal::new(1, 4);
+        boundary.binding.quantity_step = Decimal::new(1, 4);
+        boundary.plan.quantity = Decimal::new(50, 4);
+        // Static precision passes; the EUR1 entry-value minimum still fails.
+        assert!(
+            matches!(boundary.evaluate(&config, now()).unwrap(), OrderReadiness::Blocked { blockers }
+            if blockers.contains(&ReadinessBlocker::OrderValueOrPriceRange))
+        );
         let mut rebound = snapshot;
         rebound.binding.isin = "NL0010273215".into();
         assert!(

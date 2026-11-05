@@ -191,6 +191,28 @@ pub fn run(action: &str, args: &[String]) -> Result<Value> {
         && expected_days
             .as_ref()
             .is_some_and(|days| days.iter().all(|day| by_day.contains_key(day)));
+    let native_month_reports = store.list_documents("demo_month_report", since, 1000)?;
+    let latest_cutoff = latest["completed_at"]
+        .as_str()
+        .and_then(|v| v.parse::<chrono::DateTime<Utc>>().ok());
+    let native_month = native_month_reports
+        .as_array()
+        .into_iter()
+        .flatten()
+        .rev()
+        .find(|r| {
+            r["document"]["cutoff"]
+                .as_str()
+                .and_then(|v| v.parse::<chrono::DateTime<Utc>>().ok())
+                .zip(latest_cutoff)
+                .is_some_and(|(cutoff, end)| cutoff >= since && cutoff <= end)
+        });
+    if let Some(report) = native_month {
+        hashes.insert(
+            "trusted_demo_month_report".into(),
+            report["content_sha256"].clone(),
+        );
+    }
     let id = format!(
         "review_{}",
         &content_hash(
@@ -213,6 +235,9 @@ pub fn run(action: &str, args: &[String]) -> Result<Value> {
             "flat_days":flat,"broker_mutations_observed":mutations,"period_closed":period_closed,
             "complete_week_coverage":complete_coverage,"calendar_coverage_verified":expected_days.is_some(),
             "expected_trading_days":expected_days.as_ref().map_or(0,BTreeSet::len),
+            "trusted_native_month_report_present":native_month.is_some(),
+            "native_month_fill_count":native_month.and_then(|r|r["document"]["native_fill_count"].as_u64()).unwrap_or(0),
+            "native_month_economic_reconciliation_complete":native_month.is_some_and(|r|r["document"]["economic_reconciliation_complete"]==true),
             "performance_metrics_available":economic_reconciliation_complete && complete_coverage && net_pnl_microuro.is_some(),
             "prior_unarchived_database_history_lost":prior_history_lost},
         "review_questions":["Which recorded blockers prevented a valid selection?","Do source errors or identity changes need investigation?",

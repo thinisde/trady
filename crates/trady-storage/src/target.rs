@@ -433,6 +433,30 @@ impl PgTargetStore {
             .map_err(crate::db)
             .map(|row| row.get(0))
     }
+    pub fn list_record_window(
+        &mut self,
+        kind: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        after: Option<DateTime<Utc>>,
+        after_id: Option<&str>,
+    ) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT target.list_record_window($1,$2,$3,$4,$5,$6,$7,64)",
+                &[
+                    &kind,
+                    &self.owner_id,
+                    &self.account_id,
+                    &start,
+                    &end,
+                    &after,
+                    &after_id,
+                ],
+            )
+            .map_err(crate::db)
+            .map(|row| row.get(0))
+    }
     pub fn read_review_artifact(&mut self, id: &str) -> Result<Option<serde_json::Value>> {
         self.client
             .query_one(
@@ -575,6 +599,38 @@ impl PgTargetStore {
 }
 
 impl trady_application::eur_protocol::ProtocolJournal for PgTargetStore {
+    fn record_protection_confirmation(
+        &mut self,
+        context: &trady_application::eur_protocol::ProtocolContext,
+        view: &trady_application::eur_protocol::driver::ProtectionConfirmation,
+    ) -> Result<()> {
+        require(
+            context.account_id == self.account_id,
+            "protection confirmation account differs",
+        )?;
+        self.append_document(
+            "protocol_protection_confirmation",
+            &trady_application::harness::new_id("stop_confirmation"),
+            &serde_json::json!({"intent_id":context.intent_id,"confirmation":view}),
+        )?;
+        Ok(())
+    }
+    fn record_observation(
+        &mut self,
+        context: &trady_application::eur_protocol::ProtocolContext,
+        view: &trady_application::eur_protocol::driver::BrokerObservation,
+    ) -> Result<()> {
+        require(
+            context.account_id == self.account_id,
+            "broker observation account differs",
+        )?;
+        self.append_document(
+            "protocol_broker_observation",
+            &trady_application::harness::new_id("broker_view"),
+            &serde_json::json!({"intent_id":context.intent_id,"observation":view}),
+        )?;
+        Ok(())
+    }
     fn load(
         &mut self,
         intent_id: &str,

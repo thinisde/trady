@@ -597,7 +597,15 @@ impl YfinanceMarketData {
                         _ => Interval::D1,
                     };
                     Ticker::new(&client, symbol)
-                        .history(Some(Range::M6), Some(interval), false)
+                        .history(
+                            Some(if interval_seconds < 86_400 {
+                                Range::D5
+                            } else {
+                                Range::M6
+                            }),
+                            Some(interval),
+                            false,
+                        )
                         .await
                         .map_err(|_| Error("yfinance history request failed".into()))
                 })
@@ -606,10 +614,15 @@ impl YfinanceMarketData {
         let candles = thread
             .join()
             .map_err(|_| Error("yfinance history worker stopped unexpectedly".into()))??;
+        // Yahoo can append an irregular latest-price point after its current
+        // intraday bucket. Provider coverage, rather than our later wall clock,
+        // determines whether that bucket has actually completed.
+        let coverage_end = candles.iter().map(|c| c.ts).max().unwrap_or(now).min(now);
         let mut bars = Vec::new();
         for candle in candles {
             let closes_at = candle.ts + ChronoDuration::seconds(i64::from(interval_seconds));
-            if closes_at > now {
+            if !completed_history_window(candle.ts, closes_at, coverage_end, interval_seconds, now)
+            {
                 continue;
             }
             let currency = candle.currency.code().to_owned();
@@ -632,6 +645,11 @@ impl YfinanceMarketData {
                 received_at: now,
                 completed: true,
             });
+        }
+        // Five trading days of minute bars can exceed the domain's bounded
+        // snapshot. Keep the most recent completed window in chronological order.
+        if bars.len() > 2048 {
+            bars.drain(..bars.len() - 2048);
         }
         let observed_at = bars
             .last()
@@ -810,6 +828,52 @@ impl YfinanceMarketData {
         thread
             .join()
             .map_err(|_| Error("yfinance quote worker stopped unexpectedly".into()))?
+    }
+}
+
+fn completed_history_window(
+    opens_at: DateTime<Utc>,
+    closes_at: DateTime<Utc>,
+    provider_coverage: DateTime<Utc>,
+    interval: u32,
+    now: DateTime<Utc>,
+) -> bool {
+    closes_at <= now
+        && (interval == 86_400
+            || (opens_at.timestamp().rem_euclid(i64::from(interval)) == 0
+                && opens_at.timestamp_subsec_nanos() == 0
+                && closes_at <= provider_coverage))
+}
+
+#[cfg(test)]
+mod completed_history_tests {
+    use super::*;
+    #[test]
+    fn delayed_latest_price_point_and_forming_bucket_are_not_completed_bars() {
+        let at = |s: &str| s.parse::<DateTime<Utc>>().unwrap();
+        let now = at("2026-11-05T10:38:12Z");
+        let coverage = at("2026-11-05T10:22:59Z");
+        assert!(completed_history_window(
+            at("2026-11-05T10:15:00Z"),
+            at("2026-11-05T10:20:00Z"),
+            coverage,
+            300,
+            now
+        ));
+        assert!(!completed_history_window(
+            at("2026-11-05T10:20:00Z"),
+            at("2026-11-05T10:25:00Z"),
+            coverage,
+            300,
+            now
+        ));
+        assert!(!completed_history_window(
+            at("2026-11-05T10:22:59Z"),
+            at("2026-11-05T10:27:59Z"),
+            coverage,
+            300,
+            now
+        ));
     }
 }
 

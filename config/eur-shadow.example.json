@@ -3,7 +3,9 @@
   "enabled": false,
   "execution_stage": "SHADOW",
   "live_enabled": false,
-  "broker": {"environment": "demo"},
+  "broker": {
+    "environment": "demo"
+  },
   "account_id": "paper_t212_eur_demo",
   "base_currency": "EUR",
   "owner_id": "eur_demo_owner",
@@ -36,8 +38,16 @@
     "maximum_volatility_fraction": "0.12"
   },
   "session_deadlines": [
-    {"exchange_mic": "XPAR", "timezone": "Europe/Paris", "flatten_minutes_before_close": 15},
-    {"exchange_mic": "XAMS", "timezone": "Europe/Amsterdam", "flatten_minutes_before_close": 15}
+    {
+      "exchange_mic": "XPAR",
+      "timezone": "Europe/Paris",
+      "flatten_minutes_before_close": 15
+    },
+    {
+      "exchange_mic": "XAMS",
+      "timezone": "Europe/Amsterdam",
+      "flatten_minutes_before_close": 15
+    }
   ],
   "yfinance_config": "config/yfinance.eur-shadow.reviewed.json",
   "research_config": "config/research.eur-shadow.metadata.json",
@@ -47,11 +57,14 @@
     "deployment_id": "eur_shadow_v1",
     "crosswalk_config": "docs/evidence/eur-shadow-review-2026-11-04/crosswalk.json",
     "state_directory": "/var/lib/trady-executor/eur-shadow",
-    "interval_seconds": 60
+    "interval_seconds": 60,
+    "ibkr_config": "config/ibkr-smart.eur-shadow.example.json",
+    "bar_interval_seconds": 300
   },
   "notes": [
     "Disabled deployment preparation template. Activation is a separate operation.",
     "Identity-only crosswalk: unknown broker precision remains null and cannot authorize orders.",
-    "Analyst capture, executor coordination and gateway delivery use separate PostgreSQL roles."
+    "Analyst capture, executor coordination and gateway delivery use separate PostgreSQL roles.",
+    "Owner source policy: IBKR SMART Live for real-time bid/ask; YFinance and Alpha Vantage for history, news and other research. No quote fallback."
   ]
 }

@@ -1,0 +1,543 @@
+{
+  "authorization": {
+    "bounded_demo_capability_probes": true,
+    "documentation": true,
+    "final_activation_approval": false,
+    "identity_renewal": true,
+    "implementation": true,
+    "independent_reviewer": true,
+    "live_credentials_used": false,
+    "unknown_submission_blind_retry": false
+  },
+  "branch": "implement/eur-first-run",
+  "broker_state": {
+    "at_most_one_acquired_holding": true,
+    "broker_account_id": 52211463,
+    "currency": "EUR",
+    "handoff_cash_eur": "4992.68",
+    "handoff_observed_at": "2026-11-05T16:48:28.687225118Z",
+    "handoff_snapshot": "var/eur-autonomous-evidence-20261105-1534/final-handoff-demo-state.json",
+    "live_enabled": false,
+    "native_history_snapshot": "var/eur-month-preparation-20261105/final-demo-native-snapshot.json",
+    "pending_orders": [],
+    "positions": []
+  },
+  "continuation_schedule": {
+    "enabled": false,
+    "next_run_at": null,
+    "read_only_confirmation": "var/eur-month-preparation-20261105/continuation-schedule-check.json",
+    "recurring_codex_work_created": false
+  },
+  "current_candles": {
+    "age_seconds_at_receipt": {
+      "AIR_PA_EQ": "300.792",
+      "ASML_AS_EQ": "301.021"
+    },
+    "alpha_intraday": {
+      "five_minute_points": 0,
+      "http_status": 200,
+      "path": "var/eur-autonomous-evidence-20261105-1534/alpha-AIR_PA_EQ-response.json",
+      "requests": 1,
+      "result": "EXPLICIT_PREMIUM_ACCESS_RESTRICTION",
+      "subscription_changed": false
+    },
+    "completed_bars_each": 199,
+    "completion_cutoffs": [
+      "requested_at",
+      "native_coverage_end",
+      "last_native_bar_opens_at"
+    ],
+    "duration_days": 2,
+    "fresh_at_native_receipt": true,
+    "interval_seconds": 300,
+    "last_completed_at": "2026-11-05T16:05:00Z",
+    "last_native_interval_requires_successor": true,
+    "later_diagnostic": "var/eur-autonomous-evidence-20261105-1534/current-bars-normalized-diagnostic.json",
+    "later_diagnostic_results": [
+      {
+        "completed_bars": 199,
+        "genuine_signal": null,
+        "instrument": "AIR_PA_EQ",
+        "last_age_seconds": 871,
+        "last_completed": "2026-11-05T16:05:00Z",
+        "paper_passed": false
+      },
+      {
+        "completed_bars": 199,
+        "genuine_signal": null,
+        "instrument": "ASML_AS_EQ",
+        "last_age_seconds": 871,
+        "last_completed": "2026-11-05T16:05:00Z",
+        "paper_passed": false
+      }
+    ],
+    "later_diagnostic_was_stale": true,
+    "new_broker_mutations": 0,
+    "paper_passed": false,
+    "provider": "IBKR_SMART_TRADES",
+    "raw_bars_each": 200,
+    "raw_capture": "/var/lib/trady-executor/eur-shadow/current-bars-source-smoke-v2-20261105.json",
+    "raw_capture_sha256": "f087e67843c7c6c01608e1f5d2f82dc1937b9ebe9faef6ba2eb15c787dfb3984",
+    "regular_session_only": true,
+    "sdk": "10.50.2",
+    "service_account_capture": {
+      "broker_mutations": 0,
+      "classification": "NATIVE_SERVICE_ACCOUNT_CURRENT_CANDLE_SOURCE_AFTER_CLOSE_NOT_POSITIVE_PAPER",
+      "entry_authorized": false,
+      "instruments": {
+        "AIR_PA_EQ": {
+          "coverage": {
+            "end": "20261105 17:31:29 MET",
+            "end_offset_seconds": 3600,
+            "end_utc": "2026-11-05T16:31:29+00:00",
+            "start": "20261103 17:31:29 MET",
+            "start_offset_seconds": 3600,
+            "start_utc": "2026-11-03T16:31:29+00:00"
+          },
+          "historical_end_received": true,
+          "raw_bars": 204,
+          "received_at": "2026-11-05T16:31:29.780453+00:00"
+        },
+        "ASML_AS_EQ": {
+          "coverage": {
+            "end": "20261105 17:31:29 MET",
+            "end_offset_seconds": 3600,
+            "end_utc": "2026-11-05T16:31:29+00:00",
+            "start": "20261103 17:31:29 MET",
+            "start_offset_seconds": 3600,
+            "start_utc": "2026-11-03T16:31:29+00:00"
+          },
+          "historical_end_received": true,
+          "raw_bars": 204,
+          "received_at": "2026-11-05T16:31:29.952740+00:00"
+        }
+      },
+      "paper_passed": false,
+      "path": "/var/lib/trady-executor/eur-shadow/current-bars-service-user-smoke-20261105.json",
+      "primary_session_reopened": false,
+      "reason_for_repeat": "New SHADOW deployment: validate actual executor permissions and pinned native helper under service identity",
+      "received_at": "2026-11-05T16:31:29.952836+00:00",
+      "requested_at": "2026-11-05T16:31:29.589284+00:00",
+      "sha256": "24eaf0d90f5727b3d1651cf324d9f145a0d57ae7b37e0a347212f54258f8c260",
+      "status": "COMPLETED"
+    },
+    "source_live_freshness_is_separate_from_executable_quote_type1": true
+  },
+  "deployment": {
+    "at": "2026-11-05T16:30:44.085397+00:00",
+    "binary_sha256": "48afedeaf209412f58fe4e6fa2d2f9397c600cd081bfcf2c6f924f7ccd329f4b",
+    "broker_mutations": 0,
+    "current_bars_bridge_sha256": "785000c69d444b33922f27adba20a831121daf5ba3de73ee74803bcb44b5bd1d",
+    "current_bars_config_sha256": "0b47cf6ed909922710bd7ed804644ad78fdea1833cf0c135318d005aec21ca31",
+    "demo_environment_file_created": false,
+    "demo_runtime_installed": false,
+    "demo_service_enabled": false,
+    "demo_service_state": "var/eur-autonomous-evidence-20261105-1534/demo-unit-final-state.txt",
+    "deployment_id": "eur_month_ibkr_candles_v1",
+    "execution_stage": "SHADOW",
+    "installed_binary_matches_final_bundle": true,
+    "installed_deployment_id": "eur_month_ibkr_candles_v1",
+    "installed_runtime_sha256": "eb0ae36e184973a3ada3b93f1f0b08e5bc504e2d6cc95541b09a5b8687d178d7",
+    "live_enabled": false,
+    "migration": 20,
+    "migration_changed_during_current_candle_work": false,
+    "owner_receipt_created": false,
+    "previous_binary_sha256": "9bb9b133466b58c60eef2e597238058f6ada77fc2566da1e1036f73133692b3a",
+    "previous_deployments_preserved": "var/eur-autonomous-evidence-20261105-1534/deployment-backup",
+    "runtime_sha256": "eb0ae36e184973a3ada3b93f1f0b08e5bc504e2d6cc95541b09a5b8687d178d7",
+    "services": {
+      "trady-eur-analyst": "active",
+      "trady-eur-executor": "active",
+      "trady-eur-gateway": "active"
+    },
+    "settled_health": {
+      "path": "var/eur-autonomous-evidence-20261105-1534/shadow-settled-health.json",
+      "sha256": "3733895e42310cc46fa3616d46d6022a5a51d155ec384fd02917c937f7cb3444"
+    },
+    "source_policy_sha256": "a653a08c62bc96abeefd5ab41e0ffc4d64d90263806480d1c82bf0158b55245f",
+    "status": "IBKR_CURRENT_CANDLE_SHADOW_ONLY_INSTALLED"
+  },
+  "external_blockers": [
+    {
+      "detail": "Complete retained94-order accountwide history has no approved native partial BUY. Previous bounded entries filled completely. No new order was justified by unchanged broker capabilities or closed primary session.",
+      "id": "NATIVE_PARTIAL_ENTRY_REMAINDER_PROTECTION",
+      "status": "UNOBSERVED"
+    },
+    {
+      "detail": "Verified current IBKR access is available. A valid registered-strategy analyst/risk/paper lifecycle was not observed before the broker flatten deadline; no signal or evidence was manufactured.",
+      "id": "GENUINE_POSITIVE_REAL_INPUT_PAPER",
+      "status": "UNOBSERVED"
+    }
+  ],
+  "git_head": "d76dba53fe13dfffea49b97dda0737792b334e6d",
+  "identity": {
+    "checked_immediately": true,
+    "current_account_listing_schedule_calendar_smart_check_required_each_session_and_entry": true,
+    "month_expected_identity_policy_expires_at": "2026-12-06T00:00:00+00:00",
+    "month_policy_is_fresh_observation_or_order_authority": false,
+    "month_policy_sha256": "8879ab9d7eca020e46903942cfa46303a6902e774c61f20a8bdfdc828c348cd4",
+    "original_review_expires_at": "2026-11-05T19:08:04.851142+00:00",
+    "original_review_unchanged": true,
+    "policy_review": "var/eur-month-preparation-20261105/reviewer-policy/component-policy-review.json",
+    "renewal": "var/eur-month-preparation-20261105/identity-renewal/renewal.json",
+    "renewal_performed": true,
+    "renewed_observation_review_expires_at": "2026-11-06T13:25:13.132668+00:00"
+  },
+  "implementation": {
+    "all_reviewed_findings_resolved_in_reviewed_scope": true,
+    "changes": [
+      "Finite DEMO month supervisor with recovery discovery, source/dependency/hash and manual entry window gates.",
+      "Immutable intraday research cursor, explicit request expiry and current-session completed-bar/signal freshness.",
+      "Current scoped catalog/listing/schedule, account and fresh SMART entry recheck after warmup; quote/signal/authority transport deadline.",
+      "Pre-POST trusted root authority check and tested readonly group receipt without weakening original private approval.",
+      "Pre-cancel metadata headroom, preserve working stop on read failure, bounded exact-listing short restart cache.",
+      "Shared account fence defers SHADOW/analytics during active protocol; dead-connection takeover verified against existing0017.",
+      "Bounded database keyset pages; native accountwide fills and cash-event collection; exact lifecycle coverage and null unsupported returns.",
+      "Native transaction400 corrected to unfiltered first query; native200 and2-page94-row history capability retained.",
+      "Disabled DEMO systemd unit, bounded1-to60second restart backoff, no new Codex schedule or automatic model/LIVE promotion.",
+      "Verified read-only IBKR SMART current TRADES candles with exact contract/config/helper binding; Yahoo/Alpha historical/news retained without candle fallback.",
+      "Native coverage and successor-based candle completion; raw normalization independently re-derived during replay.",
+      "Frozen paper source/configuration/bridge bindings reject a source downgrade or substituted provider file.",
+      "Source findings CANDLES-R1 and CANDLES-R2 repaired; real colliding temporary test fixture names made unique. Failed validation runs retained.",
+      "Historical unaccepted SHADOW cost wording explicitly separated from the current independently accepted bounded month sensitivity model."
+    ],
+    "current_candle_scoped_review": "var/eur-autonomous-evidence-20261105-1534/reviewer/current-bars-implementation-review-v2.json",
+    "findings": "var/eur-autonomous-evidence-20261105-1534/reviewer-final/independent-review.json",
+    "report": "var/eur-autonomous-evidence-20261105-1534/reviewer-final/implementation-review.md"
+  },
+  "independent_review": {
+    "artifact": "var/eur-autonomous-evidence-20261105-1534/release-final-reviewed/artifacts/independent_review.json",
+    "artifact_roles_reviewed": 31,
+    "artifact_sha256": "c026addb4bbac22a8742e57f21d7e1e17a2005471c10585bffeffb9b303568db",
+    "checksum_confirmation": "var/eur-autonomous-evidence-20261105-1534/reviewer-final/final-hash-confirmation.json",
+    "component_decisions": {
+      "costs": {
+        "artifact_sha256": "78e4498b8b63fd898bfd26f36ad89f0c54396db5f3c51d93656604e37cd2ba18",
+        "passed": true
+      },
+      "independent_review": {
+        "artifact_sha256": "c026addb4bbac22a8742e57f21d7e1e17a2005471c10585bffeffb9b303568db",
+        "passed": false
+      },
+      "instrument_rules": {
+        "artifact_sha256": "75ce3448843d8cfb24a0a6479efdac10b429b27b816c8929d0b93e0e280b76fd",
+        "passed": true
+      },
+      "paper_day_acceptance": {
+        "artifact_sha256": "8f270d961b5f90fd3b28ce88f3b8bb3c7c48ca07b8b5bdf078da12cb26e28900",
+        "passed": false
+      },
+      "protocol_acceptance": {
+        "artifact_sha256": "a8a44f4e4ceee1f17cc2749be9f3010d69bab8d97781b59510f391bc5a80978b",
+        "passed": false
+      },
+      "quote_compatibility": {
+        "artifact_sha256": "eaa11189a191dfb08a6f8edb1c4e6fb59a045ab6ff76f0815f347d1b72981261",
+        "passed": true
+      }
+    },
+    "current_candle_scoped_findings_resolved": [
+      "CANDLES-R1",
+      "CANDLES-R2"
+    ],
+    "decision": "REQUEST_CHANGES",
+    "missing_native_and_paper_evidence_approved": false,
+    "nonself_hash_references_verified": 30,
+    "passed": false,
+    "report": "var/eur-autonomous-evidence-20261105-1534/reviewer-final/implementation-review.md",
+    "reviewer": "independent_agent:/root/eur_independent_review"
+  },
+  "initial_checkpoint": "var/eur-month-preparation-20261105/initial-checkpoint",
+  "native_evidence": {
+    "actual_demo_fills": 48,
+    "analysis_directory": "var/eur-session-20261105/evidence-month-v1",
+    "capability_experiments_are_strategy_performance": false,
+    "complete_accountwide_order_audit": {
+      "native_partial_buy_found": false,
+      "path": "var/eur-autonomous-evidence-20261105-1534/reviewer/all-94-orders-audit.json",
+      "sha256": "e312dbac7a784848ec18302863a527d32d631dced690486d912b80e3d4e3c954",
+      "unique_orders": 94
+    },
+    "controlled_trigger_and_2500ms_delay": true,
+    "expected_and_observed_flat_cash_eur": "4992.68",
+    "failed_runs_controlled_faults_manual_reductions_and_synthetic_tests_preserved_and_distinguished": true,
+    "instruments": {
+      "AIRp_EQ": {
+        "fills": 35,
+        "independently_accepted_limit_bps": "5",
+        "isin": "NL0000235190",
+        "observed_maximum_divergence_bps": "2.482005460412012906428394142"
+      },
+      "ASMLa_EQ": {
+        "fills": 13,
+        "independently_accepted_limit_bps": "3",
+        "isin": "NL0010273215",
+        "observed_maximum_divergence_bps": "1.548706829797119405296577358"
+      }
+    },
+    "market_data_type": 1,
+    "native_partial_entry_observed": false,
+    "native_stop_fill_delayed_cancellation": {
+      "classification": "REAL_NATIVE_STOP_FILL_WITH_CONTROLLED_IMMEDIATE_TRIGGER_AND_2500MS_DELAYED_CANCEL",
+      "delete_http_status": 404,
+      "delete_response_at": "2026-11-05T12:13:42.779616680Z",
+      "direct_reducer_cancel_effect_dispatch_proven": false,
+      "entry_filled_at": "2026-11-05T12:13:36Z",
+      "entry_order_id": "57550618853",
+      "experiment": "stop-fill-trigger-air",
+      "final_flat_at": "2026-11-05T12:13:46.430324047Z",
+      "market_exit_submissions": 0,
+      "native_stop_order_id": "57550618859",
+      "raw_chain_verifies": true,
+      "simultaneous_network_race_claimed": false,
+      "stop_filled_at": "2026-11-05T12:13:42Z",
+      "transport_wrapper_cancellation": true,
+      "working_stop_latency_pass_claimed": false
+    },
+    "new_passive_entries": [
+      {
+        "entry_id": "57550620796",
+        "experiment": "month-passive-air",
+        "fill_to_protection_seconds": "5.068983631",
+        "filled_quantity": "12.3487",
+        "final_phase": "FLAT",
+        "native_partial": false,
+        "stop_id": "57550620804"
+      },
+      {
+        "entry_id": "57550621791",
+        "experiment": "month-passive-asml",
+        "fill_to_protection_seconds": "6.060616512",
+        "filled_quantity": "1.93618",
+        "final_phase": "FLAT",
+        "native_partial": false,
+        "stop_id": "57550621804"
+      }
+    ],
+    "opening_cash_eur": "4999.07",
+    "preceding_live_smart_quotes_matched": 48,
+    "separate_disclosed_commission_field_available": false,
+    "signed_native_wallet_cash_delta_eur": "-6.39",
+    "simultaneous_network_race_or_latency_guarantee_claimed": false
+  },
+  "next_activation_condition": "Collect actual missing native/real-input evidence, repair findings if any, obtain independent complete acceptance, assemble a new exact bundle and only then obtain owner approval of that hash. This blocked hash cannot be activated by owner approval alone.",
+  "original_changed_paths_preserved": 59,
+  "paper_day": {
+    "after_flatten_or_forced_entry_used": false,
+    "analyst_invoked": false,
+    "current_source_acceptance": "var/eur-autonomous-evidence-20261105-1534/release-final-reviewed/artifacts/paper_day_acceptance.json",
+    "earlier_real_capture_bars_each": 470,
+    "earlier_strategy_status": "NO_BREAKOUT",
+    "earlier_yahoo_diagnostics_retained": true,
+    "executable_quote_fallback": false,
+    "forward": {
+      "path": "var/eur-month-preparation-20261105/forward-paper-month-1/paper-day-summary.json",
+      "result": {
+        "blockers": [
+          "DURABLE_REAL_INPUT_SELECTION_AND_RISK_PLAN_REQUIRED"
+        ],
+        "broker_mutations": 0,
+        "live_enabled": false,
+        "paper_day_passed": false,
+        "risk_blockers": [],
+        "selection_failure": {
+          "kind": "NO_ELIGIBLE_INSTRUMENT",
+          "message": "No candidate has current quotes, an open primary session and a deterministic strategy signal"
+        },
+        "source": "REAL_INPUT_FORWARD_PAPER",
+        "status": "PAPER_DAY_BLOCKED",
+        "strategy_assessments": {
+          "AIR_PA_EQ": {
+            "completed_bar_count": 489,
+            "detail": null,
+            "interval_seconds": 300,
+            "status": "COMPLETED_BAR_STALE_OR_PRIOR_SESSION"
+          },
+          "ASML_AS_EQ": {
+            "completed_bar_count": 489,
+            "detail": null,
+            "interval_seconds": 300,
+            "status": "COMPLETED_BAR_STALE_OR_PRIOR_SESSION"
+          }
+        }
+      }
+    },
+    "ibkr_current_source_diagnostic_is_positive_paper": false,
+    "independent_rebuilt_binary_check": "var/eur-month-preparation-20261105/reviewer-final/final-rebind",
+    "interval_seconds": 300,
+    "latest_bar_closes_at": "2026-11-05T14:45:00+00:00",
+    "latest_decision_completed_at": "2026-11-05T15:04:01.829989145+00:00",
+    "latest_real_completed_bars_each": 489,
+    "latest_strategy_status": "COMPLETED_BAR_STALE_OR_PRIOR_SESSION",
+    "offline_check": {
+      "path": "var/eur-month-preparation-20261105/offline-paper-month-1/paper-day-summary.json",
+      "result": {
+        "blockers": [
+          "NO_RECORDED_EXECUTABLE_EUR_CANDIDATE",
+          "REAL_INPUT_PAPER_ORDER_LEDGER_UNAVAILABLE_OR_INVALID",
+          "RECORDED_STRATEGY_OR_RISK_PLAN_UNAVAILABLE"
+        ],
+        "broker_mutations": 0,
+        "configuration_hash": "1515aeea29b011543e7cd4583125cda3f6e91532698414740f8b06af8eaa4295",
+        "entry_authorized": false,
+        "forward_paper_ledger_verified": false,
+        "optional_source_gaps": [
+          "eur_eur_month_shadow_v1_20261105T150000_1515aeea29b0_yf_news_AIR_PA_EQ",
+          "eur_eur_month_shadow_v1_20261105T150000_1515aeea29b0_yf_news_ASML_AS_EQ",
+          "eur_eur_month_shadow_v1_20261105T150000_1515aeea29b0_yf_stream"
+        ],
+        "paper_day_passed": false,
+        "policy_hash": "3338b0bc74e881b0f2f02ba733abf96f4bdefbe7732f0bb30ced1ef386cf72ed",
+        "protocol_scenarios_passed": 15,
+        "provider_calls": 0,
+        "recorded_code_hash": "8cef867163d8478b51a6bce630917fa8511652616ebb9f71ab7d73324cd1b7f5",
+        "replay_engine_hash": "4967bc7712b8d0a899fe244cd8ab7c0fe22007ed3c5972e9c12e1a3ae7844ea4",
+        "run_id": "eur_eur_month_shadow_v1_20261105T150000_1515aeea29b0",
+        "schema_version": 1,
+        "selection_reproduced": true,
+        "source_manifest_hash": "151546045966fd9a876157256cd39ebfb97c563b3e8b09a7b60ff3fcb3a42fb5",
+        "status": "PAPER_DAY_BLOCKED"
+      }
+    },
+    "primary_close_at": "2026-11-05T16:30:00Z",
+    "primary_flatten_deadline_at": "2026-11-05T16:15:00Z",
+    "risk_plan_available": false,
+    "selection_forced": false,
+    "successful_real_input_paper_lifecycle": false,
+    "synthetic_positive_tests_are_real_input_paper_evidence": false,
+    "x_llm_processing_allowed": false
+  },
+  "previous_evidence_record": {
+    "path": "var/eur-autonomous-evidence-20261105-1534/baseline-evidence.json",
+    "sha256": "f2a321a77947e7e88a64c0b079ba2241bdf3dd845d98ec019407b705faf7e3af"
+  },
+  "recorded_at": "2026-11-05T16:49:14.576611+00:00",
+  "release": {
+    "activation_requested": false,
+    "artifact_roles": 31,
+    "builder": "codex_implementation_agent",
+    "bundle": "var/eur-autonomous-evidence-20261105-1534/release-final-reviewed",
+    "bundled_verification_file": "var/eur-autonomous-evidence-20261105-1534/verify-bundled-final.json",
+    "created_at": "2026-11-05T16:45:21.549476+00:00",
+    "manifest": "var/eur-autonomous-evidence-20261105-1534/release-final-reviewed/manifest.json",
+    "manifest_sha256": "9e0478dd96c677eeb75ee1d3b1d172514184dd2a8dc244562ec8512c46a9bc62",
+    "owner_approval_created": false,
+    "prior_candidates_preserved": [
+      {
+        "bundle": "var/eur-session-20261105/release-candidate",
+        "manifest_sha256": "a412cfbbaa9ea0c7be5d7b79df7c8ae938d3aa5d1482c9d6905bdf6b5ffb363b"
+      },
+      {
+        "bundle": "var/eur-session-20261105/release-final-reviewed",
+        "manifest_sha256": "dd62865670e5f6b4457722bbe95d0f1492a1f299b459240fa9e6b2806f3d14eb"
+      },
+      {
+        "bundle": "var/eur-month-preparation-20261105/release-draft-v1"
+      },
+      {
+        "bundle": "var/eur-month-preparation-20261105/release-draft-v2"
+      },
+      {
+        "bundle": "var/eur-month-preparation-20261105/release-final-reviewed",
+        "manifest_sha256": "8e7e3ba67412667d33381f03d9da20cf8368971b302295357841fdd066dc633c"
+      },
+      {
+        "bundle": "var/eur-autonomous-evidence-20261105-1534/release-draft-v1",
+        "manifest_sha256": "ae8c0d2d8a7107ac3fae3a8399d8bd0f9f09e5b56bc24b37591580333e163fbd"
+      },
+      {
+        "bundle": "var/eur-autonomous-evidence-20261105-1534/release-draft-v2",
+        "manifest_sha256": "8624f4368d5873f1f240432cd876b40cfde5d9988e078768c91a932e73301176"
+      }
+    ],
+    "prospective_runtime_installed": false,
+    "prospective_runtime_mode": "DEMO",
+    "ready_for_final_owner_approval": false,
+    "self_referential_evidence_record_excluded_from_source_archive": true,
+    "valid_until": "2026-12-06T00:00:00+00:00",
+    "verification": {
+      "activation_authorized": false,
+      "blockers": [
+        "NATIVE_PARTIAL_ENTRY_NOT_OBSERVED",
+        "PROTOCOL_ACCEPTANCE_NOT_ACCEPTED",
+        "PAPER_DAY_ACCEPTANCE_NOT_ACCEPTED",
+        "INDEPENDENT_REVIEW_NOT_ACCEPTED",
+        "EXACT_HASH_OWNER_APPROVAL_MISSING"
+      ],
+      "broker_mutations": 0,
+      "live_enabled": false,
+      "release_sha256": "9e0478dd96c677eeb75ee1d3b1d172514184dd2a8dc244562ec8512c46a9bc62",
+      "schema_version": 1
+    },
+    "verification_file": "var/eur-autonomous-evidence-20261105-1534/verify-final-reviewed.json",
+    "verifier_exit_code": 1
+  },
+  "release_activation_authorized": false,
+  "remaining_blockers": [
+    "NATIVE_PARTIAL_ENTRY_NOT_OBSERVED",
+    "PROTOCOL_ACCEPTANCE_NOT_ACCEPTED",
+    "PAPER_DAY_ACCEPTANCE_NOT_ACCEPTED",
+    "INDEPENDENT_REVIEW_NOT_ACCEPTED",
+    "EXACT_HASH_OWNER_APPROVAL_MISSING"
+  ],
+  "report": "docs/eur-demo-month-2026-11.md",
+  "requested_operation": {
+    "automatic_live_activation": false,
+    "automatic_model_promotion": false,
+    "broker_account_id": 52211463,
+    "calendar_days": 30,
+    "ends_at": "2026-12-06T00:00:00+00:00",
+    "environment": "demo",
+    "max_daily_entries": 1,
+    "max_open_positions": 1,
+    "no_overnight": true,
+    "optimization_decision": "KEEP",
+    "policy": "var/eur-month-preparation-20261105/proposed-month/operation.json",
+    "starts_at": "2026-11-06T00:00:00+00:00"
+  },
+  "schema_version": 3,
+  "source_policy": {
+    "configuration": "config/eur-data-sources.json",
+    "current_bars_bridge_sha256": "785000c69d444b33922f27adba20a831121daf5ba3de73ee74803bcb44b5bd1d",
+    "current_bars_config_sha256": "0b47cf6ed909922710bd7ed804644ad78fdea1833cf0c135318d005aec21ca31",
+    "current_candle_owner_instruction_date": "2026-11-05",
+    "current_candles": "IBKR_SMART_TRADES",
+    "current_candles_fallback_allowed": false,
+    "historical_bars_are_executable_quotes": false,
+    "market_data_type": 1,
+    "quote_fallback_allowed": false,
+    "real_time_bid_ask": "IBKR_SMART_LIVE",
+    "research_providers": [
+      "YFINANCE",
+      "ALPHA_VANTAGE"
+    ],
+    "sha256": "a653a08c62bc96abeefd5ab41e0ffc4d64d90263806480d1c82bf0158b55245f",
+    "x_content": "METADATA_ONLY"
+  },
+  "status": "VERIFIED_IBKR_CURRENT_CANDLES_INSTALLED_SHADOW_DEMO_ACTIVATION_BLOCKED",
+  "uncommitted_changes_preserved": true,
+  "validation": {
+    "assets_and_links": "PASS",
+    "clippy": "PASS",
+    "disposable_postgresql": {
+      "log": "var/eur-autonomous-evidence-20261105-1534/postgres-bars.log",
+      "passed": 40
+    },
+    "failed_workspace_fixture_and_clippy_runs_preserved": true,
+    "format": "PASS",
+    "logs_in_bundle_role": "validation_logs",
+    "native_partial_entry_evidence": "UNOBSERVED",
+    "native_service_account_candle_bridge": "COMPLETED_AFTER_CLOSE_NO_ORDER_OR_PAPER_AUTHORITY",
+    "positive_real_input_paper_lifecycle": "BLOCKED",
+    "python": {
+      "log": "var/eur-autonomous-evidence-20261105-1534/python-bars-final.log",
+      "passed": 55
+    },
+    "rust_workspace": {
+      "ignored": 41,
+      "log": "var/eur-autonomous-evidence-20261105-1534/workspace-bars-final.log",
+      "passed": 689
+    },
+    "strict_clippy_log": "var/eur-autonomous-evidence-20261105-1534/clippy-bars-v2.log"
+  }
+}

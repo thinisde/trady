@@ -2,7 +2,8 @@
 
 Trady is a Rust research and execution system migrating from IEX30/Alpaca to
 EUR equities. The first operational milestone is a real-input SHADOW run with
-PostgreSQL and Telegram. That end-to-end milestone is still incomplete.
+PostgreSQL and Telegram. That SHADOW milestone has completed with blocked
+selection; a successful paper day and demo acceptance remain incomplete.
 The checked-in EUR example is disabled, uses SHADOW, and cannot submit orders.
 LIVE is rejected; DEMO remains blocked pending independently accepted quote,
 protection/recovery, replay, and owner-release evidence.
@@ -11,9 +12,21 @@ The target operator profile is [config/eur-demo.example.json](./config/eur-demo.
 The migration plan and authority boundary are documented in
 [docs/trady-bot-implementation-plan.md](./docs/trady-bot-implementation-plan.md).
 The IEX30/Alpaca implementation remains in place for migration comparison; it
-has not been archived or replaced by a fully wired EUR executor.
+has not been archived while EUR acceptance is pending. The
+[current follow-up](./docs/eur-blocker-resolution-2026-11-05.md) records the
+real DEMO fills, protocol fixes, cash reconciliation and remaining acceptance.
+The [bounded DEMO month handoff](./docs/eur-demo-month-2026-11.md) prepares
+6 November–6 December operation and offline optimization without automatic LIVE
+activation or model promotion.
 
 ## Focused configuration
+
+The owner's EUR data-source policy (4–5 November 2026) is **IBKR SMART Live
+for real-time bid/ask** and **verified IBKR SMART TRADES for current five-minute
+strategy candles**. YFinance and Alpha Vantage supply historical stock research,
+news where available and other research queries.
+Missing or stale IBKR books block entry; Yahoo or Alpha Vantage prices cannot
+replace them. See [source policy](./docs/eur-data-sources.md).
 
 - [EUR Trading 212 demo profile](./config/eur-demo.example.json)
 - [EUR yfinance-rs crosswalk](./config/yfinance.euronext.example.json)

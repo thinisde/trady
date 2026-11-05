@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "kind": "EUR_IMPLEMENTATION_AND_ACCEPTANCE_FOLLOWUP",
+  "recorded_at": "2026-11-04T19:43:17.446596+00:00",
+  "owner_implementation_authorization": "Resolve these blockers; hereby, I grant you the highest permission.",
+  "release_activation_authorized": false,
+  "live_enabled": false,
+  "deployment": {
+    "status": "TESTED_SHADOW_DEPLOYMENT_INSTALLED",
+    "installed_at": "2026-11-04T19:37:42.124160+00:00",
+    "binary_sha256": "698fc5b13702ea548aa8ca9e4ab98315a3df54a125a68dad284a58b4fbe4d140",
+    "runtime_sha256": "4b55ca27d18ec77fa0d22669afd884f08c6937922d077275d2502a4e8cf29d4b",
+    "crosswalk_sha256": "ed5ad6174422a18db58ccb814182025e8e0f2e30db7d0541b11593f54fea21b9",
+    "identity_valid_until": "2026-11-05T19:08:04.851142+00:00",
+    "backup": "/var/lib/trady-eur-backups/runtime-final-20261104T193740Z",
+    "mode": "SHADOW",
+    "live_enabled": false,
+    "demo_activation": false
+  },
+  "cycle_id": "eur_eur_shadow_ibkr_v7_20261104_403847d0ddb5",
+  "runtime_result": {
+    "selection_failure": {
+      "kind": "NO_ELIGIBLE_INSTRUMENT",
+      "message": "No candidate has current quotes, an open primary session and a deterministic strategy signal"
+    },
+    "analyst_invoked_on_real_closed_session": false,
+    "risk_plan_status": "NOT_CALCULATED_BLOCKED_INPUTS",
+    "broker_mutations": 0,
+    "reconciled_flat": true,
+    "recorded_code_hash": "9a9d890f53828eccdf3b42a085d1fa3c665e1fb138633c69b4fb9ea24e110eb9"
+  },
+  "telegram_delivery": [
+    {
+      "attempt_count": 1,
+      "event_id": "eur_eur_shadow_ibkr_v7_20261104_403847d0ddb5_summary",
+      "last_error": null,
+      "notification_kind": "DAILY_REPORT",
+      "sent_at": "2026-11-04T19:39:42.963065+00:00",
+      "status": "SENT"
+    }
+  ],
+  "restart": {
+    "same_checkpoint_reused": true,
+    "summary_delivery_attempt_count": 1
+  },
+  "test_evidence": {
+    "path": "/thinisde/trady/var/eur-completion-20261104/validation.json",
+    "sha256": "5f048d88c44e40bd405ff5628634c4773ae0d240d2089fcc5da5476de5814377"
+  },
+  "model_contract_probe": {
+    "path": "/thinisde/trady/var/eur-completion-20261104/online-analyst-probe.json",
+    "sha256": "55bfbb53403f2a801e33b4de9d7ad007806c3e257f8639851eacb71b6c33c17c"
+  },
+  "broker_rules": "docs/evidence/eur-broker-rule-probes-2026-11-04.json",
+  "source_policy": {
+    "path": "config/eur-data-sources.json",
+    "sha256": "6f30eda85989511a3c248aab8fb5f56400fecaf02f233b6f59266dff542ee51b"
+  },
+  "capture_manifest": {
+    "path": "/thinisde/trady/var/eur-completion-20261104/capture-final/manifest.json",
+    "sha256": "7ff42e6081359a95fcd4178a027ccd642ac17347df60bf5b4cc041a892be47a3"
+  },
+  "paper_day": {
+    "artifact": {
+      "path": "/thinisde/trady/var/eur-completion-20261104/paper-day-final/paper-day-summary.json",
+      "sha256": "afd3130b57ffc15499bd7c37e7a4e562515a6b0f22470e1144b0cc67fdadfec4"
+    },
+    "passed": false,
+    "selection_reproduced": true,
+    "blockers": [
+      "NO_RECORDED_EXECUTABLE_EUR_CANDIDATE",
+      "PROVIDER_ERRORS_OR_STALE_OBSERVATIONS_RECORDED",
+      "RECORDED_STRATEGY_OR_RISK_PLAN_UNAVAILABLE",
+      "REVIEWED_COST_AND_FX_INPUTS_UNAVAILABLE"
+    ]
+  },
+  "release_candidate": {
+    "manifest": {
+      "path": "/thinisde/trady/var/eur-completion-20261104/release-candidate/manifest.json",
+      "sha256": "630d98e3ef6c6d78ef1239128160c08a350efcff402bb0c16d726a5b447b5af4"
+    },
+    "verification": {
+      "schema_version": 1,
+      "release_sha256": "630d98e3ef6c6d78ef1239128160c08a350efcff402bb0c16d726a5b447b5af4",
+      "activation_authorized": false,
+      "blockers": [
+        "MISSING_INDEPENDENT_REVIEW",
+        "INSTRUMENT_RULES_NOT_ACCEPTED",
+        "QUOTE_COMPATIBILITY_NOT_ACCEPTED",
+        "COSTS_NOT_ACCEPTED",
+        "PROTOCOL_ACCEPTANCE_NOT_ACCEPTED",
+        "PAPER_DAY_ACCEPTANCE_NOT_ACCEPTED",
+        "EXACT_HASH_OWNER_APPROVAL_MISSING"
+      ],
+      "broker_mutations": 0,
+      "live_enabled": false
+    },
+    "status": "BLOCKED_CANDIDATE_NOT_FINAL_APPROVED_RELEASE"
+  },
+  "open_session_continuation": {
+    "scheduledTaskId": "scheduled-task:command:mcp:fef44704-17d7-4627-b824-1c3a114403b5:schedule-task:eur-open-session-blockers-20261105-v1",
+    "nextRunAt": "2026-11-05T08:05:00.000Z",
+    "bindToCurrentThread": true,
+    "oneTimeContinuation": true
+  },
+  "remaining_blockers": [
+    "Executable price tick in actual order ranges remains unverified.",
+    "Real broker fill/protection/fault/restart campaign remains unaccepted.",
+    "EUR instrument-specific BUY/SELL quote compatibility and divergence acceptance are missing.",
+    "Complete real-input paper-day and EUR cost reconciliation have not passed.",
+    "Independent review and exact-hash final owner approval are missing."
+  ],
+  "credentials_needed": []
+}

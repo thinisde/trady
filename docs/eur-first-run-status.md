@@ -1,5 +1,22 @@
 # EUR first-run implementation status
 
+Latest continuation: [bounded DEMO month preparation](./eur-demo-month-2026-11.md).
+Month operation is prepared for 6 November–6 December, with LIVE disabled and
+no automatic model promotion. The final evidence record, rather than the
+historical expiry statements below, identifies current policies and release
+blockers. Native partial-entry proof and a genuine positive paper lifecycle
+still prevent activation.
+
+The [5 November follow-up](./eur-blocker-resolution-2026-11-05.md) supersedes
+the implementation gaps and identity-expiry statement below. Decision/risk
+handoffs, an evidence-gated broker protocol command and the activation verifier
+are now implemented; SHADOW has been redeployed. Broker-backed acceptance and
+a successful real-input paper day remain incomplete. The renewed identity
+review expires **5 November 2026 at 19:08:04 UTC (20:08 CET)**.
+
+The remaining sections preserve the earlier implementation baseline and evidence
+history; they are not a claim that the later acceptance gates have passed.
+
 Recorded 4 November 2026 on branch `implement/eur-first-run`.
 Authority implementation: `3219fb0`; durable SHADOW deployment: `88078cf`;
 persistent database and systemd credential repair: `712f0fa`.

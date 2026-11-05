@@ -99,6 +99,13 @@ impl EurResearchAnalyst for OpenCodeEurAnalyst {
             "prompt_version": EUR_ANALYST_PROMPT_VERSION,
             "task": "rank only the verified EUR candidates and return exactly one selected instrument",
             "request": request,
+            "output_contract": {
+                "run_id":request.run.run_id,"session_id":request.run.session_id,"model":request.run.model,
+                "ranks":[{"instrument_id":"ONE_OF_ELIGIBLE_IDS","score":"0.5","sentiment":null,"confidence":null,"evidence_ids":["ONE_OF_CANDIDATE_EVIDENCE_IDS"],"rationale":"evidence-based explanation"}],
+                "selected_instrument_id":"HIGHEST_RANKED_ELIGIBLE_ID",
+                "proposal":{"entry_minimum":"FROM_CAPTURED_SIGNAL","entry_maximum":"FROM_CAPTURED_SIGNAL","stop_price":"FROM_CAPTURED_SIGNAL","target_price":"FROM_CAPTURED_SIGNAL","maximum_hold_until":"FROM_CAPTURED_SIGNAL","rationale":"captured strategy evidence"},
+                "uncertainties":[],"contradictions":[],"completed_at":"RFC3339_UTC_AT_OR_BEFORE_CURRENT_TIME"
+            },
             "rules": [
                 "Do not invent instruments, evidence IDs, prices, tools, or eligibility.",
                 "Use deterministic Rust eligibility and risk values as authoritative.",

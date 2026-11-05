@@ -143,6 +143,9 @@ pub(super) struct Order {
     extended_hours: Option<bool>,
 }
 impl Order {
+    pub(super) fn stop_price_value(&self) -> Option<Decimal> {
+        self.stop_price.map(|n| n.0)
+    }
     pub fn normalize(&self) -> BrokerResult<BrokerOrder> {
         if self.id <= 0
             || self.strategy != "QUANTITY"
@@ -198,6 +201,30 @@ impl Order {
     }
 
     pub fn matches(&self, request: &BrokerOrderRequest, normalized: &BrokerOrder) -> bool {
+        self.matches_fields(request, normalized, false)
+    }
+
+    /// The broker omits TIF from terminal history. An absent historical field
+    /// cannot establish active protection; active pending/ACK rows stay strict.
+    pub fn matches_history(
+        &self,
+        request: &BrokerOrderRequest,
+        normalized: &BrokerOrder,
+        verified_pending: bool,
+    ) -> bool {
+        self.matches_fields(
+            request,
+            normalized,
+            normalized.status.terminal() || verified_pending,
+        )
+    }
+
+    fn matches_fields(
+        &self,
+        request: &BrokerOrderRequest,
+        normalized: &BrokerOrder,
+        history_tif_omission: bool,
+    ) -> bool {
         if normalized.instrument_id != request.instrument_id
             || normalized.side != request.side
             || normalized.quantity != request.quantity
@@ -210,6 +237,10 @@ impl Order {
         }
         let price = self.limit_price.map(|n| n.0);
         let stop = self.stop_price.map(|n| n.0);
+        let tif_matches = |expected| {
+            self.time_in_force.as_deref() == Some(validity(expected))
+                || (history_tif_omission && self.time_in_force.is_none())
+        };
         match request.kind {
             OrderKind::Market { extended_hours } => {
                 self.kind == "MARKET" && self.extended_hours == Some(extended_hours)
@@ -217,19 +248,11 @@ impl Order {
             OrderKind::Limit {
                 price: limit,
                 time_in_force,
-            } => {
-                self.kind == "LIMIT"
-                    && price == Some(limit)
-                    && self.time_in_force.as_deref() == Some(validity(time_in_force))
-            }
+            } => self.kind == "LIMIT" && price == Some(limit) && tif_matches(time_in_force),
             OrderKind::Stop {
                 price: trigger,
                 time_in_force,
-            } => {
-                self.kind == "STOP"
-                    && stop == Some(trigger)
-                    && self.time_in_force.as_deref() == Some(validity(time_in_force))
-            }
+            } => self.kind == "STOP" && stop == Some(trigger) && tif_matches(time_in_force),
             OrderKind::StopLimit {
                 stop: trigger,
                 limit,
@@ -238,7 +261,7 @@ impl Order {
                 self.kind == "STOP_LIMIT"
                     && stop == Some(trigger)
                     && price == Some(limit)
-                    && self.time_in_force.as_deref() == Some(validity(time_in_force))
+                    && tif_matches(time_in_force)
             }
         }
     }

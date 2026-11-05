@@ -1,5 +1,12 @@
 # Isolated Trady runtime deployment
 
+The [bounded EUR DEMO month](../../docs/eur-demo-month-2026-11.md) adds a
+[disabled service template](./trady-eur-demo-month.service) and
+[exact release environment template](./eur-demo-month-release.env.example).
+These files do not create a recurring Codex task or activate orders. Root must
+first obtain a complete verified release and exact-hash owner approval; the
+helper then issues the executor-readable, root-owned read-only receipt.
+
 ## Overview
 
 These are reviewable deployment artifacts. Nothing here installs units/users,

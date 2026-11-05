@@ -1,0 +1,40 @@
+[Unit]
+Description=Trady bounded EUR month on Trading 212 DEMO
+After=trady-eur-executor.service network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+ConditionPathExists=/etc/trady/runtime/eur-demo-month-release.env
+
+[Service]
+User=trady-executor
+Group=trady-executor
+EnvironmentFile=/etc/trady/runtime/eur-demo-month-release.env
+ExecStart=/opt/trady/bin/trady eur demo-run --config /etc/trady/runtime/eur-demo-month.json --bundle ${EUR_RELEASE_BUNDLE} --owner-approval ${EUR_OWNER_RECEIPT}
+Environment=TRADY_CREDENTIALS_FILE=%d/credentials.json
+LoadCredential=credentials.json:/etc/trady/secrets/executor.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/opt/trady /etc/trady/runtime
+StateDirectory=trady-executor
+UMask=0077
+MemoryMax=768M
+TasksMax=32
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=1
+RestartSteps=5
+RestartMaxDelaySec=60
+
+[Install]
+WantedBy=multi-user.target

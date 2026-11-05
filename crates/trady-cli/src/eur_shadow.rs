@@ -34,6 +34,7 @@ use trady_storage::target::{PgTargetOutbox, PgTargetStore};
 const MAX_FILE: u64 = 8 * 1024 * 1024;
 const LEASE_SECONDS: i32 = 180;
 
+#[derive(Clone)]
 struct Loaded {
     config: EurRuntimeConfig,
     settings: ShadowSettings,
@@ -100,6 +101,10 @@ fn load(path: &str) -> Result<Loaded> {
         .clone()
         .ok_or_else(|| Error("durable shadow settings missing".into()))?;
     settings.validate()?;
+    require(
+        settings.ibkr_config.is_some(),
+        "IBKR SMART Live configuration is required by the EUR source policy; quote fallback is prohibited",
+    )?;
     let crosswalk_value: Value = read_json(&resolve(&config_path, &settings.crosswalk_config))?;
     let crosswalk: ShadowCrosswalk = serde_json::from_value(crosswalk_value.clone())
         .map_err(|_| Error("invalid shadow crosswalk".into()))?;
@@ -119,6 +124,22 @@ fn load(path: &str) -> Result<Loaded> {
         let document: Value = read_json(&resolve(&config_path, reference))?;
         provider_hashes.insert(name, hash(&document)?);
     }
+    for (name, reference) in [
+        ("risk", settings.risk_config.as_deref()),
+        ("universe", config.universe_config.as_deref()),
+        ("current_bars", settings.current_bars_config.as_deref()),
+    ] {
+        if let Some(reference) = reference {
+            let document: Value = read_json(&resolve(&config_path, reference))?;
+            provider_hashes.insert(name, hash(&document)?);
+        }
+    }
+    if let Some(reference) = &settings.current_bars_config {
+        let bars: trady_adapters::ibkr_bars::CurrentBarsConfig =
+            read_json(&resolve(&config_path, reference))?;
+        bars.validate()?;
+        require(bars.enabled, "current-bar source disabled")?;
+    }
     if let Some(reference) = &settings.ibkr_config {
         let document: Value = read_json(&resolve(&config_path, reference))?;
         let ibkr: IbkrSmartConfig = serde_json::from_value(document.clone())
@@ -130,16 +151,7 @@ fn load(path: &str) -> Result<Loaded> {
     }
     let config_hash = hash(&json!({"runtime":config,"crosswalk_hash":crosswalk_hash,
         "provider_configuration_hashes":provider_hashes}))?;
-    let cycle_id = format!(
-        "eur_{}_{}_{}",
-        settings.deployment_id,
-        Utc::now().format("%Y%m%d"),
-        &config_hash[..12]
-    );
-    require(
-        cycle_id.len() <= 120,
-        "EUR deployment identifier is too long",
-    )?;
+    let cycle_id = settings.cycle_id(&config_hash, Utc::now())?;
     Ok(Loaded {
         config,
         settings,
@@ -161,7 +173,68 @@ fn store(loaded: &Loaded, role: &str, credential: &str) -> Result<PgTargetStore>
 }
 
 fn observation_id(loaded: &Loaded, slot: &str) -> String {
+    if slot.starts_with("alpha_history_") && loaded.settings.decision_interval_seconds.is_some() {
+        return format!(
+            "eur_{}_{}_{}_{}",
+            loaded.settings.deployment_id,
+            Utc::now().format("%Y%m%d"),
+            &loaded.config_hash[..12],
+            slot
+        );
+    }
     format!("{}_{}", loaded.cycle_id, slot)
+}
+
+pub(super) fn current_result(path: &str) -> Result<Option<Value>> {
+    let loaded = load(path)?;
+    latest_result(
+        &loaded,
+        &mut store(&loaded, "trady_executor", "TRADY_EXECUTOR_DSN")?,
+    )
+}
+pub(super) fn configuration_hash(path: &str) -> Result<String> {
+    Ok(load(path)?.config_hash)
+}
+
+fn recent_cursor(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Option<Value>> {
+    if loaded.settings.decision_interval_seconds.is_none() {
+        return Ok(None);
+    }
+    let rows = repository.list_documents(
+        "research_cycle_cursor",
+        Utc::now() - chrono::Duration::days(2),
+        1000,
+    )?;
+    let rows = rows
+        .as_array()
+        .ok_or_else(|| Error("EUR research cursor list invalid".into()))?;
+    require(rows.len() < 1000, "EUR research cursor list truncated")?;
+    Ok(rows
+        .iter()
+        .rev()
+        .find(|row| row["document"]["configuration_hash"] == loaded.config_hash)
+        .map(|row| row["document"].clone()))
+}
+
+fn latest_result(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Option<Value>> {
+    if loaded.settings.decision_interval_seconds.is_none() {
+        return repository.read_document("shadow_result", &loaded.cycle_id);
+    }
+    let since = Utc::now()
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .ok_or_else(|| Error("invalid EUR day".into()))?
+        .and_utc();
+    let rows = repository.list_documents("shadow_result", since, 1000)?;
+    let rows = rows
+        .as_array()
+        .ok_or_else(|| Error("EUR result list invalid".into()))?;
+    require(rows.len() < 1000, "EUR result list truncated")?;
+    Ok(rows
+        .iter()
+        .rev()
+        .find(|row| row["document"]["configuration_hash"] == loaded.config_hash)
+        .map(|row| row["document"].clone()))
 }
 
 fn observe<F>(
@@ -404,6 +477,56 @@ fn repeat<T>(
 fn capture(loaded: &Loaded) -> Result<Value> {
     require(loaded.config.enabled, "EUR shadow deployment is disabled")?;
     let mut repository = store(loaded, "trady_analyst", "TRADY_ANALYST_DSN")?;
+    let mut selected = loaded.clone();
+    if let Some(cursor) = recent_cursor(loaded, &mut repository)? {
+        selected.cycle_id = cursor["cycle_id"]
+            .as_str()
+            .ok_or_else(|| Error("EUR research cursor missing cycle".into()))?
+            .into();
+    }
+    let loaded = &selected;
+    process_research_request(loaded, &mut repository)?;
+    // Freeze daily research only after the reviewed primary session opens.
+    // Midnight capture would otherwise freeze yesterday's incomplete daily
+    // bar projection and consume the day's source slots before entry time.
+    if !loaded.cycle_id.starts_with("eur_input_probe_") {
+        let calendar = repository.read_document(
+            "provider_snapshot",
+            &observation_id(loaded, "broker_sessions"),
+        )?;
+        let Some(calendar) = calendar else {
+            return Ok(
+                json!({"status":"EUR_ANALYST_WAITING_FOR_BROKER_CALENDAR","cycle_id":loaded.cycle_id,"entry_authorized":false}),
+            );
+        };
+        let calendar: ProviderObservation = serde_json::from_value(calendar)
+            .map_err(|_| Error("invalid captured session calendar".into()))?;
+        calendar.validate()?;
+        let now = Utc::now();
+        let sessions: Result<Vec<_>> = loaded
+            .crosswalk
+            .members
+            .iter()
+            .map(|identity| {
+                trady_application::eur_shadow::session_from_catalog(
+                    identity,
+                    &loaded.config.session_deadlines,
+                    &calendar.response,
+                    calendar.received_at,
+                    now,
+                )
+            })
+            .collect();
+        let sessions = sessions?;
+        if sessions
+            .iter()
+            .all(|s| now < s.opens_at || now >= s.flatten_at)
+        {
+            return Ok(
+                json!({"status":"EUR_ANALYST_WAITING_FOR_PRIMARY_SESSION","cycle_id":loaded.cycle_id,"entry_authorized":false}),
+            );
+        }
+    }
     let data_path = provider_path(loaded, loaded.config.yfinance_config.as_deref(), "Yahoo")?;
     let data_config: YfinanceDataConfig = read_json(&data_path)?;
     for identity in &loaded.crosswalk.members {
@@ -454,7 +577,7 @@ fn capture(loaded: &Loaded) -> Result<Value> {
                     if kind == "bars" {
                         serde_json::to_value(data.completed_bars(
                             &identity.internal_instrument_id,
-                            86_400,
+                            loaded.settings.bar_interval_seconds.unwrap_or(300),
                             Utc::now(),
                         )?)
                         .map_err(|_| Error("Yahoo bar encoding failed".into()))
@@ -598,6 +721,92 @@ fn capture(loaded: &Loaded) -> Result<Value> {
     )
 }
 
+fn process_research_request(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<()> {
+    let request_id = observation_id(loaded, "research_request");
+    let response_id = observation_id(loaded, "research_response");
+    if repository
+        .read_document("provider_snapshot", &response_id)?
+        .is_some()
+    {
+        return Ok(());
+    }
+    let Some(document) = repository.read_document("provider_snapshot", &request_id)? else {
+        return Ok(());
+    };
+    if repository
+        .read_document("research_cycle_expiry", &loaded.cycle_id)?
+        .is_some()
+    {
+        let attempted = repository
+            .read_document(
+                "provider_snapshot",
+                &observation_id(loaded, "analyst_attempt"),
+            )?
+            .is_some();
+        repository.append_document("provider_snapshot", &response_id, &json!({"status":if attempted {"UNKNOWN_AFTER_ANALYST_RESTART"} else {"EXPIRED_BEFORE_ANALYST_DISPATCH"},"entry_authorized":false}))?;
+        return Ok(());
+    }
+    let request: trady_application::analyst::AnalystRequest =
+        serde_json::from_value(document["request"].clone())
+            .map_err(|_| Error("invalid durable research request".into()))?;
+    request.validate(Utc::now())?;
+    require(
+        request.run.account_id == loaded.config.account_id.as_str()
+            && request.run.session_id == loaded.cycle_id
+            && document["configuration_hash"] == loaded.config_hash,
+        "research request scope changed",
+    )?;
+    let attempt_id = observation_id(loaded, "analyst_attempt");
+    if repository
+        .read_document("provider_snapshot", &attempt_id)?
+        .is_some()
+    {
+        repository.append_document(
+            "provider_snapshot",
+            &response_id,
+            &json!({"status":"UNKNOWN_AFTER_ANALYST_RESTART","entry_authorized":false}),
+        )?;
+        return Ok(());
+    }
+    repository.append_document(
+        "provider_snapshot",
+        &attempt_id,
+        &json!({"started_at":Utc::now(),"request_hash":hash(&document)?}),
+    )?;
+    let tools = super::eur_decision::CapturedTools(
+        serde_json::from_value(document["tools"].clone())
+            .map_err(|_| Error("invalid scoped research tools".into()))?,
+    );
+    let llm = read_json(&provider_path(
+        loaded,
+        loaded.config.opencode_config.as_deref(),
+        "analyst",
+    )?)?;
+    let selection = (|| {
+        let mut analyst = trady_adapters::opencode::eur_analyst::OpenCodeEurAnalyst::new(
+            llm,
+            super::secret("OPENCODE_API_KEY")?,
+        )?
+        .with_tools(tools);
+        trady_application::eur_runtime::analyst_select_candidate(
+            &mut analyst,
+            &request,
+            vec![],
+            Utc::now(),
+        )
+    })();
+    let response = match selection {
+        Ok(selection) => {
+            json!({"status":"COMPLETED","selection":selection,"request_hash":hash(&document)?})
+        }
+        Err(_) => {
+            json!({"status":"ANALYST_FAILED_OR_RESPONSE_INVALID","request_hash":hash(&document)?,"entry_authorized":false})
+        }
+    };
+    repository.append_document("provider_snapshot", &response_id, &response)?;
+    Ok(())
+}
+
 pub fn autonomous(action: &str, args: &[String], path: &str) -> Result<Value> {
     let loaded = load(path)?;
     if action == "check" {
@@ -644,12 +853,59 @@ fn broker(loaded: &Loaded) -> Result<Trading212Reader> {
     Trading212Reader::new_bound(config, credentials).map_err(|error| Error(error.to_string()))
 }
 
+fn prepare_cycle(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Option<Loaded>> {
+    let mut selected = loaded.clone();
+    if let Some(seconds) = loaded.settings.decision_interval_seconds {
+        if let Some(cursor) = recent_cursor(loaded, repository)? {
+            let id = cursor["cycle_id"]
+                .as_str()
+                .ok_or_else(|| Error("EUR cycle cursor invalid".into()))?;
+            let expiry: chrono::DateTime<Utc> =
+                serde_json::from_value(cursor["expires_at"].clone())
+                    .map_err(|_| Error("EUR cycle expiry invalid".into()))?;
+            let complete = repository.read_document("shadow_result", id)?.is_some();
+            if !complete && Utc::now() < expiry {
+                selected.cycle_id = id.into();
+            } else if !complete
+                && repository
+                    .read_document("research_cycle_expiry", id)?
+                    .is_none()
+            {
+                repository.append_document("research_cycle_expiry", id, &json!({"cycle_id":id,"expired_at":Utc::now(),"reason":"RESEARCH_DEADLINE_EXCEEDED","entry_authorized":false}))?;
+            }
+            if !complete && Utc::now() >= expiry && id == loaded.cycle_id {
+                return Ok(None);
+            }
+        }
+        if repository
+            .read_document("research_cycle_cursor", &selected.cycle_id)?
+            .is_none()
+        {
+            let lifetime =
+                seconds.min(loaded.settings.bar_interval_seconds.unwrap_or(300) * 2 + 15);
+            repository.append_document("research_cycle_cursor", &selected.cycle_id, &json!({"cycle_id":selected.cycle_id,"configuration_hash":loaded.config_hash,"expires_at":Utc::now()+chrono::Duration::seconds(i64::from(lifetime)),"entry_authorized":false}))?;
+        }
+    }
+    Ok(Some(selected))
+}
+
 fn run_once(loaded: &Loaded) -> Result<Value> {
     require(loaded.config.enabled, "EUR shadow deployment is disabled")?;
     let mut repository = store(loaded, "trady_executor", "TRADY_EXECUTOR_DSN")?;
-    let worker = new_id("eur_worker");
-    repository.acquire_executor_lease(&worker, LEASE_SECONDS)?;
-    let result = run_fenced(loaded, &mut repository);
+    repository.acquire_executor_lease(&new_id("eur_worker"), LEASE_SECONDS)?;
+    let result = (|| {
+        if super::eur_operation::protocol_needs_execution(&mut repository)? {
+            return Ok(
+                json!({"status":"SHADOW_DEFERRED_FOR_ACTIVE_PROTOCOL","broker_mutations":0,"entry_authorized":false}),
+            );
+        }
+        match prepare_cycle(loaded, &mut repository)? {
+            Some(selected) => run_fenced(&selected, &mut repository),
+            None => Ok(
+                json!({"status":"WAITING_NEXT_RESEARCH_BUCKET","cycle_id":loaded.cycle_id,"entry_authorized":false}),
+            ),
+        }
+    })();
     let release = repository.release_executor_lease();
     let value = result?;
     release?;
@@ -752,10 +1008,49 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
         &observation_id(loaded, "analyst_manifest"),
     )?;
     if analyst.is_none() {
-        gaps.push("ANALYST_INPUTS_NOT_CAPTURED".into());
+        return Ok(
+            json!({"status":"EUR_SHADOW_WAITING_FOR_ANALYST_INPUTS","cycle_id":loaded.cycle_id,"broker_mutations":0,"entry_authorized":false}),
+        );
     }
     let data_path = provider_path(loaded, loaded.config.yfinance_config.as_deref(), "Yahoo")?;
     let data = YfinanceMarketData::new(read_json(&data_path)?)?;
+    let current_bars = if let Some(reference) = &loaded.settings.current_bars_config {
+        repository.renew_executor_lease(LEASE_SECONDS)?;
+        let settings: trady_adapters::ibkr_bars::CurrentBarsConfig =
+            read_json(&resolve(&loaded.config_path, reference))?;
+        let quote_path = resolve(
+            &loaded.config_path,
+            loaded
+                .settings
+                .ibkr_config
+                .as_deref()
+                .ok_or_else(|| Error("current-bar quote identity missing".into()))?,
+        );
+        let quotes: IbkrSmartConfig = read_json(&quote_path)?;
+        let raw = observe(
+            repository,
+            loaded,
+            "ibkr_current_bars_wire",
+            "ibkr_smart_trades",
+            "tcp://127.0.0.1/ib-gateway",
+            "OWNER_APPROVED_CURRENT_TRADE_CANDLES_ONLY",
+            || {
+                let directory = Path::new(&loaded.settings.state_directory);
+                if !directory.exists() {
+                    private_dir(directory)?;
+                }
+                settings.capture(
+                    &quote_path,
+                    &resolve(&loaded.config_path, &loaded.settings.crosswalk_config),
+                    &directory.join(format!("{}.json", new_id("ibkr_current_bars"))),
+                )
+            },
+        )?;
+        repository.renew_executor_lease(LEASE_SECONDS)?;
+        Some((settings, quotes, raw))
+    } else {
+        None
+    };
     let ibkr = if let Some(reference) = &loaded.settings.ibkr_config {
         let config: IbkrSmartConfig = read_json(&resolve(&loaded.config_path, reference))?;
         let raw = observe(
@@ -787,12 +1082,17 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
         None
     };
     let mut candidates = Vec::new();
+    let mut decision_observations = std::collections::BTreeMap::new();
+    let mut deadlines = std::collections::BTreeMap::new();
     let mut observations = vec![
         catalog.observation_id.clone(),
         exchanges.observation_id.clone(),
         account_observation.observation_id.clone(),
     ];
     if let Some((_, raw)) = &ibkr {
+        observations.push(raw.observation_id.clone());
+    }
+    if let Some((_, _, raw)) = &current_bars {
         observations.push(raw.observation_id.clone());
     }
     for identity in &loaded.crosswalk.members {
@@ -850,6 +1150,67 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
             },
         )?;
         observations.push(quote.observation_id.clone());
+        decision_observations.insert(quote.observation_id.clone(), quote.response.clone());
+        if let Ok(session) = trady_application::eur_shadow::session_from_catalog(
+            identity,
+            &loaded.config.session_deadlines,
+            &exchanges.response,
+            exchanges.received_at,
+            Utc::now(),
+        ) {
+            decision_observations.insert(
+                format!("session:{}", identity.internal_instrument_id),
+                serde_json::to_value(&session)
+                    .map_err(|_| Error("session encoding failed".into()))?,
+            );
+            deadlines.insert(
+                identity.internal_instrument_id.to_string(),
+                session.flatten_at,
+            );
+        }
+        if let Some((settings, quotes, raw)) = &current_bars {
+            let bars = observe(
+                repository,
+                loaded,
+                &format!("ibkr_bars_{}", identity.internal_instrument_id),
+                "ibkr_smart_trades",
+                "tcp://127.0.0.1/ib-gateway",
+                "OWNER_APPROVED_CURRENT_TRADE_CANDLES_ONLY",
+                || {
+                    serde_json::to_value(settings.normalize(
+                        quotes,
+                        identity,
+                        &loaded.crosswalk_hash,
+                        &raw.response,
+                        Utc::now(),
+                    )?)
+                    .map_err(|_| Error("current-bar encoding failed".into()))
+                },
+            )?;
+            observations.push(bars.observation_id.clone());
+            if bars.status == ObservationStatus::Ok {
+                decision_observations.insert(
+                    format!("bars:{}", identity.internal_instrument_id),
+                    bars.response,
+                );
+            }
+        } else if let Some(value) = repository.read_document(
+            "provider_snapshot",
+            &observation_id(
+                loaded,
+                &format!("yf_bars_{}", identity.internal_instrument_id),
+            ),
+        )? {
+            let bars: ProviderObservation =
+                serde_json::from_value(value).map_err(|_| Error("invalid recorded bars".into()))?;
+            bars.validate()?;
+            if bars.status == ObservationStatus::Ok {
+                decision_observations.insert(
+                    format!("bars:{}", identity.internal_instrument_id),
+                    bars.response,
+                );
+            }
+        }
         let assessed_at = Utc::now();
         let mut candidate = assess_quote(
             identity,
@@ -898,6 +1259,140 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
             }
         }
     }
+    let research_id = format!("{}_research", loaded.cycle_id);
+    let decision = if let Some(value) = repository.read_document("research_result", &research_id)? {
+        value
+    } else {
+        let input_id = observation_id(loaded, "research_inputs");
+        let frozen = if let Some(value) = repository.read_document("research_inputs", &input_id)? {
+            value
+        } else {
+            let value = json!({"candidates":candidates,"observations":decision_observations,"deadlines":deadlines,"as_of":Utc::now()});
+            repository.append_document("research_inputs", &input_id, &value)?;
+            value
+        };
+        let frozen_candidates = serde_json::from_value::<
+            Vec<trady_application::eur_shadow::ShadowCandidate>,
+        >(frozen["candidates"].clone())
+        .map_err(|_| Error("invalid frozen research candidates".into()))?;
+        let frozen_observations = serde_json::from_value(frozen["observations"].clone())
+            .map_err(|_| Error("invalid frozen research observations".into()))?;
+        let frozen_deadlines = serde_json::from_value(frozen["deadlines"].clone())
+            .map_err(|_| Error("invalid frozen research deadlines".into()))?;
+        let research_at = serde_json::from_value(frozen["as_of"].clone())
+            .map_err(|_| Error("invalid frozen research timestamp".into()))?;
+        let universe = loaded
+            .config
+            .universe_config
+            .as_ref()
+            .map(|p| {
+                read_json::<trady_domain::EurUniverseSnapshot>(&resolve(&loaded.config_path, p))
+            })
+            .transpose()?;
+        if let Some(universe) = &universe {
+            loaded.config.validate_universe(universe, Utc::now())?;
+        }
+        let costs = loaded
+            .settings
+            .risk_config
+            .as_ref()
+            .map(|p| {
+                read_json::<super::eur_decision::ReviewedCosts>(&resolve(&loaded.config_path, p))
+            })
+            .transpose()?;
+        let llm: trady_adapters::opencode::llm::OpenCodeGoConfig = read_json(&provider_path(
+            loaded,
+            loaded.config.opencode_config.as_deref(),
+            "analyst",
+        )?)?;
+        repository.renew_executor_lease(LEASE_SECONDS)?;
+        // The analyst receives its own DSN and LLM credential. The executor
+        // publishes a scoped immutable handoff, never acquires the LLM key.
+        let mut risk_quotes = Vec::new();
+        let need_risk = frozen_candidates.iter().any(|c| c.research_eligible)
+            && costs.is_some()
+            && universe.is_some()
+            && repository
+                .read_document(
+                    "provider_snapshot",
+                    &observation_id(loaded, "research_response"),
+                )?
+                .is_some();
+        if need_risk {
+            let response = repository
+                .read_document(
+                    "provider_snapshot",
+                    &observation_id(loaded, "research_response"),
+                )?
+                .unwrap_or_default();
+            for c in &frozen_candidates {
+                if response["selection"]["selected_instrument_id"].as_str()
+                    == Some(c.instrument_id.as_str())
+                    && let Ok((q, ids)) = refresh_risk_quote(loaded, repository, &c.instrument_id)
+                {
+                    observations.extend(ids);
+                    risk_quotes.push((c.instrument_id.clone(), q));
+                }
+            }
+        }
+        let decision = super::eur_decision::decide(
+            &loaded.config,
+            &loaded.cycle_id,
+            &frozen_candidates,
+            &frozen_observations,
+            &account,
+            universe.as_ref(),
+            costs.as_ref(),
+            &frozen_deadlines,
+            llm,
+            research_at,
+            &mut |id| {
+                let q = risk_quotes
+                    .iter()
+                    .find(|(instrument, _)| instrument == id)
+                    .ok_or_else(|| Error("fresh risk quote unavailable".into()))?
+                    .1
+                    .clone();
+                Ok((q, observation_id(loaded, &format!("risk_quote_{id}"))))
+            },
+            &mut |request, tools| {
+                let request_id = observation_id(loaded, "research_request");
+                if repository
+                    .read_document("provider_snapshot", &request_id)?
+                    .is_none()
+                {
+                    repository.append_document("provider_snapshot",&request_id,&json!({"request":request,"tools":tools.0,"configuration_hash":loaded.config_hash}))?;
+                }
+                match repository.read_document(
+                    "provider_snapshot",
+                    &observation_id(loaded, "research_response"),
+                )? {
+                    Some(response) if response["status"] == "COMPLETED" => {
+                        serde_json::from_value(response["selection"].clone())
+                            .map_err(|_| Error("invalid durable research selection".into()))
+                    }
+                    Some(_) => Err(Error(
+                        "analyst outcome unavailable; no automatic retry".into(),
+                    )),
+                    None => Err(Error("EUR_RESEARCH_PENDING".into())),
+                }
+            },
+        );
+        let value = match decision {
+            Ok(value) => value,
+            Err(error) if error.0 == "EUR_RESEARCH_PENDING" => {
+                return Ok(
+                    json!({"status":"EUR_SHADOW_WAITING_FOR_ANALYST_SELECTION","cycle_id":loaded.cycle_id,"entry_authorized":false,"broker_mutations":0}),
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        repository.renew_executor_lease(LEASE_SECONDS)?;
+        repository.append_document("research_result", &research_id, &value)?;
+        value
+    };
+    let selected = !decision["selection"]["selected_instrument_id"].is_null();
+    let planned = !decision["risk_plan"].is_null();
     let completed_at = Utc::now();
     let result = json!({"schema_version":1,"cycle_id":loaded.cycle_id,"account_id":loaded.config.account_id,
         "code_hash":code_fingerprint(),
@@ -905,24 +1400,95 @@ fn run_fenced(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Value> 
         "crosswalk_hash":loaded.crosswalk_hash,"policy_hash":hash(&loaded.config.policy)?,
         "started_at":started.requested_at,"completed_at":completed_at,"candidates":candidates,
         "provider_observation_ids":observations,"source_gaps":gaps,
-        "selected_instrument_id":null,"selection_failure":{"kind":"OPERATIONAL_INPUTS_UNAVAILABLE",
-            "code":"NO_EXECUTABLE_EUR_CANDIDATE","message":"No reviewed executable quote and order rules; candidate blockers are retained."},
-        "model_run":null,"analyst_invoked":false,"strategy_status":"BLOCKED_INPUTS",
-        "risk_plan_status":"NOT_CALCULATED_BLOCKED_INPUTS","coordinator_state":"REJECTED",
+        "selected_instrument_id":decision["selection"]["selected_instrument_id"],"selection_failure":decision["selection"]["failure"],
+        "model_run":decision["selection"]["model"],"selection":decision["selection"],"analyst_invoked":decision["analyst_invoked"],
+        "strategy_signals":decision["strategy_signals"],"strategy_assessments":decision["strategy_assessments"],"strategy_status":if selected {"RESEARCH_SELECTED"} else {"BLOCKED_INPUTS"},
+        "risk_plan":decision["risk_plan"],"risk_cost_model":decision["risk_cost_model"],"risk_blockers":decision["risk_blockers"],
+        "risk_plan_status":if planned {"CALCULATED_SHADOW_ONLY"}else {"NOT_CALCULATED_BLOCKED_INPUTS"},"coordinator_state":if planned {"RISK_APPROVED"}else {"REJECTED"},
         "broker_mutations":0,"entry_authorized":false,"reconciled_flat":account.positions.is_empty()&&account.orders.is_empty()});
     // Persist the immutable decision before projections. Interrupted finalization
     // reuses its original timestamps and payloads instead of rebinding IDs.
     repository.append_document("shadow_result", &loaded.cycle_id, &result)?;
     finalize_result(loaded, repository, &result)?;
     Ok(
-        json!({"status":"EUR_SHADOW_COMPLETED_WITH_BLOCKED_SELECTION","cycle_id":loaded.cycle_id,
+        json!({"status":if planned {"EUR_SHADOW_RISK_CALCULATED"}else if selected {"EUR_SHADOW_SELECTED_RISK_BLOCKED"}else {"EUR_SHADOW_COMPLETED_WITH_BLOCKED_SELECTION"},"cycle_id":loaded.cycle_id,
         "new_selection":true,"broker_mutations":0,"entry_authorized":false,"result":result}),
     )
+}
+
+fn refresh_risk_quote(
+    loaded: &Loaded,
+    repository: &mut PgTargetStore,
+    id: &trady_domain::InstrumentId,
+) -> Result<(trady_domain::Quote, Vec<String>)> {
+    let identity = loaded
+        .crosswalk
+        .members
+        .iter()
+        .find(|m| &m.internal_instrument_id == id)
+        .ok_or_else(|| Error("risk quote identity unavailable".into()))?;
+    let reference = loaded
+        .settings
+        .ibkr_config
+        .as_ref()
+        .ok_or_else(|| Error("risk requires IBKR SMART Live".into()))?;
+    let config: IbkrSmartConfig = read_json(&resolve(&loaded.config_path, reference))?;
+    let raw = observe(
+        repository,
+        loaded,
+        "risk_ibkr_wire",
+        "ibkr_tws_api",
+        "tcp://127.0.0.1/ib-gateway",
+        "IBKR_PRIVATE_API_SMART_COMPOSITE",
+        || {
+            config.capture(
+                &resolve(&loaded.config_path, &loaded.settings.crosswalk_config),
+                &Path::new(&loaded.settings.state_directory)
+                    .join(format!("{}.json", new_id("risk_ibkr"))),
+            )
+        },
+    )?;
+    let normalized = observe(
+        repository,
+        loaded,
+        &format!("risk_quote_{id}"),
+        "ibkr_tws_api",
+        "tcp://127.0.0.1/ib-gateway",
+        "IBKR_PRIVATE_API_SMART_COMPOSITE",
+        || {
+            let mut value = config.normalize(
+                identity,
+                &raw.response,
+                Utc::now(),
+                loaded.config.eligibility.quote_max_age_seconds,
+            )?;
+            value["raw_capture_id"] = json!(raw.observation_id);
+            Ok(value)
+        },
+    )?;
+    let q: trady_application::eur_shadow::ShadowQuote =
+        serde_json::from_value(normalized.response.clone())
+            .map_err(|_| Error("fresh IBKR risk quote invalid".into()))?;
+    require(
+        normalized.status == ObservationStatus::Ok && normalized.response["fresh"] == true,
+        "IBKR risk quote stale",
+    )?;
+    let quote = trady_domain::Quote {
+        instrument_id: id.clone(),
+        currency: loaded.config.base_currency.clone(),
+        bid: q.bid.ok_or_else(|| Error("IBKR bid unavailable".into()))?,
+        ask: q.ask.ok_or_else(|| Error("IBKR ask unavailable".into()))?,
+        observed_at: q.observed_at,
+        received_at: q.received_at,
+        tradable: true,
+    };
+    Ok((quote, vec![raw.observation_id, normalized.observation_id]))
 }
 
 fn code_fingerprint() -> String {
     content_hash(concat!(
         include_str!("eur_shadow.rs"),
+        include_str!("eur_decision.rs"),
         include_str!("../../trady-application/src/eur_shadow.rs"),
         include_str!("../../trady-adapters/src/yfinance.rs"),
         include_str!("../../trady-adapters/src/ibkr_smart.rs"),
@@ -945,7 +1511,7 @@ fn finalize_result(loaded: &Loaded, repository: &mut PgTargetStore, result: &Val
         .take(64)
         .map(str::to_owned)
         .collect();
-    for (suffix, kind, from, to) in [
+    let mut transitions = vec![
         (
             "research",
             CoordinatorEventKind::StartResearch,
@@ -958,20 +1524,47 @@ fn finalize_result(loaded: &Loaded, repository: &mut PgTargetStore, result: &Val
             CoordinatorState::Researching,
             CoordinatorState::CandidatesRanked,
         ),
-        (
+    ];
+    if !result["risk_plan"].is_null() {
+        transitions.extend([
+            (
+                "validated",
+                CoordinatorEventKind::CandidateValidated,
+                CoordinatorState::CandidatesRanked,
+                CoordinatorState::CandidateValidated,
+            ),
+            (
+                "signal",
+                CoordinatorEventKind::SignalProduced,
+                CoordinatorState::CandidateValidated,
+                CoordinatorState::SignalReady,
+            ),
+            (
+                "risk",
+                CoordinatorEventKind::RiskApproved,
+                CoordinatorState::SignalReady,
+                CoordinatorState::RiskApproved,
+            ),
+        ]);
+    } else {
+        transitions.push((
             "rejected",
             CoordinatorEventKind::Reject,
             CoordinatorState::CandidatesRanked,
             CoordinatorState::Rejected,
-        ),
-    ] {
+        ));
+    }
+    for (suffix, kind, from, to) in transitions {
         let event = CoordinatorEvent {
             event_id: format!("{}_{}", loaded.cycle_id, suffix),
             kind,
             from,
             to,
             account_id: loaded.config.account_id.to_string(),
-            instrument_id: None,
+            instrument_id: result["selected_instrument_id"]
+                .as_str()
+                .map(|s| trady_domain::InstrumentId::new(s.to_owned()))
+                .transpose()?,
             policy_revision: loaded.config.policy.revision.clone(),
             evidence_snapshot_ids: evidence.clone(),
             occurred_at: if suffix == "research" {
@@ -983,7 +1576,7 @@ fn finalize_result(loaded: &Loaded, repository: &mut PgTargetStore, result: &Val
                 if suffix == "rejected" {
                     "no executable input authority"
                 } else {
-                    "durable EUR shadow research"
+                    "durable EUR shadow research and deterministic risk evaluation"
                 }
                 .into(),
             ),
@@ -998,6 +1591,13 @@ fn finalize_result(loaded: &Loaded, repository: &mut PgTargetStore, result: &Val
         }
     }
     repository.append_document("selection", &loaded.cycle_id, result)?;
+    if !result["risk_plan"].is_null() {
+        repository.append_document(
+            "trade_plan",
+            &format!("{}_plan", loaded.cycle_id),
+            &result["risk_plan"],
+        )?;
+    }
     repository.append_document("daily_report", &loaded.cycle_id, result)?;
     repository.append_document("shadow_cycle", &loaded.cycle_id, result)?;
     publish_result(loaded, repository, result)
@@ -1064,7 +1664,10 @@ fn publish_result(loaded: &Loaded, repository: &mut PgTargetStore, result: &Valu
         evidence_ids: vec![loaded.cycle_id.clone()],
         occurred_at,
         text: format!(
-            "EUR SHADOW completed. No broker orders submitted.\nSelection blocked by input/execution evidence.\n{blocked}\nBroker flat: {}. Source gaps: {}.",
+            "EUR SHADOW completed. No broker orders submitted.\nSelected: {}. Analyst invoked: {}. Risk: {}.\n{blocked}\nBroker flat: {}. Source gaps: {}.",
+            result["selected_instrument_id"],
+            result["analyst_invoked"],
+            result["risk_plan_status"],
             result["reconciled_flat"],
             result["source_gaps"].as_array().map_or(0, Vec::len)
         ),
@@ -1143,11 +1746,14 @@ fn report(loaded: &Loaded) -> Result<Value> {
 /// files are synced. Existing directories are never overwritten.
 pub fn export_bundle(path: &str, root: &Path) -> Result<Value> {
     use std::collections::{BTreeMap, BTreeSet};
-    let loaded = load(path)?;
+    let mut loaded = load(path)?;
     let mut repository = store(&loaded, "trady_analyst", "TRADY_ANALYST_DSN")?;
-    let result = repository
-        .read_document("shadow_result", &loaded.cycle_id)?
+    let result = latest_result(&loaded, &mut repository)?
         .ok_or_else(|| Error("no completed EUR shadow decision to export".into()))?;
+    loaded.cycle_id = result["cycle_id"]
+        .as_str()
+        .ok_or_else(|| Error("completed EUR cycle missing".into()))?
+        .into();
     require(
         result["configuration_hash"].as_str() == Some(&loaded.config_hash),
         "capture configuration differs from completed decision",
@@ -1243,6 +1849,21 @@ pub fn export_bundle(path: &str, root: &Path) -> Result<Value> {
         )?;
     }
     let mut provider_configs = BTreeMap::new();
+    for (kind, slot) in [
+        ("provider_snapshot", "research_request"),
+        ("provider_snapshot", "research_response"),
+        ("research_inputs", "research_inputs"),
+    ] {
+        if let Some(value) = repository.read_document(kind, &observation_id(&loaded, slot))? {
+            write_capture_file(
+                root,
+                slot,
+                &format!("provider-snapshots/{slot}.json"),
+                &value,
+                &mut inputs,
+            )?;
+        }
+    }
     for (name, reference) in [
         ("yfinance", loaded.config.yfinance_config.as_deref()),
         ("research", loaded.config.research_config.as_deref()),
@@ -1260,27 +1881,55 @@ pub fn export_bundle(path: &str, root: &Path) -> Result<Value> {
         reject_configuration_secrets(&value)?;
         provider_configs.insert("ibkr", value);
     }
+    for (name, reference) in [
+        ("risk", loaded.settings.risk_config.as_deref()),
+        ("universe", loaded.config.universe_config.as_deref()),
+        (
+            "current_bars",
+            loaded.settings.current_bars_config.as_deref(),
+        ),
+    ] {
+        if let Some(reference) = reference {
+            let value: Value = read_json(&resolve(&loaded.config_path, reference))?;
+            reject_configuration_secrets(&value)?;
+            provider_configs.insert(name, value);
+        }
+    }
     let crosswalk: Value = read_json(&resolve(
         &loaded.config_path,
         &loaded.settings.crosswalk_config,
     ))?;
     let deliveries = repository.telegram_delivery_summary(&loaded.settings.deployment_id)?;
+    let cost_document = match provider_configs.get("risk") {
+        Some(costs) => json!({"status":"REVIEWED_MODEL_INPUTS","reviewed_costs":costs,
+            "scope":"SHADOW_COST_MODEL_NOT_INDEPENDENT_RELEASE_ACCEPTANCE","same_currency_fx":"EUR_TO_EUR_IDENTITY",
+            "fees_assumed_zero":false}),
+        None => {
+            json!({"status":"UNAVAILABLE","reason":"NO_REVIEWED_TRANSACTION_COST_OBSERVATION_IN_SHADOW_RUN",
+            "same_currency_fx":"EUR_TO_EUR_IDENTITY","fees_assumed_zero":false})
+        }
+    };
+    let account_snapshot = repository
+        .read_document(
+            "provider_snapshot",
+            &observation_id(&loaded, "account_snapshot"),
+        )?
+        .and_then(|value| value.get("response").cloned())
+        .unwrap_or(Value::Null);
     write_capture_file(
         root,
         "capture_context",
         "capture-context.json",
         &json!({"schema_version":1,
         "runtime":loaded.config,"crosswalk":crosswalk,"provider_configurations":provider_configs,
-        "result":result,"observation_index":index,"telegram_deliveries":deliveries}),
+        "result":result,"account_snapshot":account_snapshot,"observation_index":index,"telegram_deliveries":deliveries}),
         &mut inputs,
     )?;
     write_capture_file(
         root,
         "cost_fx",
         "provider-snapshots/cost-fx.json",
-        &json!({"status":"UNAVAILABLE",
-        "reason":"NO_REVIEWED_TRANSACTION_COST_OBSERVATION_IN_SHADOW_RUN","same_currency_fx":"EUR_TO_EUR_IDENTITY",
-        "fees_assumed_zero":false}),
+        &cost_document,
         &mut inputs,
     )?;
     write_capture_file(root, "selection", "selection.json", &result, &mut inputs)?;
@@ -1362,6 +2011,99 @@ pub(super) fn private_json(path: &Path, value: &Value) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore = "requires the disposable PostgreSQL runner"]
+    fn durable_intraday_cursor_resumes_and_expires_without_repeating_model_calls() {
+        assert_eq!(std::env::var("TRADY_TEST_ISOLATED").as_deref(), Ok("1"));
+        let mut config: EurRuntimeConfig =
+            serde_json::from_str(include_str!("../../../config/eur-shadow.example.json")).unwrap();
+        config.account_id = trady_domain::AccountId::new(new_id("paper_cursor")).unwrap();
+        let mut settings = config.shadow.clone().unwrap();
+        settings.decision_interval_seconds = Some(300);
+        let hash = content_hash(config.account_id.as_str());
+        let mut loaded = Loaded {
+            config: config.clone(),
+            settings: settings.clone(),
+            crosswalk: serde_json::from_str(include_str!(
+                "../../../docs/evidence/eur-shadow-review-2026-11-04/crosswalk.json"
+            ))
+            .unwrap(),
+            config_path: PathBuf::from("/unused-fixture.json"),
+            config_hash: hash.clone(),
+            crosswalk_hash: "a".repeat(64),
+            cycle_id: settings.cycle_id(&hash, Utc::now()).unwrap(),
+        };
+        let mut repository = PgTargetStore::connect(
+            &std::env::var("TRADY_EXECUTOR_DSN").unwrap(),
+            "trady_executor",
+            config.owner_id.clone(),
+            config.account_id.to_string(),
+        )
+        .unwrap();
+        repository
+            .acquire_executor_lease(&new_id("cursor_test"), 120)
+            .unwrap();
+        let old = settings
+            .cycle_id(&hash, Utc::now() - chrono::Duration::minutes(5))
+            .unwrap();
+        repository.append_document("research_cycle_cursor",&old,&json!({"cycle_id":old,"configuration_hash":hash,"expires_at":Utc::now()+chrono::Duration::seconds(120),"synthetic_fixture":true})).unwrap();
+        assert_eq!(
+            prepare_cycle(&loaded, &mut repository)
+                .unwrap()
+                .unwrap()
+                .cycle_id,
+            old
+        );
+        repository.append_document("shadow_result",&old,&json!({"cycle_id":old,"configuration_hash":hash,"risk_plan":null,"completed_at":Utc::now(),"synthetic_fixture":true})).unwrap();
+        assert_eq!(
+            latest_result(&loaded, &mut repository).unwrap().unwrap()["cycle_id"],
+            old
+        );
+        assert_eq!(
+            prepare_cycle(&loaded, &mut repository)
+                .unwrap()
+                .unwrap()
+                .cycle_id,
+            loaded.cycle_id
+        );
+        loaded.cycle_id = new_id("expired_research_fixture");
+        repository
+            .append_document(
+                "research_cycle_expiry",
+                &loaded.cycle_id,
+                &json!({"synthetic_fixture":true,"entry_authorized":false}),
+            )
+            .unwrap();
+        repository
+            .append_document(
+                "provider_snapshot",
+                &observation_id(&loaded, "research_request"),
+                &json!({"request":{},"synthetic_fixture":true}),
+            )
+            .unwrap();
+        process_research_request(&loaded, &mut repository).unwrap();
+        assert_eq!(
+            repository
+                .read_document(
+                    "provider_snapshot",
+                    &observation_id(&loaded, "research_response")
+                )
+                .unwrap()
+                .unwrap()["status"],
+            "EXPIRED_BEFORE_ANALYST_DISPATCH"
+        );
+        assert!(
+            repository
+                .read_document(
+                    "provider_snapshot",
+                    &observation_id(&loaded, "analyst_attempt")
+                )
+                .unwrap()
+                .is_none()
+        );
+        repository.release_executor_lease().unwrap();
+    }
     #[test]
     fn pending_delivery_survives_disabled_entry_and_missing_review_files() {
         let mut config: EurRuntimeConfig =

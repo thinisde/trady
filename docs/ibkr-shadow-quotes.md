@@ -1,5 +1,8 @@
 # IBKR SMART quotes in EUR SHADOW
 
+The [owner's source policy](./eur-data-sources.md) requires IBKR SMART Live
+for real-time bid/ask. YFinance and Alpha Vantage remain research providers.
+
 The local `ibg-controller` session returned **live SMART bid/ask** for Airbus
 and ASML on 4 November 2026. Both contracts resolved by exact ISIN in EUR.
 The [assessment](./evidence/ibkr-smart-eur-assessment-2026-11-04.json) records
@@ -23,8 +26,10 @@ systemd state directory. Root-owned deployment/recovery archives are separate.
 
 For a reviewed SHADOW deployment, set `shadow.ibkr_config` to the installed
 source configuration. Include that file in the configuration hash and use a
-new deployment ID. Yahoo remains available for completed bars and research;
-Alpha Vantage remains a historical cross-check. There is no silent fallback
+new deployment ID. Under the 5 November owner instruction, the separate
+[current-candle bridge](../scripts/capture-ibkr-current-bars.py) supplies verified
+IBKR SMART TRADES bars; Yahoo and Alpha remain historical research sources.
+There is no silent fallback
 to a delayed or untimed quote when IBKR is unavailable.
 
 The adapter requires a live `marketDataType` callback and a timestamped
@@ -43,6 +48,13 @@ SMART is a composite venue source. Trading 212 quote compatibility, order
 precision and protection/recovery acceptance are still required for DEMO.
 Adding this source does not open those gates, and LIVE stays blocked.
 
+The candle bridge permits only connection setup, contract discovery, server
+time, historical-data requests and cancellation. It has no broker credentials
+or order API. Its timestamps and native coverage are independently checked;
+historical bars never substitute for the live type-1 executable book. See the
+[source policy](./eur-data-sources.md) for completion and freshness rules.
+
 Primary API references: [market-data types](https://www.interactivebrokers.com/docs/tws-api/doc/md/delayed-data),
 [timestamped BidAsk callbacks](https://www.interactivebrokers.com/docs/tws-api/doc/md/live-ticks),
-and [contract discovery by ISIN](https://www.interactivebrokers.com/docs/tws-api/contracts/contracts-specified-by-cusip-figi-or-isin).
+[contract discovery by ISIN](https://www.interactivebrokers.com/docs/tws-api/contracts/contracts-specified-by-cusip-figi-or-isin),
+and [historical trade bars](https://www.interactivebrokers.com/docs/tws-api/doc/md/historical-bars).

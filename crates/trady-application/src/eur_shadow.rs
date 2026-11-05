@@ -17,6 +17,16 @@ pub struct ShadowSettings {
     /// Optional read-only IBKR quote source. Yahoo remains the research source.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ibkr_config: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub risk_config: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bar_interval_seconds: Option<u32>,
+    /// Reevaluate on immutable completed-bar time buckets; None preserves daily runs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decision_interval_seconds: Option<u32>,
+    /// Explicit current strategy candles; absent preserves historical Yahoo captures.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_bars_config: Option<String>,
 }
 
 impl ShadowSettings {
@@ -32,12 +42,73 @@ impl ShadowSettings {
             "invalid durable EUR shadow settings",
         )?;
         require(
+            matches!(
+                self.bar_interval_seconds.unwrap_or(300),
+                60 | 300 | 900 | 1800 | 3600 | 86_400
+            ),
+            "unsupported EUR research bar interval",
+        )?;
+        require(
+            self.decision_interval_seconds.is_none_or(|seconds| {
+                (300..=3600).contains(&seconds)
+                    && seconds % self.bar_interval_seconds.unwrap_or(300) == 0
+            }),
+            "EUR decision interval must cover whole research bars",
+        )?;
+        require(
+            self.current_bars_config.as_ref().is_none_or(|p| {
+                !p.trim().is_empty()
+                    && self.ibkr_config.is_some()
+                    && self.bar_interval_seconds.unwrap_or(300) == 300
+            }),
+            "current SMART candles require the exact quote binding and five-minute interval",
+        )?;
+        require(
             self.ibkr_config
                 .as_ref()
                 .is_none_or(|p| !p.trim().is_empty()),
             "IBKR source path is empty",
         )
     }
+
+    pub fn cycle_id(&self, configuration_hash: &str, now: DateTime<Utc>) -> Result<String> {
+        self.validate()?;
+        require(
+            configuration_hash.len() == 64
+                && configuration_hash.bytes().all(|c| c.is_ascii_hexdigit()),
+            "invalid EUR configuration hash",
+        )?;
+        let period = if let Some(seconds) = self.decision_interval_seconds {
+            let seconds = i64::from(seconds);
+            DateTime::from_timestamp(now.timestamp().div_euclid(seconds) * seconds, 0)
+                .ok_or_else(|| Error("invalid EUR decision clock".into()))?
+                .format("%Y%m%dT%H%M%S")
+                .to_string()
+        } else {
+            now.format("%Y%m%d").to_string()
+        };
+        let id = format!(
+            "eur_{}_{}_{}",
+            self.deployment_id,
+            period,
+            &configuration_hash[..12]
+        );
+        require(id.len() <= 120, "EUR deployment identifier is too long")?;
+        Ok(id)
+    }
+}
+
+/// A recent download cannot turn an old session's last candle into a current signal.
+pub fn completed_bar_is_current(
+    bars: &trady_domain::BarSnapshot,
+    session_open: DateTime<Utc>,
+    now: DateTime<Utc>,
+) -> bool {
+    bars.bars.last().is_some_and(|bar| {
+        bar.opens_at >= session_open
+            && bar.closes_at <= now
+            && (now - bar.closes_at).num_seconds() <= i64::from(bars.interval_seconds) * 2 + 15
+    })
 }
 
 /// Additional provenance fields in the review bundle carry no executable authority.
@@ -374,6 +445,63 @@ mod tests {
     use super::*;
     use chrono::Duration;
     use serde_json::json;
+
+    #[test]
+    fn freshly_downloaded_bars_require_a_recent_completed_current_session_candle() {
+        let at = now();
+        let session_open = at - Duration::hours(4);
+        let mut bars: trady_domain::BarSnapshot = serde_json::from_value(json!({
+            "snapshot_id":"synthetic_stale_bar_test","instrument_id":"AIR_PA_EQ","provider":"synthetic","interval_seconds":300,
+            "observed_at":at,"received_at":at,"bars":[{"bar_id":"one","instrument_id":"AIR_PA_EQ","interval_seconds":300,
+                "opens_at":at-Duration::seconds(300),"closes_at":at,"open":"100","high":"101","low":"99","close":"100",
+                "volume":"1","provider":"synthetic","received_at":at,"completed":true}]})).unwrap();
+        assert!(completed_bar_is_current(&bars, session_open, at));
+        assert!(completed_bar_is_current(
+            &bars,
+            session_open,
+            at + Duration::seconds(615)
+        ));
+        assert!(!completed_bar_is_current(
+            &bars,
+            session_open,
+            at + Duration::seconds(616)
+        ));
+        assert!(!completed_bar_is_current(
+            &bars,
+            session_open,
+            at - Duration::seconds(1)
+        ));
+        bars.bars[0].opens_at = session_open - Duration::days(1);
+        bars.bars[0].closes_at = session_open - Duration::days(1) + Duration::seconds(300);
+        assert!(!completed_bar_is_current(&bars, session_open, at));
+        bars.bars.clear();
+        assert!(!completed_bar_is_current(&bars, session_open, at));
+    }
+
+    #[test]
+    fn research_buckets_resume_same_bar_then_advance_without_reusing_daily_no_signal() {
+        let config: crate::eur_runtime::EurRuntimeConfig =
+            serde_json::from_str(include_str!("../../../config/eur-shadow.example.json")).unwrap();
+        let mut settings = config.shadow.unwrap();
+        let hash = "a".repeat(64);
+        let at: DateTime<Utc> = "2026-11-06T08:04:59Z".parse().unwrap();
+        let daily = settings.cycle_id(&hash, at).unwrap();
+        assert_eq!(
+            daily,
+            settings.cycle_id(&hash, at + Duration::minutes(8)).unwrap()
+        );
+        settings.decision_interval_seconds = Some(300);
+        assert_eq!(
+            settings.cycle_id(&hash, at).unwrap(),
+            settings.cycle_id(&hash, at - Duration::minutes(1)).unwrap()
+        );
+        assert_ne!(
+            settings.cycle_id(&hash, at).unwrap(),
+            settings.cycle_id(&hash, at + Duration::seconds(1)).unwrap()
+        );
+        settings.decision_interval_seconds = Some(301);
+        assert!(settings.validate().is_err());
+    }
 
     fn crosswalk() -> ShadowCrosswalk {
         serde_json::from_str(include_str!(

@@ -17,6 +17,11 @@ ingestion, approved-artifact native inference and Telegram delivery state.
 
 ## Interface
 
+The [EUR analyst probe](./examples/eur_analyst_probe.rs) explicitly calls the
+pinned model with synthetic numerical fixtures and no broker port. It validates
+the online selection contract and labels its output ineligible for market,
+paper-day or release acceptance.
+
 - [Optional intelligence adapters](./src/intelligence/README.md): bounded
   normalized imports, SEC ownership XML, sequence-checked displayed books,
   in-memory research replay and optional read-only tools.
@@ -41,6 +46,11 @@ ingestion, approved-artifact native inference and Telegram delivery state.
 - `[src/yfinance.rs:YfinanceMarketData]`: explicitly mapped, read-only
   Euronext quote reads through `yfinance-rs`; both bid/ask and freshness are
   required before an observation can enter the executable quote contract.
+- `[src/ibkr_bars.rs:CurrentBarsConfig]`: bounded read-only SMART TRADES
+  capture for current EUR strategy candles. It binds the helper hash, exact
+  contracts, native coverage and timestamps, and withholds the latest interval
+  without a successor. EUR executable quotes remain the separate live type-1
+  bid/ask source; Yahoo/Alpha remain historical/news research.
 - `[src/sessions.rs:MemorySessionRepository]`: scoped session fixtures with
   generation/revision fencing.
 - [X and news contract](./src/news/README.md): reviewed read-only sources, bounded

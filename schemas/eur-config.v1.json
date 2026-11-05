@@ -56,9 +56,23 @@
         }
       }
     },
-    "universe_config":{"$ref":"#/$defs/Path"},"yfinance_config":{"$ref":"#/$defs/Path"},
+    "operation_config":{"$ref":"#/$defs/Path"},"universe_config":{"$ref":"#/$defs/Path"},"yfinance_config":{"$ref":"#/$defs/Path"},
     "research_config":{"$ref":"#/$defs/Path"},"trading212_config":{"$ref":"#/$defs/Path"},
-    "opencode_config":{"$ref":"#/$defs/Path"},"notes":{"type":"array","items":{"type":"string"}}
+    "opencode_config":{"$ref":"#/$defs/Path"},"notes":{"type":"array","items":{"type":"string"}},
+    "shadow": {
+      "type":["object","null"],"additionalProperties":false,
+      "required":["deployment_id","crosswalk_config","state_directory","interval_seconds"],
+      "properties":{
+        "deployment_id":{"type":"string","pattern":"^[A-Za-z0-9_.:-]{1,120}$"},
+        "crosswalk_config":{"type":"string","minLength":1},
+        "state_directory":{"type":"string","pattern":"^/var/lib/"},
+        "interval_seconds":{"type":"integer","minimum":10,"maximum":3600},
+        "ibkr_config":{"$ref":"#/$defs/Path"},"risk_config":{"$ref":"#/$defs/Path"},
+        "bar_interval_seconds":{"type":["integer","null"],"enum":[null,60,300,900,1800,3600,86400]},
+        "decision_interval_seconds":{"type":["integer","null"],"minimum":300,"maximum":3600},
+        "current_bars_config":{"$ref":"#/$defs/Path"}
+      }
+    }
   },
   "not":{"properties":{"execution_stage":{"const":"LIVE"}},"required":["execution_stage"]},
   "$defs":{

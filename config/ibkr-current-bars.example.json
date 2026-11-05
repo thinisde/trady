@@ -1,0 +1,12 @@
+{
+  "config_version": 1,
+  "enabled": false,
+  "provider": "IBKR_SMART_TRADES",
+  "python_path": "/opt/trady/ibkr-sdk/bin/python",
+  "script_path": "/opt/trady/scripts/capture-ibkr-current-bars.py",
+  "script_sha256": "785000c69d444b33922f27adba20a831121daf5ba3de73ee74803bcb44b5bd1d",
+  "client_id": 910075,
+  "timeout_seconds": 90,
+  "interval_seconds": 300,
+  "duration_days": 2
+}

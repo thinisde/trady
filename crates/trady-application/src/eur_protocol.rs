@@ -28,6 +28,9 @@ pub struct ProtocolContext {
     pub created_at: DateTime<Utc>,
     pub flatten_at: DateTime<Utc>,
     pub max_unprotected_seconds: i64,
+    /// First BUY transport expires with its retained live executable quote.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entry_valid_until: Option<DateTime<Utc>>,
 }
 impl ProtocolContext {
     pub fn validate(&self) -> Result<()> {
@@ -64,6 +67,11 @@ impl ProtocolContext {
                 && self.created_at.date_naive() == self.flatten_at.date_naive()
                 && (1..=10).contains(&self.max_unprotected_seconds),
             "invalid EUR protocol authority or risk bounds",
+        )?;
+        require(
+            self.entry_valid_until
+                .is_none_or(|until| self.created_at < until && until <= self.flatten_at),
+            "invalid entry quote deadline",
         )
     }
 }
@@ -154,6 +162,10 @@ pub enum ProtocolInput {
         history_complete: bool,
         stop_price: Option<Decimal>,
     },
+    EntryFillTimeObserved {
+        broker_id: String,
+        filled_at: DateTime<Utc>,
+    },
     Rejected {
         leg: OrderLeg,
     },
@@ -205,6 +217,9 @@ pub struct ProtocolState {
     pub exit_requested: bool,
     pub reconciliation_required: bool,
     pub unprotected_since: Option<DateTime<Utc>>,
+    /// Optional for replay compatibility with journals predating broker clocks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entry_first_filled_at: Option<DateTime<Utc>>,
     pub reason: Option<String>,
     pub last_event_at: DateTime<Utc>,
 }
@@ -225,6 +240,7 @@ impl ProtocolState {
             exit_requested: false,
             reconciliation_required: false,
             unprotected_since: None,
+            entry_first_filled_at: None,
             reason: None,
         })
     }
@@ -359,6 +375,12 @@ impl ProtocolState {
                         && *holding_quantity >= Decimal::ZERO,
                     "broker identity or quantity conflict",
                 )?;
+                let protection_overdue = *leg == OrderLeg::Protection
+                    && self.entry_first_filled_at.is_some()
+                    && self.unprotected_since.is_some_and(|since| {
+                        (at - since).num_milliseconds()
+                            >= self.context.max_unprotected_seconds * 1000
+                    });
                 let late_entry_fill = *leg == OrderLeg::Entry
                     && self.protection.is_some()
                     && self.entry.as_ref().is_some_and(|p| *filled > p.filled);
@@ -426,7 +448,32 @@ impl ProtocolState {
                         self.exit_requested = true;
                         self.reason = Some("LATE_ENTRY_FILL_AFTER_PROTECTION".into());
                     }
+                    if protection_overdue {
+                        self.exit_requested = true;
+                        self.reason = Some("BROKER_FILL_PROTECTION_DEADLINE_EXCEEDED".into());
+                    }
                     self.exit_phase();
+                }
+            }
+            ProtocolInput::EntryFillTimeObserved {
+                broker_id,
+                filled_at,
+            } => {
+                let entry = self.progress(OrderLeg::Entry)?;
+                require(
+                    entry.broker_id.as_ref() == Some(broker_id)
+                        && entry.filled > Decimal::ZERO
+                        // Provider history has whole-second precision.
+                        && *filled_at >= entry.dispatched_at - chrono::Duration::seconds(1)
+                        && *filled_at <= at,
+                    "invalid broker entry fill time",
+                )?;
+                let first = self
+                    .entry_first_filled_at
+                    .map_or(*filled_at, |old| old.min(*filled_at));
+                self.entry_first_filled_at = Some(first);
+                if let Some(since) = self.unprotected_since {
+                    self.unprotected_since = Some(since.min(first));
                 }
             }
             ProtocolInput::Rejected { leg } => {
@@ -656,6 +703,42 @@ pub fn recover(records: &[ProtocolRecord]) -> Result<ProtocolState> {
 pub trait ProtocolJournal {
     fn load(&mut self, intent_id: &str) -> Result<Vec<ProtocolRecord>>;
     fn append(&mut self, expected_revision: u64, record: &ProtocolRecord) -> Result<()>;
+    fn record_observation(
+        &mut self,
+        _context: &ProtocolContext,
+        _view: &driver::BrokerObservation,
+    ) -> Result<()> {
+        Ok(())
+    }
+    fn record_protection_confirmation(
+        &mut self,
+        _context: &ProtocolContext,
+        _view: &driver::ProtectionConfirmation,
+    ) -> Result<()> {
+        Ok(())
+    }
+}
+impl<J: ProtocolJournal + ?Sized> ProtocolJournal for &mut J {
+    fn load(&mut self, intent_id: &str) -> Result<Vec<ProtocolRecord>> {
+        (**self).load(intent_id)
+    }
+    fn append(&mut self, expected_revision: u64, record: &ProtocolRecord) -> Result<()> {
+        (**self).append(expected_revision, record)
+    }
+    fn record_observation(
+        &mut self,
+        context: &ProtocolContext,
+        view: &driver::BrokerObservation,
+    ) -> Result<()> {
+        (**self).record_observation(context, view)
+    }
+    fn record_protection_confirmation(
+        &mut self,
+        context: &ProtocolContext,
+        view: &driver::ProtectionConfirmation,
+    ) -> Result<()> {
+        (**self).record_protection_confirmation(context, view)
+    }
 }
 /// Only return an effect after its UNKNOWN dispatch marker has committed.
 /// Replaying the same event after a crash always reconciles, never resubmits.
@@ -685,4 +768,7 @@ pub fn advance<J: ProtocolJournal>(
     Ok(record.effect)
 }
 
+pub mod driver;
+#[cfg(test)]
+mod driver_tests;
 pub mod scenarios;

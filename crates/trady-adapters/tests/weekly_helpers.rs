@@ -7,10 +7,12 @@ use trady_application::optimization::*;
 use trady_domain::{AccountId, Mode};
 
 fn fixture(script: &str, timeout: u32, max_output: usize) -> (PathBuf, HelperCommand) {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let directory = std::env::temp_dir().join(format!(
-        "trady-weekly-helper-test-{}-{}",
+        "trady-weekly-helper-test-{}-{}-{}",
         std::process::id(),
-        chrono::Utc::now().timestamp_nanos_opt().unwrap()
+        chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
     fs::create_dir(&directory).unwrap();
     let script_path = directory.join("helper.py");

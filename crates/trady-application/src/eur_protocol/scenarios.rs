@@ -22,7 +22,7 @@ impl ProtocolJournal for MemoryJournal {
         Ok(())
     }
 }
-fn context() -> ProtocolContext {
+pub(super) fn context() -> ProtocolContext {
     let at = "2026-11-04T09:00:00Z".parse().unwrap();
     ProtocolContext {
         runtime_mode: trady_domain::ExecutionStage::Replay,
@@ -43,6 +43,7 @@ fn context() -> ProtocolContext {
         created_at: at,
         flatten_at: at + Duration::hours(7),
         max_unprotected_seconds: 5,
+        entry_valid_until: None,
     }
 }
 fn step(j: &mut MemoryJournal, input: ProtocolInput) -> ProtocolEffect {

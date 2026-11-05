@@ -30,6 +30,7 @@ fn durable_protocol_reserves_daily_slot_and_survives_unknown_dispatch_restart() 
         created_at: at,
         flatten_at: at + Duration::minutes(1),
         max_unprotected_seconds: 5,
+        entry_valid_until: None,
     };
     let dsn = env::var("TRADY_EXECUTOR_DSN").unwrap();
     let open =
@@ -52,11 +53,56 @@ fn durable_protocol_reserves_daily_slot_and_survives_unknown_dispatch_restart() 
         ProtocolEffect::SubmitEntry { .. }
     ));
     assert_eq!(store.daily_entry_count(at.date_naive()).unwrap(), 1);
+    store.record_observation(&c,&trady_application::eur_protocol::driver::BrokerObservation{
+        holding_quantity:Decimal::ZERO,available_quantity:Decimal::ZERO,pending_order_ids:vec![],exact_orders:vec![],history_complete:true,observed_at:at,entry_first_filled_at:None,entry_confirmation_from_full_view_at:None,
+        evidence:serde_json::json!({"provider":"SYNTHETIC_POSTGRES_FIXTURE","fill_prices_and_wallet_fees":"retained_without_credentials"}),
+    }).unwrap();
+    store
+        .record_protection_confirmation(
+            &c,
+            &driver::ProtectionConfirmation {
+                order: trady_domain::BrokerOrder {
+                    broker_order_id: "1002".into(),
+                    client_intent_id: None,
+                    instrument_id: trady_domain::InstrumentId::new("AIRp_EQ").unwrap(),
+                    side: trady_domain::Side::Sell,
+                    quantity: Decimal::ONE,
+                    filled_quantity: Decimal::ZERO,
+                    status: trady_domain::OrderStatus::Open,
+                },
+                stop_price: Decimal::from(98),
+                holding_quantity: Decimal::ONE,
+                observed_at: at,
+                evidence: serde_json::json!({"classification":"SYNTHETIC_POSTGRES_FIXTURE"}),
+            },
+        )
+        .unwrap();
     drop(store);
     let mut restarted = open();
     restarted
         .acquire_executor_lease("restart_worker", 120)
         .unwrap();
+    let observations = restarted
+        .list_documents(
+            "protocol_broker_observation",
+            at - Duration::seconds(1),
+            100,
+        )
+        .unwrap();
+    assert_eq!(observations.as_array().unwrap().len(), 1);
+    assert_eq!(
+        restarted
+            .list_documents(
+                "protocol_protection_confirmation",
+                at - Duration::seconds(1),
+                100
+            )
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
     assert_eq!(
         recover(&restarted.load(&c.intent_id).unwrap())
             .unwrap()

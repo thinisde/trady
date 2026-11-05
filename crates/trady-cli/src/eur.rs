@@ -1,5 +1,4 @@
-//! EUR authority diagnostics and catalog reconciliation. All reads are bounded;
-//! no command in this module receives a broker mutation port.
+//! EUR authority diagnostics, bounded supervision and durable protocol routing.
 use chrono::Utc;
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
@@ -25,7 +24,7 @@ use trady_application::{
 use trady_domain::{Error, FallbackAttempt, RankedCandidate, Result, SelectionRun, require};
 use trady_storage::target::PgTargetStore;
 
-pub const HELP: &str = "\nEUR target (disabled SHADOW by default; LIVE rejected):\n  trady eur config --config FILE\n  trady eur capture|diagnose-inputs|daily|gateway|report --config FILE [--once]\n  trady eur export --config FILE --out NEW_DIRECTORY\n  trady eur weekly|handoff --config FILE [--out FILE]\n  trady universe check --config FILE\n  trady universe snapshot --config FILE --review FILE [--catalog RECORDED_FILE] [--out FILE]\n  trady gate explain --config FILE [--snapshot FILE]\n  trady eur select --run FILE --candidates FILE [--fallback FILE]\n  trady replay manifest-check --config FILE --manifest FILE\n  trady replay paper-day --config FILE --manifest FILE [--out NEW_DIRECTORY]\n  trady replay protocol-suite --out NEW_FILE\n\nSnapshot writes require the analyst PostgreSQL role. Crosswalk review must bind exact catalog IDs.\nManifest checking and synthetic protocol fixtures do not certify a complete paper-day replay.\n";
+pub const HELP: &str = "\nEUR target (disabled SHADOW by default; LIVE rejected):\n  trady eur config --config FILE\n  trady eur capture|diagnose-inputs|daily|gateway|report --config FILE [--once]\n  trady eur forward-paper --config FILE --stream DIR --out NEW_DIRECTORY [--exit-after-seconds N]\n  trady eur export --config FILE --out NEW_DIRECTORY\n  trady eur weekly|handoff --config FILE [--out FILE]\n  trady universe check --config FILE\n  trady universe snapshot --config FILE --review FILE [--catalog RECORDED_FILE] [--out FILE]\n  trady gate explain --config FILE [--snapshot FILE]\n  trady eur select --run FILE --candidates FILE [--fallback FILE]\n  trady eur demo-run --config FILE --bundle DIR --owner-approval FILE [--once]\n  trady eur demo-report --config FILE --out NEW_DIRECTORY\n  trady eur protocol-drive --config FILE --bundle DIR --owner-approval FILE --intent ID [--snapshot FILE] [--exit-reason REASON] [--once]\n  trady replay manifest-check --config FILE --manifest FILE\n  trady replay paper-day --config FILE --manifest FILE [--out NEW_DIRECTORY]\n  trady replay protocol-suite --out NEW_FILE\n\nSnapshot writes require the analyst PostgreSQL role. Crosswalk review must bind exact catalog IDs.\nManifest checking and synthetic protocol fixtures do not certify a complete paper-day replay.\n";
 
 pub fn run(args: &[String]) -> Result<Value> {
     let command = args
@@ -41,12 +40,16 @@ pub fn run(args: &[String]) -> Result<Value> {
                 json!({"authority":"eur_intraday_v1","account_id":config.account_id,
                 "enabled":config.enabled,"execution_stage":config.execution_stage,
                 "live_enabled":config.live_enabled,"broker_environment":config.broker.environment,
-                "entry_authorized":false,"broker_mutation_path_implemented":false}),
+                "entry_authorized":false,"broker_mutation_path_implemented":true,"verified_release_and_owner_approval_required":true}),
             )
         }
         "gate-explain" => gate_command(&[vec!["explain".into()], args[1..].to_vec()].concat()),
         "universe-check" => universe_command(&[vec!["check".into()], args[1..].to_vec()].concat()),
         "select" => select(&args[1..]),
+        "protocol-drive" => super::eur_execute::run(&args[1..]),
+        "demo-run" => super::eur_operation::run(&args[1..]),
+        "demo-report" => super::eur_operation::report(&args[1..]),
+        "forward-paper" => super::eur_paper::run(&args[1..]),
         "weekly" | "handoff" => super::eur_workflow::run(command, &args[1..]),
         "export" => {
             let values = options(&args[1..], &["--config", "--out"], &["--config", "--out"])?;
@@ -233,7 +236,8 @@ pub fn replay_command(args: &[String]) -> Result<Value> {
             "scenarios":result["scenarios"].as_array().map(Vec::len),"broker_capability_proven":false,"entry_authorized":false}),
         );
     }
-    let paper = args.first().map(String::as_str) == Some("paper-day");
+    let paper_check = args.first().map(String::as_str) == Some("paper-day-check");
+    let paper = paper_check || args.first().map(String::as_str) == Some("paper-day");
     require(
         paper || args.first().map(String::as_str) == Some("manifest-check"),
         "usage: trady replay manifest-check|paper-day --config FILE --manifest FILE [--out NEW_DIRECTORY]",
@@ -301,7 +305,7 @@ pub fn replay_command(args: &[String]) -> Result<Value> {
             .get("--out")
             .map(PathBuf::from)
             .unwrap_or_else(|| root.join("paper-day-result"));
-        return super::eur_replay::paper_day(&config, &manifest, &documents, &out);
+        return super::eur_replay::paper_day(&config, &manifest, &documents, &out, !paper_check);
     }
     Ok(
         json!({"status":"MANIFEST_INTEGRITY_CHECKED","run_id":manifest.run_id,
@@ -401,7 +405,7 @@ fn resolve(config_path: &Path, value: &str) -> PathBuf {
             .join(p)
     }
 }
-fn options(
+pub(super) fn options(
     args: &[String],
     allowed: &[&str],
     required: &[&str],

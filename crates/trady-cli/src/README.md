@@ -14,6 +14,20 @@ declares the `trady` binary and no library target (`[main.rs:run]`).
 
 ## Interface
 
+The EUR [decision workflow](./eur_decision.rs) ranks deterministic strategy
+survivors through an immutable analyst-role handoff and refreshes IBKR quotes
+before risk calculation. [SHADOW coordination](./eur_shadow.rs) persists both
+positive and rejected decisions; model credentials stay with the analyst.
+The explicit [protocol driver](./eur_execute.rs) connects the durable journal
+to Trading 212 only after verifying the exact runtime/binary release, independent
+evidence and owner approval. Its command and remaining acceptance prerequisites
+are documented in [EUR execution and release](../../../docs/eur-execution-and-release.md).
+The [forward-paper workflow](./eur_paper.rs) requires an existing real-input
+selection and risk plan, samples fresh SMART books, and writes an explicitly
+simulated order ledger with verified protection, exit and EUR cash arithmetic.
+It has no broker transport. A no-signal run remains blocked; synthetic unit
+ledgers and capability trades cannot establish paper-day acceptance.
+
 `[entry_demo.rs:run]` exposes `demo-entry --directory ABSOLUTE_DIRECTORY`.
 It calls the native limit calculator with bundled synthetic inputs and a fixed
 fixture clock, then submits only to the recording-only `ShadowBroker`. Its
@@ -384,3 +398,10 @@ semantics. No proof or historical performance is inferred from these fixtures.
 Run `cargo test -p trady-cli --locked`; the disposable database script also runs all
 three role-specific startup probes and the PostgreSQL demonstration.
 Run `cargo test --workspace --locked` from the repository root for workspace verification.
+
+`replay paper-day-check` performs complete paper capsule validation without
+credentials or PostgreSQL persistence for the exact release verifier. It
+reconstructs the registered signal and risk calculation and cannot pass a
+missing real-input selection or ledger. Normal `replay paper-day` persists its
+report. Protocol execution binds accepted forward costs and checks authority
+expiry during the running loop.

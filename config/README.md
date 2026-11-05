@@ -15,6 +15,14 @@ from provider configuration. `credentials init` creates the ignored private
 
 ## Interface
 
+- [EUR data-source policy](../docs/eur-data-sources.md): IBKR SMART Live is
+  the sole real-time bid/ask source; verified IBKR TRADES supplies current
+  five-minute strategy candles. YFinance and Alpha Vantage serve historical
+  research and available news. An unavailable required IBKR source blocks entry.
+- [IBKR current candles](./ibkr-current-bars.example.json): disabled example
+  binding the exact read-only helper hash, dedicated client ID and two-day
+  regular-session history. No Yahoo/Alpha current-candle fallback is allowed.
+
 - [EUR Trading 212 demo](./eur-demo.example.json): disabled SHADOW template
   with one entry slot, one open position, 15-minute pre-close flattening, and
   rotation disabled. LIVE is structurally blocked.

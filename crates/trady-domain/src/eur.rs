@@ -37,12 +37,36 @@ pub struct EurInstrumentBinding {
     pub price_tick: Decimal,
     pub quantity_step: Decimal,
     pub fractional_orders: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value_rules: Option<EurOrderValueRules>,
     pub effective_from: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub liquidity_threshold: LiquidityThreshold,
     pub volatility_threshold: VolatilityThreshold,
     pub provenance_ids: Vec<String>,
     pub review_owner: String,
+}
+
+/// EUR value constraints are separate from the quantity lattice. A minimum
+/// quantity observed at a EUR 1 limit is not a universal one-share minimum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EurOrderValueRules {
+    pub minimum_trade_value: Decimal,
+    pub minimum_remaining_position_value: Decimal,
+    pub price_floor: Decimal,
+    pub price_ceiling: Decimal,
+}
+impl EurOrderValueRules {
+    fn validate(&self) -> Result<()> {
+        require(
+            self.minimum_trade_value > Decimal::ZERO
+                && self.minimum_remaining_position_value > Decimal::ZERO
+                && self.price_floor > Decimal::ZERO
+                && self.price_ceiling >= self.price_floor,
+            "invalid reviewed EUR order-value rules",
+        )
+    }
 }
 
 /// Canonical orderable crosswalk row. `broker_ticker` is the provider catalog
@@ -66,6 +90,8 @@ pub struct EurInstrumentRegistryEntry {
     pub quantity_step: Decimal,
     pub price_tick: Decimal,
     pub fractional_support: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value_rules: Option<EurOrderValueRules>,
     pub effective_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub owner_review_reference: String,
@@ -89,6 +115,7 @@ impl EurInstrumentRegistryEntry {
             quantity_step: binding.quantity_step,
             price_tick: binding.price_tick,
             fractional_support: binding.fractional_orders,
+            value_rules: binding.value_rules.clone(),
             effective_at: binding.effective_from,
             expires_at: binding.expires_at,
             owner_review_reference: binding.review_owner.clone(),
@@ -96,6 +123,9 @@ impl EurInstrumentRegistryEntry {
     }
 
     pub fn validate(&self, now: DateTime<Utc>) -> Result<()> {
+        if let Some(rules) = &self.value_rules {
+            rules.validate()?;
+        }
         require(
             self.internal_instrument_id.as_str().ends_with("_EQ")
                 && valid_reference(&self.broker_ticker)
@@ -123,7 +153,30 @@ impl EurInstrumentRegistryEntry {
 }
 
 impl EurInstrumentBinding {
+    pub fn entry_minimum_quantity(&self, price: Decimal) -> Result<Decimal> {
+        require(
+            price > Decimal::ZERO && self.quantity_step > Decimal::ZERO,
+            "invalid EUR entry quantity price or step",
+        )?;
+        let Some(rules) = &self.value_rules else {
+            return Ok(self.minimum_quantity);
+        };
+        rules.validate()?;
+        require(
+            price >= rules.price_floor && price <= rules.price_ceiling,
+            "price outside reviewed EUR rule band",
+        )?;
+        let units = rules
+            .minimum_trade_value
+            .checked_div(price)
+            .and_then(|q| q.checked_div(self.quantity_step))
+            .ok_or_else(|| crate::Error("EUR minimum order value arithmetic failed".into()))?;
+        Ok((units.ceil() * self.quantity_step).max(self.minimum_quantity))
+    }
     pub fn validate(&self, now: DateTime<Utc>) -> Result<()> {
+        if let Some(rules) = &self.value_rules {
+            rules.validate()?;
+        }
         require(
             self.instrument_id.as_str().ends_with("_EQ")
                 && valid_reference(&self.broker_instrument_id)
@@ -645,6 +698,7 @@ mod tests {
             price_tick: Decimal::new(1, 2),
             quantity_step: Decimal::ONE,
             fractional_orders: false,
+            value_rules: None,
             effective_from: now() - Duration::days(1),
             expires_at: Some(now() + Duration::days(1)),
             liquidity_threshold: LiquidityThreshold {
@@ -659,6 +713,38 @@ mod tests {
             provenance_ids: vec!["review_1".into()],
             review_owner: "owner".into(),
         }
+    }
+
+    #[test]
+    fn euro_trade_value_is_not_a_fixed_one_share_minimum() {
+        let mut b = binding();
+        b.minimum_quantity = Decimal::new(1, 4);
+        b.quantity_step = Decimal::new(1, 4);
+        b.fractional_orders = true;
+        b.value_rules = Some(EurOrderValueRules {
+            minimum_trade_value: Decimal::ONE,
+            minimum_remaining_position_value: Decimal::ONE,
+            price_floor: Decimal::from(190),
+            price_ceiling: Decimal::from(210),
+        });
+        assert_eq!(
+            b.entry_minimum_quantity(Decimal::new(19840, 2)).unwrap(),
+            Decimal::new(51, 4)
+        );
+        assert_eq!(
+            b.entry_minimum_quantity(Decimal::from(203)).unwrap(),
+            Decimal::new(50, 4)
+        );
+        assert!(b.entry_minimum_quantity(Decimal::from(189)).is_err());
+        assert!(b.entry_minimum_quantity(Decimal::ZERO).is_err());
+        b.quantity_step = Decimal::new(1, 5);
+        b.minimum_quantity = b.quantity_step;
+        b.value_rules.as_mut().unwrap().price_floor = Decimal::from(1200);
+        b.value_rules.as_mut().unwrap().price_ceiling = Decimal::from(1400);
+        assert_eq!(
+            b.entry_minimum_quantity(Decimal::new(128752, 2)).unwrap(),
+            Decimal::new(78, 5)
+        );
     }
 
     fn quote() -> VenueQuote {

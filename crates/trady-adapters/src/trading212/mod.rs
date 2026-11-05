@@ -7,6 +7,7 @@ mod http;
 pub use autonomous::AutonomousTrading212;
 #[cfg(test)]
 mod autonomous_tests;
+pub mod eur_protocol;
 #[cfg(test)]
 mod tests;
 
@@ -368,37 +369,13 @@ impl<C: Clock> Trading212Reader<C> {
             .as_ref()
             .is_none_or(|(at, _, _)| at.elapsed() >= Duration::from_secs(600))
         {
-            let rows: Vec<InstrumentMetadata> = self.http.json(
+            let raw: serde_json::Value = self.http.json(
                 Bucket::Instruments,
                 Method::GET,
                 &format!("{API}/metadata/instruments"),
                 None,
             )?;
-            let mut metadata = BTreeMap::new();
-            let mut rejected_instruments = Vec::new();
-            for row in rows {
-                let id = match InstrumentId::new(row.ticker.clone()) {
-                    Ok(id) => id,
-                    Err(_) => {
-                        rejected_instruments.push(CatalogInstrumentRejection {
-                            broker_ticker: row.ticker,
-                            reason: "UNREPRESENTABLE_BROKER_TICKER".into(),
-                        });
-                        continue;
-                    }
-                };
-                let instrument = BrokerInstrument {
-                    instrument_id: id.clone(),
-                    currency: row.currency_code,
-                    isin: row.isin,
-                    kind: row.kind,
-                };
-                if metadata.insert(id, instrument).is_some() {
-                    return Err(invalid());
-                }
-            }
-            rejected_instruments.sort_by(|a, b| a.broker_ticker.cmp(&b.broker_ticker));
-            self.metadata = Some((Instant::now(), metadata, rejected_instruments));
+            self.cache_catalog(&raw)?;
         }
         let (_, metadata, rejected_instruments) = self.metadata.as_ref().ok_or_else(invalid)?;
         Ok(InstrumentCatalog {
@@ -408,8 +385,176 @@ impl<C: Clock> Trading212Reader<C> {
         })
     }
 
+    fn cache_catalog(&mut self, raw: &serde_json::Value) -> BrokerResult<()> {
+        let rows: Vec<InstrumentMetadata> =
+            serde_json::from_value(raw.clone()).map_err(|_| invalid())?;
+        let mut metadata = BTreeMap::new();
+        let mut rejected_instruments = Vec::new();
+        for row in rows {
+            let id = match InstrumentId::new(row.ticker.clone()) {
+                Ok(id) => id,
+                Err(_) => {
+                    rejected_instruments.push(CatalogInstrumentRejection {
+                        broker_ticker: row.ticker,
+                        reason: "UNREPRESENTABLE_BROKER_TICKER".into(),
+                    });
+                    continue;
+                }
+            };
+            let instrument = BrokerInstrument {
+                instrument_id: id.clone(),
+                currency: row.currency_code,
+                isin: row.isin,
+                kind: row.kind,
+            };
+            if metadata.insert(id, instrument).is_some() {
+                return Err(invalid());
+            }
+        }
+        rejected_instruments.sort_by(|a, b| a.broker_ticker.cmp(&b.broker_ticker));
+        self.metadata = Some((Instant::now(), metadata, rejected_instruments));
+        Ok(())
+    }
+
     pub fn instruments(&mut self) -> BrokerResult<Vec<BrokerInstrument>> {
         Ok(self.instruments_with_rejections()?.instruments)
+    }
+
+    /// Trusted read-only cash collector; pages are retained and never inferred empty.
+    pub fn eur_cash_events(
+        &mut self,
+        since: DateTime<Utc>,
+        mut before_page: impl FnMut() -> BrokerResult<()>,
+    ) -> BrokerResult<serde_json::Value> {
+        self.ensure_binding()?;
+        if self.config.environment != Environment::Demo || self.config.broker_account_id != 52211463
+        {
+            return Err(BrokerFailure::new(BrokerFailureKind::Unsupported));
+        }
+        let mut sources = serde_json::Map::new();
+        for endpoint in ["transactions", "dividends"] {
+            let prefix = format!("{API}/history/{endpoint}");
+            // Native DEMO400 requires cursor and time together or neither.
+            // Start unfiltered and retain all pages; period filtering is local.
+            let mut path = format!("{prefix}?limit=50");
+            let mut seen = std::collections::BTreeSet::new();
+            let mut pages = Vec::new();
+            let mut complete = false;
+            for _ in 0..20 {
+                before_page()?;
+                if !path.starts_with(&(prefix.clone() + "?"))
+                    || path.len() > 1024
+                    || path.contains(['#', '\\'])
+                    || !seen.insert(path.clone())
+                {
+                    return Err(invalid());
+                }
+                self.http.pace(Bucket::History)?;
+                let response: serde_json::Value =
+                    self.http.json(Bucket::History, Method::GET, &path, None)?;
+                if !response["items"].is_array() {
+                    return Err(invalid());
+                }
+                if !response
+                    .get("nextPagePath")
+                    .is_some_and(|v| v.is_null() || v.is_string())
+                {
+                    return Err(invalid());
+                }
+                let next = response["nextPagePath"]
+                    .as_str()
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_owned);
+                pages.push(serde_json::json!({"path":path,"received_at":self.clock.now(),"response":response}));
+                match next {
+                    Some(next) => path = next,
+                    None => {
+                        complete = true;
+                        break;
+                    }
+                }
+            }
+            sources.insert(
+                endpoint.into(),
+                serde_json::json!({"complete":complete,"pages":pages}),
+            );
+        }
+        Ok(
+            serde_json::json!({"provider":"TRADING212_DEMO","broker_account_id":52211463,"since":since,"broker_mutations":0,"sources":sources}),
+        )
+    }
+
+    /// Account-wide raw fill coverage for a bounded month audit. A page bound
+    /// is reported incomplete; scoped protocol rows cannot replace this read.
+    pub fn eur_month_order_history(
+        &mut self,
+        mut before_page: impl FnMut() -> BrokerResult<()>,
+    ) -> BrokerResult<serde_json::Value> {
+        self.ensure_binding()?;
+        if self.config.environment != Environment::Demo || self.config.broker_account_id != 52211463
+        {
+            return Err(invalid());
+        }
+        let mut cursor = None;
+        let mut pages = Vec::new();
+        let mut complete = false;
+        let mut seen = std::collections::BTreeSet::new();
+        for _ in 0..20 {
+            before_page()?;
+            let query = HistoryQuery {
+                instrument_id: None,
+                cursor,
+                limit: 50,
+            };
+            let path = cursor.map_or_else(
+                || format!("{API}/history/orders?limit=50"),
+                |id| format!("{API}/history/orders?limit=50&cursor={id}"),
+            );
+            self.http.pace(Bucket::History)?;
+            let value: serde_json::Value =
+                self.http.json(Bucket::History, Method::GET, &path, None)?;
+            if !value["items"].is_array()
+                || !value
+                    .get("nextPagePath")
+                    .is_some_and(|v| v.is_null() || v.is_string())
+            {
+                return Err(invalid());
+            }
+            let next = match value["nextPagePath"].as_str().filter(|s| !s.is_empty()) {
+                Some(path) if path.starts_with(&format!("{API}/history/orders?")) => {
+                    Some(next_cursor(path, &query)?)
+                }
+                Some(_) => return Err(invalid()),
+                None => None,
+            };
+            pages.push(
+                serde_json::json!({"path":path,"received_at":self.clock.now(),"response":value}),
+            );
+            match next {
+                Some(id) if seen.insert(id) => cursor = Some(id),
+                Some(_) => return Err(invalid()),
+                None => {
+                    complete = true;
+                    break;
+                }
+            }
+        }
+        Ok(
+            serde_json::json!({"provider":"TRADING212_DEMO","broker_account_id":52211463,"scope":"ACCOUNT_WIDE_NATIVE_ORDER_HISTORY","pages":pages,"complete":complete,"broker_mutations":0}),
+        )
+    }
+
+    pub(super) fn liquidation_catalog(&mut self) -> BrokerResult<Vec<BrokerInstrument>> {
+        // Leave a minute of cache headroom for exact cancel/history/exit reads.
+        // Refresh while native protection is still working.
+        if self
+            .metadata
+            .as_ref()
+            .is_some_and(|(at, _, _)| at.elapsed() >= Duration::from_secs(540))
+        {
+            self.metadata = None;
+        }
+        self.instruments()
     }
 
     /// Preserve provider metadata, including the working-schedule identity,
@@ -429,6 +574,35 @@ impl<C: Clock> Trading212Reader<C> {
             return Err(invalid());
         }
         Ok(value)
+    }
+
+    /// One native response supplies retained listing/schedule evidence and the
+    /// typed mutation cache; do not repeat the account-wide metadata request.
+    pub fn entry_catalog_snapshot(&mut self) -> BrokerResult<serde_json::Value> {
+        let raw = self.catalog_snapshot()?;
+        self.cache_catalog(&raw)?;
+        Ok(raw)
+    }
+
+    /// Reuse the one exact listing retained before this protocol's BUY during
+    /// short restarts. Account/position/history observations remain fresh.
+    pub fn seed_protocol_catalog(
+        &mut self,
+        raw: &serde_json::Value,
+        observed_at: DateTime<Utc>,
+    ) -> BrokerResult<()> {
+        let age = self.clock.now().signed_duration_since(observed_at);
+        if age < chrono::Duration::zero()
+            || age >= chrono::Duration::seconds(540)
+            || raw.as_array().is_none_or(|rows| rows.len() != 1)
+        {
+            return Err(invalid());
+        }
+        self.cache_catalog(raw)?;
+        if let Some((at, _, _)) = &mut self.metadata {
+            *at = Instant::now() - Duration::from_millis(age.num_milliseconds() as u64);
+        }
+        Ok(())
     }
 
     pub fn exchanges_snapshot(&mut self) -> BrokerResult<serde_json::Value> {
@@ -576,6 +750,11 @@ impl<C: Clock> Trading212Reader<C> {
         Ok(snapshot)
     }
 
+    pub fn entry_snapshot_paced(&mut self, account: &AccountId) -> BrokerResult<AccountSnapshot> {
+        self.http.pace(Bucket::Summary)?;
+        self.read_snapshot(account)
+    }
+
     fn check_account(&self, account: &AccountId) -> BrokerResult<()> {
         if account != &self.config.account_id {
             return Err(BrokerFailure::new(BrokerFailureKind::AccountMismatch));
@@ -690,10 +869,39 @@ impl<C: Clock> Trading212Executor<C> {
         binding: &EurInstrumentBinding,
         expires_at: Option<DateTime<Utc>>,
     ) -> BrokerResult<BrokerOrder> {
+        self.submit_eur_bound_guarded(request, binding, expires_at, || Ok(()))
+    }
+
+    pub(super) fn submit_eur_bound_guarded(
+        &mut self,
+        request: &BrokerOrderRequest,
+        binding: &EurInstrumentBinding,
+        expires_at: Option<DateTime<Utc>>,
+        before_post: impl FnOnce() -> BrokerResult<()>,
+    ) -> BrokerResult<BrokerOrder> {
         request.validate()?;
+        // A retained binding's review may expire while a holding is open.
+        // Market liquidation still checks its historical shape and the current
+        // account/catalog identity below. New entries and priced orders require
+        // a currently valid review.
+        let now = self.reader.clock.now();
+        let recovery_liquidation = request.side == trady_domain::Side::Sell
+            && matches!(
+                request.kind,
+                OrderKind::Market {
+                    extended_hours: false
+                }
+            );
         binding
-            .validate(self.reader.clock.now())
+            .validate(if recovery_liquidation {
+                binding.effective_from
+            } else {
+                now
+            })
             .map_err(|_| BrokerFailure::new(BrokerFailureKind::InvalidRequest))?;
+        if binding.effective_from > now {
+            return Err(invalid());
+        }
         let broker_instrument_id = InstrumentId::new(binding.broker_instrument_id.clone())
             .map_err(|_| BrokerFailure::new(BrokerFailureKind::InvalidRequest))?;
         if request.instrument_id != broker_instrument_id
@@ -712,16 +920,60 @@ impl<C: Clock> Trading212Executor<C> {
             .into_iter()
             .find(|instrument| instrument.instrument_id == broker_instrument_id)
             .ok_or_else(|| BrokerFailure::new(BrokerFailureKind::Unsupported))?;
+        let minimum_quantity = if request.side == trady_domain::Side::Buy {
+            let price = match request.kind {
+                OrderKind::Limit { price, .. } | OrderKind::Stop { price, .. } => Some(price),
+                OrderKind::StopLimit { limit, .. } => Some(limit),
+                _ => None,
+            };
+            match price {
+                Some(price) => binding
+                    .entry_minimum_quantity(price)
+                    .map_err(|_| invalid())?,
+                None if binding.value_rules.is_some() => {
+                    return Err(BrokerFailure::new(BrokerFailureKind::Unsupported));
+                }
+                None => binding.minimum_quantity,
+            }
+        } else {
+            binding.minimum_quantity
+        };
         if instrument.currency != binding.currency
             || instrument.kind != "STOCK"
             || instrument.isin != binding.isin
-            || request.quantity < binding.minimum_quantity
+            || request.quantity < minimum_quantity
             || request.quantity.checked_rem(binding.quantity_step) != Some(Decimal::ZERO)
             || (!binding.fractional_orders && request.quantity.fract() != Decimal::ZERO)
         {
             return Err(BrokerFailure::new(BrokerFailureKind::Unsupported));
         }
-        let aligned = |price: Decimal| price.checked_rem(binding.price_tick) == Some(Decimal::ZERO);
+        if recovery_liquidation && binding.expires_at.is_some_and(|until| now >= until) {
+            self.reader.http.pace(Bucket::Positions)?;
+            let positions: Vec<dto::PositionDto> = self.reader.http.json(
+                Bucket::Positions,
+                Method::GET,
+                &format!("{API}/positions"),
+                None,
+            )?;
+            if positions.len() != 1
+                || positions[0].instrument.ticker != binding.broker_instrument_id
+                || positions[0].instrument.currency != binding.currency
+                || positions[0].quantity.0 != request.quantity
+                || positions[0]
+                    .available
+                    .as_ref()
+                    .is_none_or(|q| q.0 < request.quantity)
+            {
+                return Err(invalid());
+            }
+        }
+        let aligned = |price: Decimal| {
+            price.checked_rem(binding.price_tick) == Some(Decimal::ZERO)
+                && binding
+                    .value_rules
+                    .as_ref()
+                    .is_none_or(|r| price >= r.price_floor && price <= r.price_ceiling)
+        };
         if !match request.kind {
             OrderKind::Market { .. } => true,
             OrderKind::Limit { price, .. } | OrderKind::Stop { price, .. } => aligned(price),
@@ -735,11 +987,13 @@ impl<C: Clock> Trading212Executor<C> {
             OrderKind::Stop { .. } => (Bucket::Stop, "stop"),
             OrderKind::StopLimit { .. } => (Bucket::StopLimit, "stop_limit"),
         };
+        self.reader.http.pace(bucket)?;
         if self.reader.config.environment != Environment::Demo
             || expires_at.is_some_and(|expiry| self.reader.clock.now() >= expiry)
         {
             return Err(BrokerFailure::new(BrokerFailureKind::InvalidRequest));
         }
+        before_post()?;
         let order: Order = self.reader.http.json(
             bucket,
             Method::POST,

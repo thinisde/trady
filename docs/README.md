@@ -5,7 +5,15 @@
 This directory contains Trady's operator guides and the EUR day-trading target
 authority. Shared research, storage, and legacy IEX30/v1 modules remain
 available for offline replay; the target runtime uses a reviewed EUR universe,
-yfinance-rs observations, and Trading 212 demo execution.
+IBKR SMART Live bid/ask, YFinance/Alpha Vantage research, and Trading 212
+demo execution. The [owner's data-source policy](./eur-data-sources.md)
+defines their roles and the absence of quote fallback.
+
+The [5 November real-session follow-up](./eur-blocker-resolution-2026-11-05.md)
+records actual DEMO fills, preserved failures and the remaining release gates.
+The [6 November–6 December DEMO month preparation](./eur-demo-month-2026-11.md)
+describes the finite operation, fresh-input research cadence, native ledger
+audit and outstanding activation evidence.
 
 ## Subdirectories & Boundaries
 
