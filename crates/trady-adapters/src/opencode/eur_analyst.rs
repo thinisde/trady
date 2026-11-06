@@ -224,7 +224,9 @@ impl EurResearchAnalyst for OpenCodeEurAnalyst {
                     |error| json!({"status":"UNAVAILABLE","error":error.to_string()}),
                 );
                 require(
-                    result.get("entry_authorized").is_none(),
+                    result
+                        .get("entry_authorized")
+                        .is_none_or(|value| value == false),
                     "EUR analyst read tools cannot provide execution authority",
                 )?;
                 let result = json!({"result":result,"entry_authorized":false});

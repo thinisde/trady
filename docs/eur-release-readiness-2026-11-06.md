@@ -76,23 +76,85 @@ part of the separate complete month reconciliation.
 
 ## Paper and release gates
 
-A bounded observer watches new immutable results from the installed unchanged
-registered strategy. It may attempt one 60-second forward-paper lifecycle only
-after a genuine durable analyst selection and Rust risk plan exist. The current
-13:30 UTC cycle returned `NO_BREAKOUT` for both instruments, with 168 completed
-current IBKR candles each. No paper entry, analyst response, risk plan or
-positive ledger was manufactured. Later observations will be recorded in the
-machine-readable follow-up.
+The bounded observer finished at 15:50:01 UTC after ten immutable cycles from
+13:30 through 15:45. ASML produced a genuine signal at 14:15 and AIR at 15:15,
+but both analyst attempts failed. The other eight cycles returned `NO_BREAKOUT`
+for both instruments. No cycle produced a durable valid selection/risk plan,
+so the observer started no forward-paper lifecycle. No strategy parameter,
+signal, analyst response, risk plan or ledger was manufactured.
+
+The actual retained diagnostics identify the same implementation defect in
+both failed cycles: the analyst adapter rejected a captured quote carrying
+`entry_authorized: false` merely because the field existed. The source repair
+accepts an absent marker or the exact boolean `false`; `true`, `null` and other
+values remain rejected. The application continues to wrap tool results with
+its own `entry_authorized: false`. A loopback HTTP regression reproduced the
+original failure, then passed after the fix, including successful correlated
+tool-result continuation and rejection of claimed/malformed authority. Failed
+native requests remain immutable and were not retried. The fixed candidate
+binary is separate from the installed SHADOW producer; a successful real-input
+paper lifecycle on the repaired candidate remains required.
+
+The final recorded 15:45 inputs were exported without another provider call.
+Credential-free `paper-day-check` replay exited 1 with `PAPER_DAY_BLOCKED`:
+no executable candidate, valid real-input paper ledger or strategy/risk plan.
+Fifteen passing synthetic protocol scenarios did not turn that replay green.
+
+## Owner-authorized 98% balance probe
+
+The owner's later entry authorization superseded the EUR 2,500 probe cap with
+**98% of fresh spendable EUR cash**. It applies to a new bounded manual
+experiment, not the closed morning authority. The wrapper requires a separate
+explicit balance-sizing record and exclusive attempt marker. The original
+continuation and ordinary release approvals are not extended by this record.
+
+The new snapshot contained EUR 4,993.42, giving a conservatively rounded
+EUR **4,893.55** cap. Fractional sizing at the fresh EUR 1,279.60 limit produced
+**3.82428 ASML shares**, limit notional **EUR 4,893.548688**, rounded down to the
+reviewed quantity step. Nominal share price did not impose a whole-share limit.
+The existing exact identity, price-band, quote, protection and physical account
+fences still applied.
+
+LIMIT BUY **57650117604**, fill **57650117606**, filled the whole requested
+quantity at 15:51 UTC. STOP **57650117614**, EUR 1,266.81 for the full quantity,
+was confirmed at 15:51:25.320597159 UTC, 6.320597159 seconds after the native
+whole-second first-fill timestamp. The separate process observed that exact
+STOP cancelled before MARKET SELL **57650117645**, fill **57650117647**.
+The protocol ended `FLAT`; its conservative exit-observation deadline reason
+is preserved. No partial entry or smaller-quantity protection was observed.
+
+The corrected supervisory native snapshot succeeded, and the later full
+account-wide audit reached the explicit end of **103 rows, three pages and 58
+distinct fills**. At 15:54 UTC the account was flat at **EUR 4,997.24**. This
+probe changed cash by **EUR +3.82**, still capability activity. Both fills match
+preceding positive-size live SMART books: zero BUY divergence and approximately
+3.12452 bps absolute SELL divergence. The physical UTC-day entry count is three.
+The SHADOW reader was restored and both read-only quote streams are closed.
+
+A separate self-contained six-fill attribution candidate preserves the prior
+four-fill acceptance and all old source bytes. It includes this new round trip,
+the complete refreshed history and the two original cleanup heads. The second
+independent Sol review accepted the exact six-fill candidate after 958 checks,
+resolved the analyst defect and approved the current source delta with no
+findings. The separately stamped six-fill registry passes the credential-free
+reviewed checker. Coverage ends at 15:54:32.743817983 UTC; the net Nov6
+capability cash change is EUR +4.56. The earlier four-fill registry is not
+relabelled as covering later fills, and neither new registry is installed.
+
+Both Sol rounds approved their behavior scope without findings or requested
+code changes. The second round covers the newly observed analyst repair and
+owner-authorized cash sizing. Review usage was not exposed. These source and
+attribution approvals do not approve a complete release or activate DEMO.
 
 Current native API documentation was fetched through Context7. The cancellation
 API documents acceptance of a cancellation request, not guaranteed cancellation;
 the retained experiment therefore uses exact terminal native history before
 selling. Documentation cannot replace an observed partial fill.
 
-Validation observed in this session passed 678 Rust workspace cases, 43
-disposable PostgreSQL/CLI cases and 72 Python cases, plus formatting, locked
+Final validation observed in this session passed 680 Rust workspace cases, 43
+disposable PostgreSQL/CLI cases and 73 Python cases, plus formatting, locked
 workspace checking, strict all-targets Clippy, canonical assets and local links.
-The ignored native experiment was invoked separately with explicit DEMO scope.
+The ignored native experiments were invoked separately with explicit DEMO scope.
 
 Private original bytes, request/response journals, failed commands, source
 inventory, account audit and both attribution versions are retained under

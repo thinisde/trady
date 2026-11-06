@@ -106,6 +106,25 @@ class CleanupTests(unittest.TestCase):
         self.assertIsNone(cleanup.unresolved_mutation([before, {"phase": "RESPONSE", "method": "DELETE", "path": "orders/123", "accepted": True}]))
         self.assertIsNone(cleanup.unresolved_mutation([before, {"phase": "RESPONSE", "method": "DELETE", "path": "orders/123", "http_status": 404}]))
 
+    def test_98_percent_cash_probe_needs_its_own_authority_and_cannot_repeat(self):
+        now = datetime(2026,11,6,15,50,tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as name:
+            root=Path(name)
+            start={'kind':'OWNER_AUTHORIZED_MANUAL_EVIDENCE_AFTER_30_ENTRY_POLICY_CHANGE',
+                   'started_at':now.isoformat(),'new_experiment_cutoff':'2026-11-06T16:00:00Z',
+                   'maximum_new_entry_attempts':1,'maximum_entry_notional_eur':'2500',
+                   'maximum_acquired_holdings':1,'activation_authorized':False,'live_enabled':False,'scheduled_task_used':False}
+            (root/'START.json').write_text(json.dumps(start))
+            with self.assertRaisesRegex(ValueError,'MANUAL_BOUNDED_AUTHORITY'):
+                supervisor.claim_manual(root,'nov6_cash',root/'probe',now,True)
+            start.update(kind='OWNER_AUTHORIZED_MANUAL_EVIDENCE_98_PERCENT_BALANCE',maximum_entry_cash_fraction='0.98')
+            (root/'START.json').write_text(json.dumps(start))
+            with self.assertRaisesRegex(ValueError,'MANUAL_BOUNDED_AUTHORITY'):
+                supervisor.claim_manual(root,'nov6_cash',root/'probe',now)
+            supervisor.claim_manual(root,'nov6_cash',root/'probe',now,True)
+            with self.assertRaises(FileExistsError):
+                supervisor.claim_manual(root,'nov6_other',root/'other',now,True)
+
 
 if __name__ == "__main__":
     unittest.main()

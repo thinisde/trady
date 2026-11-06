@@ -86,6 +86,41 @@ fn probe_ids(experiment: &str, instrument: &str, case: &str) -> (AccountId, Stri
         format!("cap_{stem}"),
     )
 }
+fn entry_budget(cash: Decimal, fraction: Option<Decimal>) -> Decimal {
+    match fraction {
+        Some(value) => {
+            assert_eq!(
+                value,
+                Decimal::new(98, 2),
+                "only the authorized 98% cash cap"
+            );
+            trady_policy::floor_to(cash * value, Decimal::new(1, 2)).unwrap()
+        }
+        None => Decimal::from(2500),
+    }
+}
+
+#[test]
+fn balance_probe_uses_fresh_cash_with_fractional_shares_below_the_98_percent_cap() {
+    let cash = Decimal::new(499342, 2);
+    let budget = entry_budget(cash, Some(Decimal::new(98, 2)));
+    assert_eq!(budget, Decimal::new(489355, 2));
+    for (price, step) in [
+        (Decimal::from(1296), Decimal::new(1, 5)),
+        (Decimal::new(19610, 2), Decimal::new(1, 4)),
+    ] {
+        let quantity = trady_policy::floor_to(budget / price, step).unwrap();
+        assert!(quantity * price <= budget);
+        assert!((quantity + step) * price > budget);
+        assert!(quantity.fract() > Decimal::ZERO);
+    }
+    assert_eq!(entry_budget(cash, None), Decimal::from(2500));
+    assert_eq!(
+        entry_budget(Decimal::from(1000), Some(Decimal::new(98, 2))),
+        Decimal::from(980)
+    );
+}
+
 fn eligible_book(
     book: &Value,
     contract: &IbkrBinding,
@@ -597,6 +632,10 @@ fn supervised_eur_demo_capability() {
             snapshot.positions.is_empty() && snapshot.orders.is_empty(),
             "one actual broker holding/order set at a time"
         );
+        let cash_fraction = env::var("TRADY_PROBE_ENTRY_CASH_FRACTION")
+            .ok()
+            .map(|value| value.parse::<Decimal>().expect("authorized cash fraction"));
+        let budget = entry_budget(snapshot.spendable_cash.amount, cash_fraction);
         let calendar = retry_read(|| executor.information().exchanges_snapshot());
         let now = Utc::now();
         let session =
@@ -720,12 +759,7 @@ fn supervised_eur_demo_capability() {
             )),
             evidence_ids: vec!["owner_authorized_capability_probe_20261105".into()],
             quantity: if case.starts_with("depth_partial") || case == "passive_partial" {
-                let step = if instrument == "AIR_PA_EQ" {
-                    Decimal::new(1, 4)
-                } else {
-                    Decimal::new(1, 5)
-                };
-                let q = trady_policy::floor_to(Decimal::from(2500) / entry, step).unwrap();
+                let q = trady_policy::floor_to(budget / entry, binding.quantity_step).unwrap();
                 assert!(
                     case == "passive_partial"
                         || q > book["ask_size"]
@@ -734,9 +768,7 @@ fn supervised_eur_demo_capability() {
                             .parse::<Decimal>()
                             .unwrap()
                 );
-                assert!(
-                    q * entry <= Decimal::from(2500) && q * entry <= snapshot.spendable_cash.amount
-                );
+                assert!(q * entry <= budget && q * entry <= snapshot.spendable_cash.amount);
                 q
             } else if case.starts_with("reservation_") {
                 Decimal::new(2, 2)
@@ -771,7 +803,7 @@ fn supervised_eur_demo_capability() {
             ),
         };
         context.validate().unwrap();
-        let doc = json!({"classification":"BOUNDED_DEMO_CAPABILITY_EXPERIMENT_NOT_RELEASE","experiment_id":experiment,"context":context,"binding":binding,"initial_broker_snapshot":snapshot,"initial_ibkr_book":book,"max_holding_count":1,"max_quantity":context.quantity,"max_entry_notional_eur":2500,"broker_account_id":52211463,"depth_opportunity_wait_millis":armed.elapsed().as_millis()});
+        let doc = json!({"classification":"BOUNDED_DEMO_CAPABILITY_EXPERIMENT_NOT_RELEASE","experiment_id":experiment,"context":context,"binding":binding,"initial_broker_snapshot":snapshot,"initial_ibkr_book":book,"max_holding_count":1,"max_quantity":context.quantity,"max_entry_notional_eur":budget,"maximum_entry_cash_fraction":cash_fraction,"broker_account_id":52211463,"depth_opportunity_wait_millis":armed.elapsed().as_millis()});
         store
             .append_document("capability_probe", &intent, &doc)
             .unwrap();

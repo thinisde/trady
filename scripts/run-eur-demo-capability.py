@@ -38,13 +38,19 @@ def claim_continuation(directory, experiment, out, now):
     return cutoff.isoformat()
 
 
-def claim_manual(directory, experiment, out, now):
+def claim_manual(directory, experiment, out, now, use_balance=False):
     """A new bounded manual run, never a receipt for the closed morning task."""
     start = json.loads((directory / "START.json").read_text())
     began = datetime.fromisoformat(start["started_at"])
     cutoff = datetime.fromisoformat(start["new_experiment_cutoff"].replace("Z", "+00:00"))
-    if not (start["kind"] == "OWNER_AUTHORIZED_MANUAL_EVIDENCE_AFTER_30_ENTRY_POLICY_CHANGE"
-            and start["maximum_new_entry_attempts"] == 1 and start["maximum_entry_notional_eur"] == "2500"
+    sizing_authorized = (
+        start["kind"] == "OWNER_AUTHORIZED_MANUAL_EVIDENCE_98_PERCENT_BALANCE"
+        and start.get("maximum_entry_cash_fraction") == "0.98"
+    ) if use_balance else (
+        start["kind"] == "OWNER_AUTHORIZED_MANUAL_EVIDENCE_AFTER_30_ENTRY_POLICY_CHANGE"
+        and start.get("maximum_entry_notional_eur") == "2500"
+    )
+    if not (sizing_authorized and start["maximum_new_entry_attempts"] == 1
             and start["maximum_acquired_holdings"] == 1 and start["activation_authorized"] is False
             and start["live_enabled"] is False and start["scheduled_task_used"] is False
             and now.date().isoformat() == "2026-11-06" and began.date() == now.date()
@@ -70,8 +76,11 @@ def main():
     authority=p.add_mutually_exclusive_group(required=True)
     authority.add_argument("--continuation", type=Path)
     authority.add_argument("--manual-run", type=Path)
+    p.add_argument("--use-98-percent-balance", action="store_true")
     p.add_argument("--authorized-demo-evidence", action="store_true", required=True)
     args = p.parse_args()
+    if args.use_98_percent_balance and not args.manual_run:
+        raise ValueError("BALANCE_SIZING_REQUIRES_NEW_EXPLICIT_MANUAL_AUTHORITY")
     if args.case not in ["depth_partial", "depth_partial_followup"]:
         raise ValueError("THIS_CONTINUATION_AUTHORIZES_ONLY_A_NATIVE_THIN_DEPTH_PARTIAL_WATCH")
     args.out = args.out.resolve()
@@ -79,10 +88,13 @@ def main():
     if args.manual_run:
         if args.case != "depth_partial_followup":
             raise ValueError("MANUAL_FOLLOWUP_REQUIRES_MATERIALLY_THINNER_NATIVE_DEPTH")
-        cutoff=claim_manual(args.manual_run.resolve(),args.experiment_id,args.out,datetime.now(timezone.utc))
+        cutoff=claim_manual(args.manual_run.resolve(),args.experiment_id,args.out,datetime.now(timezone.utc),args.use_98_percent_balance)
     else:
         cutoff = claim_continuation(args.continuation.resolve(), args.experiment_id, args.out, datetime.now(timezone.utc))
     environment = os.environ.copy()
+    environment.pop("TRADY_PROBE_ENTRY_CASH_FRACTION", None)
+    if args.use_98_percent_balance:
+        environment["TRADY_PROBE_ENTRY_CASH_FRACTION"] = "0.98"
     environment.update({"TRADY_CREDENTIALS_FILE": str(ROOT / "config/credentials.local.json"),
         "TRADY_DEMO_EVIDENCE_AUTHORIZED": "EUR_CAPABILITY_20261105", "TRADY_PROBE_DIRECTORY": str(args.out),
         "TRADY_PROBE_INSTRUMENT": args.instrument, "TRADY_PROBE_CASE": args.case,
