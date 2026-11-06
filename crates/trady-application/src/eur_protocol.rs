@@ -28,6 +28,9 @@ pub struct ProtocolContext {
     pub created_at: DateTime<Utc>,
     pub flatten_at: DateTime<Utc>,
     pub max_unprotected_seconds: i64,
+    /// Exact immutable research cycle, absent on historical/manual probes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub research_cycle_id: Option<String>,
     /// First BUY transport expires with its retained live executable quote.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entry_valid_until: Option<DateTime<Utc>>,
@@ -50,6 +53,10 @@ impl ProtocolContext {
                     || (self.runtime_mode == trady_domain::ExecutionStage::Replay
                         && self.account_id.starts_with("replay_")))
                 && valid_id(&self.policy_revision)
+                && self
+                    .research_cycle_id
+                    .as_ref()
+                    .is_none_or(|id| valid_id(id))
                 && self.isin.len() == 12
                 && sha(&self.policy_hash)
                 && sha(&self.configuration_hash)
@@ -123,6 +130,12 @@ pub struct OrderProgress {
     pub stop_price: Option<Decimal>,
 }
 impl OrderProgress {
+    fn requires_native_observation(&self) -> bool {
+        !(self.broker_id.is_none()
+            && self.reconciled_terminal
+            && self.status == OrderStatus::Rejected
+            && self.filled == Decimal::ZERO)
+    }
     fn new(quantity: Decimal, at: DateTime<Utc>) -> Self {
         Self {
             broker_id: None,
@@ -161,6 +174,12 @@ pub enum ProtocolInput {
         pending_present: bool,
         history_complete: bool,
         stop_price: Option<Decimal>,
+    },
+    /// One complete native account view. Apply every exact leg before comparing
+    /// the fill ledger with its single holding observation. Legacy individual
+    /// Observed records retain their original replay semantics.
+    ObservedBatch {
+        orders: Vec<ProtocolInput>,
     },
     EntryFillTimeObserved {
         broker_id: String,
@@ -462,6 +481,121 @@ impl ProtocolState {
                     if protection_overdue {
                         self.exit_requested = true;
                         self.reason = Some("BROKER_FILL_PROTECTION_DEADLINE_EXCEEDED".into());
+                    }
+                    self.exit_phase();
+                }
+            }
+            ProtocolInput::ObservedBatch { orders } => {
+                require(
+                    (2..=3).contains(&orders.len()),
+                    "invalid complete order batch size",
+                )?;
+                let mut legs = Vec::new();
+                let mut holding = None;
+                let mut late_entry = false;
+                let mut protection_overdue = false;
+                for order in orders {
+                    let ProtocolInput::Observed {
+                        leg,
+                        broker_id,
+                        broker_ticker,
+                        quantity,
+                        filled,
+                        status,
+                        holding_quantity,
+                        pending_present,
+                        history_complete,
+                        stop_price,
+                    } = order
+                    else {
+                        return Err(Error(
+                            "complete order batch contains a non-observation".into(),
+                        ));
+                    };
+                    require(
+                        !legs.contains(leg)
+                            && *history_complete
+                            && *holding_quantity >= Decimal::ZERO
+                            && holding.is_none_or(|old| old == *holding_quantity)
+                            && broker_ticker == &self.context.broker_ticker,
+                        "inconsistent complete order batch",
+                    )?;
+                    legs.push(*leg);
+                    holding = Some(*holding_quantity);
+                    late_entry |= *leg == OrderLeg::Entry
+                        && self.protection.is_some()
+                        && self.entry.as_ref().is_some_and(|p| *filled > p.filled);
+                    protection_overdue |= *leg == OrderLeg::Protection
+                        && self.entry_first_filled_at.is_some()
+                        && self.unprotected_since.is_some_and(|since| {
+                            (at - since).num_milliseconds()
+                                >= self.context.max_unprotected_seconds * 1000
+                        });
+                    let p = self.progress_mut(*leg)?;
+                    require(
+                        p.broker_id.as_ref() == Some(broker_id)
+                            && *quantity == p.quantity
+                            && *filled >= p.filled
+                            && *filled <= p.quantity
+                            && (*status != OrderStatus::Filled || *filled == p.quantity)
+                            && (*leg != OrderLeg::Protection || stop_price == &p.stop_price),
+                        "exact batch order observation conflicts",
+                    )?;
+                    p.filled = *filled;
+                    p.status = *status;
+                    p.reconciled_terminal = status.terminal() && !*pending_present;
+                }
+                require(
+                    [OrderLeg::Entry, OrderLeg::Protection, OrderLeg::Exit]
+                        .iter()
+                        .all(|leg| match self.progress(*leg) {
+                            Ok(progress) => {
+                                !progress.requires_native_observation() || legs.contains(leg)
+                            }
+                            Err(_) => true,
+                        }),
+                    "complete batch is missing an exact leg",
+                )?;
+                self.holding_quantity = holding.unwrap();
+                self.last_reconciled_at = at;
+                if self.remaining() < Decimal::ZERO || self.remaining() != self.holding_quantity {
+                    self.reconciliation_required = true;
+                    self.exit_requested = true;
+                    self.phase = ProtocolPhase::Recovery;
+                    self.reason = Some("HISTORY_AND_HOLDING_CONFLICT".into());
+                    effect = self.recovery_effect();
+                } else {
+                    self.reconciliation_required = false;
+                    if self
+                        .protection
+                        .as_ref()
+                        .is_some_and(|p| p.reconciled_terminal)
+                    {
+                        self.exit_requested = true;
+                    }
+                    if late_entry {
+                        self.exit_requested = true;
+                        self.reason = Some("LATE_ENTRY_FILL_AFTER_PROTECTION".into());
+                    }
+                    if protection_overdue {
+                        self.exit_requested = true;
+                        self.reason = Some("BROKER_FILL_PROTECTION_DEADLINE_EXCEEDED".into());
+                    }
+                    if self.protection.as_ref().is_some_and(|p| {
+                        !p.reconciled_terminal
+                            && matches!(p.status, OrderStatus::Open | OrderStatus::PartiallyFilled)
+                            && p.quantity - p.filled == self.remaining()
+                    }) && self.entry.as_ref().is_some_and(|p| p.reconciled_terminal)
+                    {
+                        self.phase = ProtocolPhase::Protected;
+                    } else if self.entry.as_ref().is_some_and(|p| p.reconciled_terminal)
+                        && self.protection.is_none()
+                    {
+                        self.phase = if self.remaining() == Decimal::ZERO {
+                            ProtocolPhase::Rejected
+                        } else {
+                            ProtocolPhase::ProtectionPrepared
+                        };
                     }
                     self.exit_phase();
                 }

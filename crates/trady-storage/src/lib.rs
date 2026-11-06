@@ -55,7 +55,9 @@ pub const EUR_PROTOCOL_LIFETIME_SQL: &str =
     include_str!("../../../migrations/0021_eur_protocol_lifetime.sql");
 pub const RESEARCH_GATEWAY_CLAIMS_SQL: &str =
     include_str!("../../../migrations/0022_research_gateway_delivery_claims.sql");
-pub const LATEST_MIGRATION: i32 = 22;
+pub const EUR_PHYSICAL_ENTRY_BUDGET_SQL: &str =
+    include_str!("../../../migrations/0023_eur_physical_entry_budget.sql");
+pub const LATEST_MIGRATION: i32 = 23;
 
 fn db(error: postgres::Error) -> Error {
     // Deliberately exclude connection strings and provider error detail from service output.
@@ -104,6 +106,7 @@ pub fn migrate(dsn: &str) -> Result<()> {
         (20, EUR_MONTH_WINDOWS_SQL),
         (21, EUR_PROTOCOL_LIFETIME_SQL),
         (22, RESEARCH_GATEWAY_CLAIMS_SQL),
+        (23, EUR_PHYSICAL_ENTRY_BUDGET_SQL),
     ] {
         if let Some(row) = tx
             .query_opt(

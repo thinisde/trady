@@ -19,6 +19,22 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_thirty_entries_unlimited_exits_still_need_bounded_reviewed_release(self):
+        path=self.path/"runtime.json"
+        value=json.loads(path.read_text())
+        value["policy"].update(revision="eur_intraday_30_entries_v2",max_daily_entries=30,max_daily_exits=None)
+        path.write_text(json.dumps(value))
+        bundle,result=self.build()
+        self.assertFalse(result["activation_authorized"])
+        self.assertIn("BOUNDED_DEMO_OPERATION_REQUIRED",result["blockers"])
+        manifest,files=release.paths_and_manifest(bundle)
+        value["policy"]["max_daily_entries"]=31
+        files["runtime"].write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError,"RUNTIME_LIMITS_EXCEEDED"):release.evidence_blockers(manifest,files,self.now)
+        value["policy"].update(max_daily_entries=30,max_daily_exits=2)
+        files["runtime"].write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError,"RUNTIME_LIMITS_EXCEEDED"):release.evidence_blockers(manifest,files,self.now)
+
     def test_positive_paper_must_use_the_actual_release_current_candle_source_and_bridge(self):
         runtime=json.loads((self.path/"runtime.json").read_text())
         runtime["shadow"]["current_bars_config"]="/opt/trady/config/current-bars.json"

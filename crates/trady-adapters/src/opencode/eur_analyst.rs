@@ -21,6 +21,7 @@ pub struct OpenCodeEurAnalyst {
     provider: OpenCodeGoProvider,
     limits: RunLimits,
     tools: Box<dyn EurAnalystReadPort>,
+    audit: Vec<Value>,
 }
 
 struct UnavailableReadTools;
@@ -37,6 +38,7 @@ impl OpenCodeEurAnalyst {
             provider: OpenCodeGoProvider::from_env(config)?,
             limits,
             tools: Box::new(UnavailableReadTools),
+            audit: Vec::new(),
         })
     }
 
@@ -46,6 +48,7 @@ impl OpenCodeEurAnalyst {
             provider: OpenCodeGoProvider::new(config, api_key)?,
             limits,
             tools: Box::new(UnavailableReadTools),
+            audit: Vec::new(),
         })
     }
 
@@ -54,6 +57,11 @@ impl OpenCodeEurAnalyst {
     pub fn with_tools<T: EurAnalystReadPort + 'static>(mut self, tools: T) -> Self {
         self.tools = Box::new(tools);
         self
+    }
+
+    /// Bounded actual provider outcomes, never credentials or request headers.
+    pub fn audit_trace(&self) -> &[Value] {
+        &self.audit
     }
 
     /// Full application-owned selection bridge: deterministic survivors are
@@ -88,6 +96,7 @@ impl OpenCodeEurAnalyst {
 
 impl EurResearchAnalyst for OpenCodeEurAnalyst {
     fn select(&mut self, request: &AnalystRequest) -> Result<AnalystResponse> {
+        self.audit.clear();
         let now = chrono::Utc::now();
         request.validate(now)?;
         let identity = self.provider.identity();
@@ -162,7 +171,17 @@ impl EurResearchAnalyst for OpenCodeEurAnalyst {
                     &cancellation,
                     &mut |_| {},
                 )
-                .map_err(|error| Error(format!("EUR analyst provider failure: {}", error.code)))?;
+                .map_err(|error| {
+                    self.audit.push(json!({"at":chrono::Utc::now(),"provider_error_code":error.code,"retryable":error.retryable}));
+                    Error(format!("EUR analyst provider failure: {}", error.code))
+                })?;
+            let message = serde_json::to_string(&completion.message)
+                .map_err(|_| Error("EUR analyst audit encoding failed".into()))?;
+            self.audit.push(if message.len() <= 65_536 {
+                json!({"at":chrono::Utc::now(),"model_turn":model_turns+1,"message":&completion.message})
+            } else {
+                json!({"at":chrono::Utc::now(),"model_turn":model_turns+1,"message_sha256":content_hash(&message),"message_bytes":message.len(),"message_retained":false})
+            });
             model_turns = model_turns.saturating_add(1);
             let assistant = completion.message;
             let Some(calls) = assistant.tool_calls.clone() else {

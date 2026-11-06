@@ -21,6 +21,17 @@ use trady_domain::{
 };
 use trady_storage::target::PgTargetStore;
 
+fn entry_intent(run_id: &str, cycle: &str) -> String {
+    format!(
+        "{}_{}",
+        run_id,
+        &trady_application::harness::content_hash(cycle)[..32]
+    )
+}
+fn opening_covers_movements(opening: Option<DateTime<Utc>>, first: Option<DateTime<Utc>>) -> bool {
+    opening.is_some_and(|at| first.is_none_or(|first| at <= first))
+}
+
 fn lifecycle_fill_coverage(
     retained: &std::collections::BTreeMap<String, Value>,
     native: &std::collections::BTreeMap<String, Value>,
@@ -65,6 +76,10 @@ pub(super) struct DemoOperation {
     pub max_daily_entries: u8,
     pub max_open_positions: u8,
     pub no_overnight: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capability_attribution_config: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capability_evidence_config: Option<String>,
 }
 impl DemoOperation {
     pub(super) fn validate(&self, config: &EurRuntimeConfig) -> Result<()> {
@@ -86,10 +101,14 @@ impl DemoOperation {
                 && (10..=60).contains(&self.poll_seconds)
                 && !self.automatic_live_activation
                 && !self.automatic_model_promotion
-                && self.max_daily_entries == 1
+                && (1..=30).contains(&self.max_daily_entries)
                 && self.max_open_positions == 1
                 && self.no_overnight
-                && config.policy.max_daily_entries == 1
+                && self.max_daily_entries == config.policy.max_daily_entries
+                && self.capability_attribution_config.is_some()
+                    == self.capability_evidence_config.is_some()
+                && (config.policy.revision != trady_policy::intraday::THIRTY_ENTRY_POLICY_VERSION
+                    || self.capability_attribution_config.is_some())
                 && config.policy.max_open_positions == 1
                 && config.policy.no_overnight
                 && Path::new(&self.source_runtime_config).is_absolute()
@@ -123,6 +142,24 @@ pub(super) fn entry_operation(
         Utc::now() >= operation.starts_at && Utc::now() < operation.ends_at,
         "new entry outside bounded DEMO operation",
     )?;
+    for (role, reference) in [
+        (
+            "capability_attribution",
+            operation.capability_attribution_config.as_ref(),
+        ),
+        (
+            "capability_evidence",
+            operation.capability_evidence_config.as_ref(),
+        ),
+    ] {
+        if let Some(reference) = reference {
+            require(
+                file_hash(&super::eur_shadow::resolve(config_path, reference))?
+                    == file_hash(&artifact(bundle, manifest, role)?)?,
+                "capability attribution dependency differs from release",
+            )?;
+        }
+    }
     let source_path = Path::new(&operation.source_runtime_config);
     require(
         file_hash(source_path)? == file_hash(&artifact(bundle, manifest, "shadow_runtime")?)?,
@@ -262,17 +299,13 @@ fn protocol_states(store: &mut PgTargetStore) -> Result<Vec<Value>> {
                 context.intent_id == id,
                 "unsubmitted preparation identity differs",
             )?;
-            store.acquire_executor_lease(&new_id("retire_preparation"), 120)?;
+            let acquired_here = !store.has_executor_fence();
+            if acquired_here {
+                store.acquire_demo_broker_lease(&new_id("retire_preparation"), 120)?;
+            }
             let retired = (|| {
                 let current = store.load(id)?;
                 if current.is_empty() {
-                    advance(
-                        store,
-                        &context,
-                        new_id("retire_reserve"),
-                        ProtocolInput::Reserve,
-                        Utc::now(),
-                    )?;
                     advance(
                         store,
                         &context,
@@ -285,7 +318,9 @@ fn protocol_states(store: &mut PgTargetStore) -> Result<Vec<Value>> {
                 }
                 store.load(id)
             })();
-            let _ = store.release_executor_lease();
+            if acquired_here {
+                let _ = store.release_executor_lease();
+            }
             records = retired?;
         }
         let state = recover(&records)?;
@@ -396,8 +431,42 @@ pub fn report(args: &[String]) -> Result<Value> {
         super::eur_shadow::private_json(&out.join("month-report.json"), &result)?;
         return Ok(result);
     }
+    let attribution = match (
+        &operation.capability_attribution_config,
+        &operation.capability_evidence_config,
+    ) {
+        (Some(registry), Some(evidence)) => {
+            let (registry, facts) = super::eur_attribution::load_for_report(
+                &super::eur_shadow::resolve(config_path, registry),
+                &super::eur_shadow::resolve(config_path, evidence),
+                &config.owner_id,
+                config.account_id.as_str(),
+                Utc::now(),
+                (operation.starts_at, operation.ends_at),
+            )?;
+            require(
+                registry.period_start == operation.starts_at
+                    && registry.period_end == operation.ends_at,
+                "capability attribution period differs from operation",
+            )?;
+            facts
+        }
+        (None, None) => super::eur_attribution::CapabilityAttribution::default(),
+        _ => {
+            return Err(Error(
+                "incomplete capability attribution configuration".into(),
+            ));
+        }
+    };
     let cutoff = Utc::now().min(operation.ends_at);
     let mut repository = store(&config)?;
+    require(
+        repository
+            .physical_unresolved_protocols_for_audit()?
+            .as_array()
+            .is_some_and(Vec::is_empty),
+        "month analytics deferred for physical-account recovery",
+    )?;
     let states = protocol_states(&mut repository)?;
     require(
         states
@@ -405,8 +474,15 @@ pub fn report(args: &[String]) -> Result<Value> {
             .all(|r| matches!(r["state"]["phase"].as_str(), Some("FLAT" | "REJECTED"))),
         "month analytics deferred while a protocol is active",
     )?;
-    repository.acquire_executor_lease(&new_id("month_analytics"), 300)?;
+    repository.acquire_demo_broker_lease(&new_id("month_analytics"), 300)?;
     let audit = (|| {
+        require(
+            repository
+                .physical_unresolved_protocols_for_audit()?
+                .as_array()
+                .is_some_and(Vec::is_empty),
+            "month analytics physical recovery priority changed",
+        )?;
         require(
             protocol_states(&mut repository)?
                 .iter()
@@ -529,10 +605,9 @@ pub fn report(args: &[String]) -> Result<Value> {
                             )?;
                         }
                         let order = item["order"]["id"].to_string();
-                        if !order_ids.contains(&order) {
-                            unattributed.insert(order);
+                        if order_ids.contains(&order) {
+                            fills.insert(id, item.clone());
                         }
-                        fills.insert(id, item.clone());
                     }
                 }
                 Ok(())
@@ -571,14 +646,20 @@ pub fn report(args: &[String]) -> Result<Value> {
                         "conflicting native history duplicate",
                     )?;
                 }
-                if !order_ids.contains(&item["order"]["id"].to_string()) || !fills.contains_key(&id)
-                {
-                    unattributed.insert(item["order"]["id"].to_string());
-                }
             }
         }
+        let (strategy_native, unknown, capability_coverage_complete) =
+            super::eur_attribution::classify(
+                &native_fills,
+                &fills,
+                &order_ids,
+                &attribution,
+                operation.starts_at,
+                cutoff,
+            )?;
+        unattributed.extend(unknown);
         let (lifecycle_coverage_complete, extra) =
-            lifecycle_fill_coverage(&fills, &native_fills, &order_ids);
+            lifecycle_fill_coverage(&fills, &strategy_native, &order_ids);
         unattributed.extend(extra);
         let fills = native_fills;
         let decimal = |value: &Value| -> Result<Decimal> {
@@ -590,7 +671,11 @@ pub fn report(args: &[String]) -> Result<Value> {
                 .map_err(|_| Error("native EUR amount unavailable".into()))
         };
         let mut wallet_delta = Decimal::ZERO;
-        for row in fills.values() {
+        let mut strategy_delta = Decimal::ZERO;
+        let mut capability_delta = Decimal::ZERO;
+        let mut unattributed_delta = Decimal::ZERO;
+        let mut first_movement: Option<DateTime<Utc>> = None;
+        for (id, row) in &fills {
             let wallet = &row["fill"]["walletImpact"];
             require(
                 wallet["currency"] == "EUR"
@@ -600,13 +685,24 @@ pub fn report(args: &[String]) -> Result<Value> {
             )?;
             let net = decimal(&wallet["netValue"])?;
             require(net >= Decimal::ZERO, "native wallet value sign unresolved")?;
-            wallet_delta += match row["order"]["side"].as_str() {
+            let delta = match row["order"]["side"].as_str() {
                 Some("BUY") => -net,
                 Some("SELL") => net,
                 _ => return Err(Error("native fill side invalid".into())),
             };
+            wallet_delta += delta;
+            if strategy_native.contains_key(id) {
+                strategy_delta += delta;
+            } else if attribution.fills.contains_key(id) {
+                capability_delta += delta;
+            } else {
+                unattributed_delta += delta;
+            }
+            let at: DateTime<Utc> = serde_json::from_value(row["fill"]["filledAt"].clone())
+                .map_err(|_| Error("fill clock missing".into()))?;
+            first_movement = Some(first_movement.map_or(at, |old| old.min(at)));
         }
-        let mut opening_cash = None;
+        let mut opening_candidates = attribution.opening_accounts.clone();
         period_documents(
             &mut repository,
             "reconciliation",
@@ -614,15 +710,30 @@ pub fn report(args: &[String]) -> Result<Value> {
             cutoff,
             |row| {
                 let account = &row["document"]["account"];
-                if opening_cash.is_none()
-                    && account["positions"] == json!([])
-                    && account["orders"] == json!([])
-                {
-                    opening_cash = Some(decimal(&account["spendable_cash"]["amount"])?);
+                if account["account_id"] == config.account_id.as_str() {
+                    opening_candidates.push(account.clone());
                 }
                 Ok(())
             },
         )?;
+        let mut opening: Option<(DateTime<Utc>, Decimal, Value)> = None;
+        for account in opening_candidates {
+            if account["positions"] != json!([])
+                || account["orders"] != json!([])
+                || account["spendable_cash"]["currency"] != "EUR"
+            {
+                continue;
+            }
+            let at: DateTime<Utc> = serde_json::from_value(account["observed_at"].clone())
+                .map_err(|_| Error("opening snapshot clock missing".into()))?;
+            if at < operation.starts_at || at >= cutoff {
+                continue;
+            }
+            if opening.as_ref().is_none_or(|(old, _, _)| at < *old) {
+                opening = Some((at, decimal(&account["spendable_cash"]["amount"])?, account));
+            }
+        }
+        let opening_cash = opening.as_ref().map(|(_, cash, _)| *cash);
         let cash_events = reader
             .eur_cash_events(operation.starts_at, || {
                 repository.renew_executor_lease(300).map_err(|_| {
@@ -654,6 +765,7 @@ pub fn report(args: &[String]) -> Result<Value> {
                     if at < operation.starts_at || at >= cutoff {
                         continue;
                     }
+                    first_movement = Some(first_movement.map_or(at, |old| old.min(at)));
                     let reference = item["reference"]
                         .as_str()
                         .filter(|s| !s.is_empty())
@@ -689,7 +801,11 @@ pub fn report(args: &[String]) -> Result<Value> {
             .entry_snapshot_paced(&config.account_id)
             .map_err(|_| Error("closing account snapshot unavailable".into()))?;
         let expected = opening_cash.map(|cash| cash + wallet_delta + event_delta);
-        let reconciled = events_complete
+        let opening_temporal_coverage =
+            opening_covers_movements(opening.as_ref().map(|(at, _, _)| *at), first_movement);
+        let reconciled = opening_temporal_coverage
+            && capability_coverage_complete
+            && events_complete
             && native_history["complete"] == true
             && lifecycle_coverage_complete
             && unattributed.is_empty()
@@ -699,7 +815,7 @@ pub fn report(args: &[String]) -> Result<Value> {
             && expected == Some(ending.spendable_cash.amount);
         let result = json!({"schema_version":1,"run_id":operation.run_id,"environment":"demo","period_start":operation.starts_at,"cutoff":cutoff,"status":if reconciled{"RECONCILED_DEMO_FACTS"}else{"ECONOMIC_RECONCILIATION_BLOCKED"},
         "completed_protocols":completed,"native_fill_count":fills.len(),"account_wide_native_history_complete":native_history["complete"],"lifecycle_fill_coverage_complete":lifecycle_coverage_complete,"protocols":by_intent,"unresolved_intents":unresolved,"unattributed_order_ids":unattributed,"native_fills":fills.values().collect::<Vec<_>>(),
-        "opening_cash_eur":opening_cash,"wallet_cash_delta_eur":wallet_delta,"cash_events_net_eur":event_delta,"cash_events_complete":events_complete,"expected_flat_cash_eur":expected,"ending_account":ending,"cash_arithmetic_reconciled":reconciled,
+        "opening_cash_eur":opening_cash,"wallet_cash_delta_eur":wallet_delta,"strategy_wallet_delta_eur":strategy_delta,"capability_wallet_delta_eur":capability_delta,"unattributed_wallet_delta_eur":unattributed_delta,"capability_fill_ids":attribution.fills.keys().collect::<Vec<_>>(),"capability_coverage_complete":capability_coverage_complete,"strategy_native_fill_count":strategy_native.len(),"opening_observation":opening.as_ref().map(|(_,_,account)|account),"opening_precedes_period_movements":opening_temporal_coverage,"cash_events_net_eur":event_delta,"cash_events_complete":events_complete,"expected_flat_cash_eur":expected,"ending_account":ending,"cash_arithmetic_reconciled":reconciled,
         "cash_flow_adjusted_investment_return":null,"optimization_decision":"KEEP","promotion_requires_independent_offline_validation":true,"automatic_model_promotion":false,"live_activation_authorized":false,"broker_mutations":0});
         super::eur_shadow::private_json(&out.join("month-report.json"), &result)?;
         let result_id = new_id("month_report");
@@ -806,6 +922,7 @@ fn prepare(
         protective_orders: verified("reviewed_sequential_native_stop_protocol"),
         quotes: verified(&quote.quote_id),
     };
+    let intent_id = entry_intent(&operation.run_id, &selection.session_id);
     let snapshot = OrderGateSnapshot {
         account,
         universe,
@@ -823,7 +940,7 @@ fn prepare(
             .map_err(|_| Error("order snapshot encoding failed".into()))?,
     )?;
     Ok(Some(
-        json!({"intent_id":format!("{}_{}",operation.run_id,Utc::now().format("%Y%m%d")),"snapshot":out.join("order-gate.json"),"source_result":result["cycle_id"],"entry_authorized":false}),
+        json!({"intent_id":intent_id,"snapshot":out.join("order-gate.json"),"source_result":result["cycle_id"],"entry_authorized":false}),
     ))
 }
 
@@ -977,7 +1094,15 @@ pub fn run(args: &[String]) -> Result<Value> {
             json!({"status":"DEMO_RELEASE_OR_OWNER_APPROVAL_BLOCKED","entry_authorized":false})
         } else if now < operation.starts_at {
             json!({"status":"WAITING_FOR_DEMO_OPERATION_START","entry_authorized":false})
-        } else if repository.daily_entry_count(now.date_naive())? >= 1 {
+        } else if repository
+            .physical_unresolved_protocols()?
+            .as_array()
+            .is_none_or(|rows| !rows.is_empty())
+        {
+            json!({"status":"PHYSICAL_ACCOUNT_UNRESOLVED_INTENT","entry_authorized":false})
+        } else if repository.daily_entry_count(now.date_naive())?
+            >= i64::from(operation.max_daily_entries)
+        {
             json!({"status":"DAILY_ENTRY_SLOT_SPENT","entry_authorized":false})
         } else {
             let path = Path::new(&operation.artifact_directory).join(new_id("entry_preparation"));
@@ -1017,6 +1142,28 @@ pub fn run(args: &[String]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn research_cycle_identity_and_opening_clock_are_not_relaxed_by_thirty_entries() {
+        assert_eq!(
+            entry_intent("month", "cycle_a"),
+            entry_intent("month", "cycle_a")
+        );
+        assert_ne!(
+            entry_intent("month", "cycle_a"),
+            entry_intent("month", "cycle_b")
+        );
+        let at = Utc::now();
+        assert!(opening_covers_movements(
+            Some(at),
+            Some(at + chrono::Duration::seconds(1))
+        ));
+        assert!(!opening_covers_movements(
+            Some(at + chrono::Duration::seconds(1)),
+            Some(at)
+        ));
+        assert!(!opening_covers_movements(None, Some(at)));
+        assert!(!opening_covers_movements(None, None));
+    }
     #[test]
     fn account_cash_equality_cannot_hide_untracked_or_missing_native_fills() {
         let row = json!({"fill":{"id":1,"walletImpact":{"netValue":"0"}},"order":{"id":11,"side":"BUY","quantity":"1"}});
@@ -1230,5 +1377,33 @@ mod tests {
                 "{field}"
             );
         }
+        let mut updated_config = config.clone();
+        updated_config.policy.revision = trady_policy::intraday::THIRTY_ENTRY_POLICY_VERSION.into();
+        updated_config.policy.max_daily_entries = 30;
+        updated_config.policy.max_daily_exits = None;
+        let mut updated = policy;
+        updated["max_daily_entries"] = json!(30);
+        assert!(
+            serde_json::from_value::<DemoOperation>(updated.clone())
+                .unwrap()
+                .validate(&updated_config)
+                .is_err(),
+            "new month cannot omit the capability audit role"
+        );
+        updated["capability_attribution_config"] =
+            json!("/opt/trady/config/reviewed-attribution.json");
+        updated["capability_evidence_config"] =
+            json!("/opt/trady/config/retained-attribution-proof.json");
+        serde_json::from_value::<DemoOperation>(updated.clone())
+            .unwrap()
+            .validate(&updated_config)
+            .unwrap();
+        updated["max_daily_entries"] = json!(31);
+        assert!(
+            serde_json::from_value::<DemoOperation>(updated)
+                .unwrap()
+                .validate(&updated_config)
+                .is_err()
+        );
     }
 }

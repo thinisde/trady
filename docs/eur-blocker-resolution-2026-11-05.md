@@ -1,5 +1,12 @@
 # EUR blocker resolution, 5 November 2026
 
+## Latest continuation status
+
+The authorized 6 November continuation, current installed pins and remaining
+gates are recorded in [the Nov6 report](./eur-evidence-continuation-2026-11-06.md)
+and [its evidence record](./evidence/eur-evidence-continuation-2026-11-06.json).
+The Nov5 observations below remain historical evidence.
+
 The later [month preparation](./eur-demo-month-2026-11.md) supersedes the
 checkpoint below: 48 native DEMO fills now reconcile to EUR 4,992.68 flat,
 new independently reviewed expected-identity/rule/cost policies cover the finite
@@ -182,3 +189,8 @@ registered-strategy paper lifecycle remain external release gates. Owner final
 activation approval must bind the resulting exact complete manifest; broad
 implementation or bounded DEMO authorization cannot replace it. A blocked
 bundle is not activation-ready even if its hash receives owner approval.
+
+The [Nov6 30-entry policy follow-up](./eur-demo-entry-policy-2026-11-06.md)
+records the newest independently reviewed SHADOW installation, account-wide
+entry counter, fenced cleanup, attribution and failed thin-depth watch. It does
+not supply the still-missing native partial or successful real-input paper proof.

@@ -30,6 +30,7 @@ fn durable_protocol_reserves_daily_slot_and_survives_unknown_dispatch_restart() 
         created_at: at,
         flatten_at: at + Duration::minutes(1),
         max_unprotected_seconds: 5,
+        research_cycle_id: None,
         entry_valid_until: None,
     };
     let dsn = env::var("TRADY_EXECUTOR_DSN").unwrap();

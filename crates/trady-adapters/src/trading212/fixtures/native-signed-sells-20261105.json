@@ -1,0 +1,156 @@
+{
+  "classification": "CAPTURED_NATIVE_WIRE_REGRESSION_FIXTURE_NOT_NEW_EXECUTION_EVIDENCE",
+  "source": "var/eur-legacy-cleanup-20261105/release-final-reviewed/artifacts/broker_history.json",
+  "source_sha256": "7907405812bdc5bdd31347c88489ae01bbdb306b9c4f9747dd9bed1c2bab772f",
+  "items": [
+    {
+      "fill": {
+        "filledAt": "2026-11-05T08:25:54.000Z",
+        "id": 57550614313,
+        "price": 203.45,
+        "quantity": 1.0,
+        "tradingMethod": "OTC",
+        "type": "TRADE",
+        "walletImpact": {
+          "currency": "EUR",
+          "fxRate": 1,
+          "netValue": 203.45,
+          "taxes": []
+        }
+      },
+      "order": {
+        "createdAt": "2026-11-05T08:25:54.000Z",
+        "currency": "EUR",
+        "extendedHours": false,
+        "filledQuantity": 1.0,
+        "id": 57550614311,
+        "initiatedFrom": "API",
+        "instrument": {
+          "currency": "EUR",
+          "isin": "NL0000235190",
+          "name": "Airbus",
+          "ticker": "AIRp_EQ"
+        },
+        "limitPrice": 203.71,
+        "quantity": 1.0,
+        "side": "BUY",
+        "status": "FILLED",
+        "strategy": "QUANTITY",
+        "ticker": "AIRp_EQ",
+        "type": "LIMIT"
+      }
+    },
+    {
+      "fill": {
+        "filledAt": "2026-11-05T08:30:56.000Z",
+        "id": 57550614394,
+        "price": 203.55,
+        "quantity": -1.0,
+        "tradingMethod": "OTC",
+        "type": "TRADE",
+        "walletImpact": {
+          "currency": "EUR",
+          "fxRate": 1,
+          "netValue": 203.55,
+          "realisedProfitLoss": 0.1,
+          "taxes": []
+        }
+      },
+      "order": {
+        "createdAt": "2026-11-05T08:30:55.000Z",
+        "currency": "EUR",
+        "extendedHours": false,
+        "filledQuantity": -1.0,
+        "id": 57550614392,
+        "initiatedFrom": "API",
+        "instrument": {
+          "currency": "EUR",
+          "isin": "NL0000235190",
+          "name": "Airbus",
+          "ticker": "AIRp_EQ"
+        },
+        "quantity": -1.0,
+        "side": "SELL",
+        "status": "FILLED",
+        "strategy": "QUANTITY",
+        "ticker": "AIRp_EQ",
+        "type": "MARKET"
+      }
+    },
+    {
+      "fill": {
+        "filledAt": "2026-11-05T12:13:36.000Z",
+        "id": 57550618855,
+        "price": 201.25,
+        "quantity": 0.01,
+        "tradingMethod": "OTC",
+        "type": "TRADE",
+        "walletImpact": {
+          "currency": "EUR",
+          "fxRate": 1,
+          "netValue": 2.01,
+          "taxes": []
+        }
+      },
+      "order": {
+        "createdAt": "2026-11-05T12:13:36.000Z",
+        "currency": "EUR",
+        "extendedHours": false,
+        "filledQuantity": 0.01,
+        "id": 57550618853,
+        "initiatedFrom": "API",
+        "instrument": {
+          "currency": "EUR",
+          "isin": "NL0000235190",
+          "name": "Airbus",
+          "ticker": "AIRp_EQ"
+        },
+        "limitPrice": 201.71,
+        "quantity": 0.01,
+        "side": "BUY",
+        "status": "FILLED",
+        "strategy": "QUANTITY",
+        "ticker": "AIRp_EQ",
+        "type": "LIMIT"
+      }
+    },
+    {
+      "fill": {
+        "filledAt": "2026-11-05T12:13:42.000Z",
+        "id": 57550618861,
+        "price": 201.1,
+        "quantity": -0.01,
+        "tradingMethod": "OTC",
+        "type": "TRADE",
+        "walletImpact": {
+          "currency": "EUR",
+          "fxRate": 1,
+          "netValue": 2.01,
+          "realisedProfitLoss": 0,
+          "taxes": []
+        }
+      },
+      "order": {
+        "createdAt": "2026-11-05T12:13:40.000Z",
+        "currency": "EUR",
+        "extendedHours": false,
+        "filledQuantity": -0.01,
+        "id": 57550618859,
+        "initiatedFrom": "API",
+        "instrument": {
+          "currency": "EUR",
+          "isin": "NL0000235190",
+          "name": "Airbus",
+          "ticker": "AIRp_EQ"
+        },
+        "quantity": -0.01,
+        "side": "SELL",
+        "status": "FILLED",
+        "stopPrice": 201.7,
+        "strategy": "QUANTITY",
+        "ticker": "AIRp_EQ",
+        "type": "STOP"
+      }
+    }
+  ]
+}

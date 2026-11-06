@@ -499,7 +499,11 @@ impl<C: Clock> Trading212Reader<C> {
         let mut pages = Vec::new();
         let mut complete = false;
         let mut seen = std::collections::BTreeSet::new();
-        for _ in 0..20 {
+        // 31*30 entries with entry/STOP/exit need at most2,790 rows before
+        // replacements.12,800 lifetime rows leave room for retained history
+        // and thousands of stop/exit changes. Exhaustion remains incomplete.
+        const MAX_MONTH_HISTORY_PAGES: usize = 256;
+        for _ in 0..MAX_MONTH_HISTORY_PAGES {
             before_page()?;
             let query = HistoryQuery {
                 instrument_id: None,
@@ -540,7 +544,7 @@ impl<C: Clock> Trading212Reader<C> {
             }
         }
         Ok(
-            serde_json::json!({"provider":"TRADING212_DEMO","broker_account_id":52211463,"scope":"ACCOUNT_WIDE_NATIVE_ORDER_HISTORY","pages":pages,"complete":complete,"broker_mutations":0}),
+            serde_json::json!({"provider":"TRADING212_DEMO","broker_account_id":52211463,"scope":"ACCOUNT_WIDE_NATIVE_ORDER_HISTORY","page_count":pages.len(),"maximum_pages":MAX_MONTH_HISTORY_PAGES,"pages":pages,"complete":complete,"broker_mutations":0}),
         )
     }
 

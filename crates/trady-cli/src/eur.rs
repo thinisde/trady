@@ -32,6 +32,7 @@ pub fn run(args: &[String]) -> Result<Value> {
         .map(String::as_str)
         .ok_or_else(|| Error(HELP.into()))?;
     match command {
+        "capability-attribution-check" => super::eur_attribution::command(&args[1..]),
         "config" => {
             let options = options(&args[1..], &["--config"], &["--config"])?;
             let config: EurRuntimeConfig = read_json(Path::new(&options["--config"]))?;

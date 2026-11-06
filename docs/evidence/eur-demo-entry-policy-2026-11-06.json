@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-06T12:47:32.749500+00:00",
+  "status": "REVIEWED_SHADOW_30_ENTRY_POLICY_RELEASE_STILL_BLOCKED",
+  "owner_policy": {
+    "revision": "eur_intraday_30_entries_v2",
+    "max_stock_entry_attempts_per_utc_day": 30,
+    "protective_stop_daily_quota": null,
+    "exit_change_daily_quota": null,
+    "max_acquired_holdings": 1,
+    "counter_scope": "PHYSICAL_DEMO_52211463_ALL_ALIASES_AND_OWNERS"
+  },
+  "validation": {
+    "workspace_passed": 678,
+    "python_passed": 72,
+    "strict_clippy_passed": true,
+    "isolated_postgres_and_cli_passed": true,
+    "tests_are_native_broker_evidence": false
+  },
+  "deployment_status": "EXACT_REVIEWED_SHADOW_SERVICES_RUNNING",
+  "native_partial_observed": false,
+  "simultaneous_stop_fill_cancel_race_observed": false,
+  "successful_real_input_paper_lifecycle": false,
+  "last_real_cycle": "eur_eur_month_thirty_entries_v4_20261106T123000_8dfc0ca2e6b4",
+  "strategy_forced": false,
+  "demo_activated": false,
+  "live_enabled": false,
+  "owner_approval_receipt_created": false,
+  "prior_sealed_manifest_preserved": "d09df2264cbb3bb13fb4fc8ad3e5de9b449348bfdb0446a021b68b09ee31fc73",
+  "morning_run_reused": false,
+  "continuation_schedules_enabled": false,
+  "new_schedules_created": false,
+  "private_evidence_directory": "var/eur-activation-followup-20261106-1038",
+  "documentation": "docs/eur-demo-entry-policy-2026-11-06.md",
+  "identity_only_observation_valid_until": "2026-11-06T17:23:08.013199Z",
+  "final_exact_manifest_owner_approval_required": true,
+  "schema_version_installed": 23,
+  "independent_review": {
+    "scoped_implementation_accepted": true,
+    "remaining_material_implementation_findings": 0,
+    "complete_release_decision": "REQUEST_CHANGES",
+    "implementation_report": "var/eur-activation-followup-20261106-1038/reviewer-attribution/implementation-review-final.md",
+    "implementation_report_sha256": "b897401eefb3274c1f2f64ce691b6779cbadc48f19448045a7f3df86d43c6703",
+    "import_guard_addendum": "var/eur-activation-followup-20261106-1038/reviewer-attribution/importer-guard-addendum.md",
+    "accepted_historical_registry_sha256": "9662d79e5414d2e8611a370ab5e9265d563437fa4327193a1552064af1baa30b",
+    "historical_evidence_sha256": "4e2c265bfc5dacec4fb345a595806cb884c6bb41be47456eafc1612b848854f3",
+    "implementation_json_record": "var/eur-activation-followup-20261106-1038/reviewer-attribution/implementation-review-final.json",
+    "implementation_json_record_sha256": "b9e970171b35c7e6f2b9b3167a87575923a219f4d94e106780f5b79b8761f0ed",
+    "import_guard_addendum_sha256": "f947dbf8cce2bc03d1b7d2093ca5f6134723a41b37a23eb24dacdeb0215e8d34",
+    "operational_addendum": "var/eur-activation-followup-20261106-1038/reviewer-attribution/operational-addendum.md",
+    "operational_addendum_sha256": "0f05dd953be7699681c23686a2b0b69e961823a2f6bae990f3d5eb18b31c52f4",
+    "operational_json_record": "var/eur-activation-followup-20261106-1038/reviewer-attribution/operational-addendum.json",
+    "operational_json_record_sha256": "f7b642171167f56228cdbd0521380483234cef7b683d655b5e8eeb32c6fdb9a3"
+  },
+  "current_state_before_migration": {
+    "observed_at": "2026-11-06T11:57:43.701837198Z",
+    "physically_flat": true,
+    "cash_eur": "4994.19"
+  },
+  "reviewed_external_cleanup_import": {
+    "status": "IMPORTED_EXACT_HEADS_ONLY",
+    "scope_count": 2,
+    "old_journals_rewritten": false,
+    "owner_approval_receipt": false
+  },
+  "manual_native_watch": {
+    "status": "FAILED_NO_QUALIFYING_OPPORTUNITY_NO_ENTRY",
+    "maximum_new_entry_attempts": 1,
+    "maximum_entry_notional_eur": "2500",
+    "maximum_displayed_ask_size": "1",
+    "morning_run_reused": false,
+    "scheduled_task_used": false,
+    "native_book_observations": 384,
+    "eligible_books": 0,
+    "new_buy_submissions": 0,
+    "native_fills": 0,
+    "probe_exit_code": 1,
+    "durable_entry_slots_used_today": 1,
+    "authority_created": false,
+    "final_flat": true,
+    "final_cash_eur": "4994.19"
+  },
+  "paper_observation": {
+    "status": "BOUNDED_OBSERVATION_COMPLETE_NO_VALID_PLAN",
+    "cutoff": "2026-11-06T12:35:00Z",
+    "maximum_natural_plan_paper_attempts": 1,
+    "strategy_forced": false,
+    "finished_at": "2026-11-06T12:35:01.357810+00:00",
+    "observed_cycles": [
+      {
+        "cycle_id": "eur_eur_month_thirty_entries_v4_20261106T121500_8dfc0ca2e6b4",
+        "genuine_plan_present": false,
+        "strategy_assessments": {
+          "AIR_PA_EQ": {
+            "detail": null,
+            "status": "NO_BREAKOUT",
+            "interval_seconds": 300,
+            "completed_bar_count": 155
+          },
+          "ASML_AS_EQ": {
+            "detail": null,
+            "status": "NO_BREAKOUT",
+            "interval_seconds": 300,
+            "completed_bar_count": 155
+          }
+        },
+        "status": "ACTUAL_NO_VALID_PLAN_OBSERVED_NO_PAPER_ATTEMPT"
+      },
+      {
+        "cycle_id": "eur_eur_month_thirty_entries_v4_20261106T123000_8dfc0ca2e6b4",
+        "genuine_plan_present": false,
+        "strategy_assessments": {
+          "AIR_PA_EQ": {
+            "detail": null,
+            "status": "NO_BREAKOUT",
+            "interval_seconds": 300,
+            "completed_bar_count": 156
+          },
+          "ASML_AS_EQ": {
+            "detail": null,
+            "status": "NO_BREAKOUT",
+            "interval_seconds": 300,
+            "completed_bar_count": 156
+          }
+        },
+        "status": "ACTUAL_NO_VALID_PLAN_OBSERVED_NO_PAPER_ATTEMPT"
+      }
+    ],
+    "forward_paper_attempts": 0,
+    "credential_free_paper_replays": 0
+  },
+  "current_account": {
+    "source": "EXISTING_NATIVE_SHADOW_RECONCILIATION_NO_EXTRA_PROVIDER_CALL",
+    "observed_at": "2026-11-06T12:38:25.927338569Z",
+    "physically_flat": true,
+    "cash_eur": "4994.19"
+  },
+  "general_demo_service_enabled": false,
+  "general_demo_service_active": false,
+  "new_approvable_release_manifest_sha256": null,
+  "new_exact_release_bundle_assembled": false,
+  "installed_shadow": {
+    "binary_sha256": "764edd9fa1a8c48deda2e50d60e8cfe24b81c568e3e8ed97de4c6148c3e1d05c",
+    "source_inventory_sha256": "c37bdc06a729c2836d48be8ca4286e64ecb28cfd338c485912e03b5750edd20a",
+    "source_archive_sha256": "84eef86e95ecd79435de9e25b476e9115d955ec5ebe31f86e9a41ea83429fce4",
+    "runtime_sha256": "be611c54084c3efd5dd9363d90e883c38837722221434ffa96aa1696f4d97f46",
+    "operation_sha256": "66f6def4ba401a2623b64a6852ed7a7411b9873f7c76702fafb1c091799da579",
+    "broker_mutations": 0,
+    "activation_authorized": false,
+    "workspace_passed": 678,
+    "supersedes_preview_binary_sha256": "1a2885a72f51b740951db3b14dce92f3129db9123448a33094a724a72f29be0e",
+    "python_passed": 72,
+    "import_guard_delta_only": true,
+    "rust_sources_and_migrations_unchanged_since_final_workspace": true,
+    "deployment_id": "eur_month_thirty_entries_v4",
+    "services_verified_at": "2026-11-06T12:29:07.112998+00:00",
+    "all_three_running_binary_pins_match": true
+  },
+  "reader_handoff": {
+    "actual_http_status": 429,
+    "raw_response_body_retained": false,
+    "diagnostic_retained": true,
+    "subsequent_reconciliation_succeeded": true,
+    "operational_correction": "Require at least5.2seconds after a finalsummary read before starting anotherreader. No subsequent handoff retest is claimed.",
+    "cooldown_procedure_retested": false
+  },
+  "remaining_release_blockers": [
+    "GENUINE_NATIVE_PARTIAL_BUY_REMAINDER_CANCEL_AND_SMALLER_QUANTITY_PROTECTION_UNOBSERVED",
+    "SUCCESSFUL_REAL_INPUT_PAPER_AND_CREDENTIAL_FREE_REPLAY_UNOBSERVED",
+    "COMPLETE_NEW_EXACT_RELEASE_REVIEW_NOT_ACCEPTED",
+    "NEW_EXACT_MANIFEST_OWNER_APPROVAL_NOT_YET_POSSIBLE"
+  ],
+  "historical_sealed_verifier": {
+    "manifest_sha256": "d09df2264cbb3bb13fb4fc8ad3e5de9b449348bfdb0446a021b68b09ee31fc73",
+    "all31artifacts_preserved": true,
+    "exit_code": 1,
+    "activation_authorized": false,
+    "matches_new_installed_policy_release": false,
+    "blockers": [
+      "NATIVE_PARTIAL_ENTRY_NOT_OBSERVED",
+      "PROTOCOL_ACCEPTANCE_NOT_ACCEPTED",
+      "PAPER_DAY_ACCEPTANCE_NOT_ACCEPTED",
+      "INDEPENDENT_REVIEW_NOT_ACCEPTED",
+      "EXACT_HASH_OWNER_APPROVAL_MISSING"
+    ]
+  },
+  "private_evidence_retention_index": {
+    "path": "var/eur-activation-followup-20261106-1038/evidence-index-final.json",
+    "sha256": "fbdc0ef4ba4e2b644b1a4bd61fe7371fb8ad5d6efa9632caf300ba8edfccdd9e",
+    "artifact_count": 285,
+    "is_release_manifest": false
+  }
+}

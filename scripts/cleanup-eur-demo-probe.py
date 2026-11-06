@@ -1,29 +1,19 @@
 #!/usr/bin/env python3
 """Exact-ID cleanup for an authorized one-holding EUR DEMO probe.
 
-Only IDs acknowledged in its private artifacts may be cancelled. History must
-prove them terminal before any flatten; no mutation is retried after dispatch.
+Python has no broker transport. It routes only an unfinished original scope
+to the physically fenced Rust exit driver; unknown submissions require review.
 """
 import argparse
-import base64
 from datetime import datetime, timezone
 from decimal import Decimal
 import json
 import os
+import subprocess
+import re
 from pathlib import Path
-import time
-from urllib.error import HTTPError
-from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = "https://demo.trading212.com/api/v0/equity/"
-
-
-class NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, *args):
-        return None
-
-
 JOURNALS = ["transport.jsonl", "faults.jsonl", "manual-safety-stop.jsonl", "cleanup.jsonl"]
 
 
@@ -31,6 +21,15 @@ def unresolved_mutation(rows):
     pending = None
     for row in rows:
         key = (row.get("method"), row.get("path"))
+        # Old probe journals predate phased mutation records. An explicitly
+        # ambiguous outcome in those records still requires exact-ID review.
+        failure = row.get("failure")
+        if row.get("method") != "GET" and (row.get("phase") == "UNKNOWN" or (isinstance(failure, dict) and failure.get("outcome_unknown") is True) or row.get("outcome_unknown") is True):
+            return key if key != (None, None) else ("UNKNOWN", row.get("cancel_exact_id", "legacy_submission"))
+        if "cancel_exact_id" in row and row.get("accepted") is not True and row.get("phase") is None:
+            status = row.get("failure_http_status")
+            if status not in [400, 401, 403, 404, 405, 415, 422]:
+                return ("DELETE", "orders/" + str(row["cancel_exact_id"]))
         if row.get("phase") == "BEFORE_SEND" and row.get("method") != "GET":
             if pending is not None:
                 return pending
@@ -40,7 +39,7 @@ def unresolved_mutation(rows):
             acknowledged = row.get("accepted") is True or (
                 isinstance(response, dict) and bool(response.get("broker_order_id")))
             definitive = isinstance(status, int) and (200 <= status < 300 or status in [400, 401, 403, 404, 405, 415, 422])
-            if definitive or acknowledged:
+            if definitive or acknowledged or row.get("definitive_no_effect") is True:
                 pending = None
     return pending
 
@@ -61,102 +60,79 @@ def acknowledged_ids(name, rows):
     return result
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--directory", type=Path, required=True)
-    args = parser.parse_args()
-    journals = {name: [json.loads(line) for line in (args.directory / name).read_text().splitlines()]
-                for name in JOURNALS if (args.directory / name).exists()}
+def cleanup_scope(directory):
+    """Local preflight only. A closed scope never loads credentials or transport."""
+    journals = {name: [json.loads(line) for line in (directory / name).read_text().splitlines()]
+                for name in JOURNALS if (directory / name).exists()}
+    if any(row.get("status") == "EXACT_ID_DEMO_PROBE_CLEANUP_FLAT"
+           for rows in journals.values() for row in rows):
+        raise ValueError("PROBE_SCOPE_ALREADY_CLEANED")
+    for name in ["result_exit.json", "result_cleanup.json"]:
+        path = directory / name
+        if path.exists() and json.loads(path.read_text())["state"]["phase"] in ["FLAT", "REJECTED"]:
+            raise ValueError("PROBE_SCOPE_ALREADY_TERMINAL")
+    if (directory / "cleanup-start.json").exists() or (directory / "result_cleanup.json").exists():
+        raise ValueError("PRIOR_CLEANUP_REQUIRES_ORIGINAL_CONTEXT_REVIEW")
     if any(unresolved_mutation(rows) is not None for rows in journals.values()):
         raise ValueError("PRIOR_MUTATION_OUTCOME_REQUIRES_EXACT_ID_REVIEW")
-    context = json.loads((args.directory / "authority.json").read_text())["context"]
-    if context["broker_account_id"] != 52211463 or context["runtime_mode"] != "DEMO" or context["broker_ticker"] not in ["AIRp_EQ", "ASMLa_EQ"]:
-        raise ValueError("INVALID_DEMO_PROBE_SCOPE")
+    authority = json.loads((directory / "authority.json").read_text())
+    context = authority["context"]
+    experiment = authority.get("experiment_id", "")
+    if (context["broker_account_id"] != 52211463 or context["runtime_mode"] != "DEMO"
+            or context["broker_ticker"] not in ["AIRp_EQ", "ASMLa_EQ"]
+            or not re.fullmatch(r"[A-Za-z0-9_]{1,32}", experiment)):
+        raise ValueError("ORIGINAL_DEMO_EXPERIMENT_REQUIRED_LEGACY_SCOPE_REVIEW_ONLY")
+    instrument = "AIR_PA_EQ" if context["broker_ticker"] == "AIRp_EQ" else "ASML_AS_EQ"
+    short = "air" if instrument == "AIR_PA_EQ" else "asml"
+    prefix = "paper_cap_" + experiment + "_" + short + "_"
+    case = context["account_id"].removeprefix(prefix)
+    if (not context["account_id"].startswith(prefix)
+            or case not in ["depth_partial", "depth_partial_followup"]
+            or context["intent_id"] != context["account_id"].removeprefix("paper_")
+            or context["instrument_id"] != instrument):
+        raise ValueError("EXACT_ORIGINAL_PROBE_SCOPE_REQUIRED")
     known = set()
     for name, rows in journals.items():
         known.update(acknowledged_ids(name, rows))
     if not known:
         raise ValueError("NO_ACKNOWLEDGED_EXACT_PROBE_IDS")
-    secrets = json.loads((ROOT / "config/credentials.local.json").read_text())["credentials"]
-    auth = "Basic " + base64.b64encode((secrets["TRADY_T212_DEMO_API_KEY"] + ":" + secrets["TRADY_T212_DEMO_API_SECRET"]).encode()).decode()
-    opener = build_opener(NoRedirect())
+    return context, experiment, instrument, case
 
-    def journal(value):
-        with os.fdopen(os.open(args.directory / "cleanup.jsonl", os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600), "a") as f:
-            f.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(), **value}) + "\n")
-            f.flush()
-            os.fsync(f.fileno())
 
-    def request(method, path, body=None):
-        for _ in range(10):
-            journal({"phase": "BEFORE_SEND", "method": method, "path": path, "body": body})
-            req = Request(BASE + path, data=body.encode() if body else None, method=method,
-                          headers={"Authorization": auth, "Content-Type": "application/json"})
-            try:
-                with opener.open(req, timeout=10) as res:
-                    status, data = res.status, res.read(1024 * 1024)
-            except HTTPError as error:
-                status, data = error.code, error.read(1024 * 1024)
-            except OSError:
-                journal({"phase": "UNKNOWN", "method": method, "path": path})
-                raise ValueError("UNKNOWN_OUTCOME_NO_MUTATION_RETRY") from None
-            value = json.loads(data) if data else None
-            journal({"phase": "RESPONSE", "method": method, "path": path, "http_status": status, "response": value})
-            if method == "GET" and status == 429:
-                time.sleep(5.1)
-                continue
-            if not 200 <= status < 300:
-                raise ValueError("BROKER_READ_OR_MUTATION_UNRESOLVED")
-            return value
-        raise ValueError("READ_RETRY_BOUND")
-
-    account = request("GET", "account/summary")
-    if account["id"] != 52211463 or account["currency"] != "EUR":
-        raise ValueError("DEMO_IDENTITY_CHANGED")
-    pending = request("GET", "orders")
-    for order in pending:
-        if str(order["id"]) not in known or order.get("ticker", order.get("instrument", {}).get("ticker")) != context["broker_ticker"]:
-            raise ValueError("UNRELATED_ORDER_REQUIRES_REVIEW")
-        request("DELETE", "orders/" + str(order["id"]))
-        time.sleep(1.3)
-    for _ in range(10):
-        history = request("GET", "history/orders?limit=50&ticker=" + context["broker_ticker"])
-        exact = {str(r["order"]["id"]): r["order"] for r in history["items"]}
-        if all(identifier in exact and exact[identifier]["status"] in ["FILLED", "CANCELLED", "REJECTED"] for identifier in known):
-            break
-        time.sleep(3.1)
-    else:
-        raise ValueError("EXACT_TERMINAL_HISTORY_MISSING")
-    if request("GET", "orders"):
-        raise ValueError("PENDING_ORDERS_STILL_PRESENT")
-    positions = request("GET", "positions")
-    if positions:
-        if len(positions) != 1 or positions[0]["instrument"]["ticker"] != context["broker_ticker"]:
-            raise ValueError("UNRELATED_HOLDING")
-        quantity = Decimal(str(positions[0]["quantity"]))
-        available = Decimal(str(positions[0]["quantityAvailableForTrading"]))
-        if not 0 < quantity <= Decimal(context["quantity"]) or available != quantity:
-            raise ValueError("UNAVAILABLE_OR_CONFLICTING_SELL_QUANTITY")
-        body = '{"ticker":' + json.dumps(context["broker_ticker"]) + ',"quantity":-' + str(quantity) + ',"extendedHours":false}'
-        result = request("POST", "orders/market", body)
-        known.add(str(result["id"]))
-    time.sleep(5.1)
-    history = request("GET", "history/orders?limit=50&ticker=" + context["broker_ticker"])
-    exact = {str(r["order"]["id"]): r["order"] for r in history["items"]}
-    if not all(identifier in exact and exact[identifier]["status"] in ["FILLED", "CANCELLED", "REJECTED"] for identifier in known):
-        raise ValueError("FINAL_TERMINAL_HISTORY_MISSING")
-    if request("GET", "positions") or request("GET", "orders"):
-        raise ValueError("FINAL_BROKER_NOT_FLAT")
-    account = request("GET", "account/summary")
-    result = {"status": "EXACT_ID_DEMO_PROBE_CLEANUP_FLAT", "broker_account_id": 52211463,
-              "known_order_ids": sorted(known), "cash_eur": account["cash"]["availableToTrade"],
-              "runtime_acceptance_passed": False, "live_enabled": False}
-    journal(result)
-    print(json.dumps(result))
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--directory", type=Path, required=True)
+    args = parser.parse_args()
+    directory = args.directory.resolve(strict=True)
+    context, experiment, instrument, case = cleanup_scope(directory)
+    if os.geteuid() != 0:
+        raise ValueError("TRUSTED_ROOT_SUPERVISION_REQUIRED")
+    with os.fdopen(os.open(directory / "cleanup-start.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as marker:
+        json.dump({"started_at":datetime.now(timezone.utc).isoformat(), "experiment_id":experiment,
+                   "context":context, "route":"FENCED_RUST_ORIGINAL_CONTEXT_EXIT_ONLY",
+                   "new_buy_authorized":False}, marker)
+        marker.flush();os.fsync(marker.fileno())
+    environment = os.environ.copy()
+    environment.update({"TRADY_CREDENTIALS_FILE":str(ROOT / "config/credentials.local.json"),
+        "TRADY_DEMO_EVIDENCE_AUTHORIZED":"EUR_CAPABILITY_20261105", "TRADY_PROBE_DIRECTORY":str(directory),
+        "TRADY_PROBE_INSTRUMENT":instrument, "TRADY_PROBE_CASE":case, "TRADY_PROBE_EXPERIMENT_ID":experiment,
+        "TRADY_PROBE_ENTRY_CUTOFF":context["flatten_at"], "TRADY_PROBE_PHASE":"cleanup"})
+    result = subprocess.run(["cargo", "test", "--locked", "-p", "trady-cli", "--test", "eur_demo_capability",
+                             "supervised_eur_demo_capability", "--", "--ignored", "--exact", "--nocapture"],
+                            cwd=ROOT,env=environment,capture_output=True,text=True)
+    with os.fdopen(os.open(directory / "cleanup-protocol.log",os.O_WRONLY | os.O_CREAT | os.O_EXCL,0o600),"w") as log:
+        log.write(result.stdout + result.stderr)
+    if result.returncode:
+        raise ValueError("FENCED_EXACT_ID_CLEANUP_REQUIRES_REVIEW_NO_BLIND_RETRY")
+    value=json.loads((directory / "result_cleanup.json").read_text())
+    if value["state"]["phase"] not in ["FLAT","REJECTED"] or Decimal(value["state"]["holding_quantity"]) != 0:
+        raise ValueError("FENCED_CLEANUP_NOT_TERMINAL")
+    print(json.dumps({"status":"FENCED_RUST_EXACT_ID_PROBE_CLEANUP_TERMINAL","intent_id":context["intent_id"],
+                      "phase":value["state"]["phase"],"runtime_acceptance_passed":False,"live_enabled":False}))
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (ValueError, KeyError, OSError, TypeError):
+    except (ValueError, KeyError, OSError, TypeError, subprocess.SubprocessError):
         raise SystemExit("Exact-ID cleanup stopped; inspect its durable journal before any further mutation.") from None

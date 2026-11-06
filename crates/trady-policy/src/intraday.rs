@@ -16,6 +16,7 @@ use crate::{
 };
 
 pub const INTRADAY_POLICY_VERSION: &str = "eur_intraday_v1";
+pub const THIRTY_ENTRY_POLICY_VERSION: &str = "eur_intraday_30_entries_v2";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -27,9 +28,9 @@ pub struct IntradayRiskPolicy {
     pub min_reward_to_risk: Decimal,
     pub max_hold_seconds: i64,
     pub minimum_seconds_to_flatten: i64,
-    /// One initial entry plus at most one fully flattened replacement.
+    /// Conservative entry attempts per UTC day. STOPs and exits are separate.
     pub max_daily_entries: u8,
-    pub max_daily_exits: u8,
+    pub max_daily_exits: Option<u64>,
     pub max_open_positions: u8,
     pub rotation_enabled: bool,
     pub minimum_rotation_net_improvement_fraction: Decimal,
@@ -50,7 +51,7 @@ impl Default for IntradayRiskPolicy {
             // The first-run authority has one entry slot. A later release may
             // explicitly raise this after rotation evidence is approved.
             max_daily_entries: 1,
-            max_daily_exits: 2,
+            max_daily_exits: Some(2),
             max_open_positions: 1,
             rotation_enabled: true,
             minimum_rotation_net_improvement_fraction: Decimal::new(2, 3),
@@ -63,7 +64,12 @@ impl Default for IntradayRiskPolicy {
 impl IntradayRiskPolicy {
     pub fn validate(&self) -> Result<()> {
         require(
-            self.revision == INTRADAY_POLICY_VERSION
+            ((self.revision == INTRADAY_POLICY_VERSION
+                && (1..=2).contains(&self.max_daily_entries)
+                && self.max_daily_exits.is_some_and(|v| (1..=2).contains(&v)))
+                || (self.revision == THIRTY_ENTRY_POLICY_VERSION
+                    && (1..=30).contains(&self.max_daily_entries)
+                    && self.max_daily_exits.is_none()))
                 && self.desired_target_min_fraction >= Decimal::new(1, 2)
                 && self.desired_target_max_fraction >= self.desired_target_min_fraction
                 && self.desired_target_max_fraction <= Decimal::new(3, 2)
@@ -72,8 +78,6 @@ impl IntradayRiskPolicy {
                 && self.min_reward_to_risk >= Decimal::new(15, 1)
                 && (300..=86_400).contains(&self.max_hold_seconds)
                 && (60..=86_400).contains(&self.minimum_seconds_to_flatten)
-                && (1..=2).contains(&self.max_daily_entries)
-                && (1..=2).contains(&self.max_daily_exits)
                 && self.max_open_positions == 1
                 && self.minimum_rotation_net_improvement_fraction > Decimal::ZERO
                 && self.minimum_rotation_net_improvement_fraction <= Decimal::new(1, 2)
@@ -501,6 +505,26 @@ mod tests {
     use std::str::FromStr;
     use trady_domain::SignalDirection;
 
+    #[test]
+    fn thirty_stock_entries_never_apply_an_exit_quota() {
+        let mut policy = IntradayRiskPolicy {
+            revision: THIRTY_ENTRY_POLICY_VERSION.into(),
+            max_daily_entries: 30,
+            max_daily_exits: None,
+            ..IntradayRiskPolicy::default()
+        };
+        policy.validate().unwrap();
+        assert_eq!(
+            serde_json::to_value(&policy).unwrap()["max_daily_exits"],
+            serde_json::Value::Null
+        );
+        policy.max_daily_entries = 31;
+        assert!(policy.validate().is_err());
+        policy.max_daily_entries = 30;
+        policy.max_daily_exits = Some(255);
+        assert!(policy.validate().is_err());
+        IntradayRiskPolicy::default().validate().unwrap();
+    }
     fn d(value: &str) -> Decimal {
         Decimal::from_str(value).expect("decimal")
     }

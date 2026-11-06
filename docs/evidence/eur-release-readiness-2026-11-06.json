@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-06T13:59:24.612103+00:00",
+  "status": "SOURCE_AND_CAPABILITY_ATTRIBUTION_INDEPENDENTLY_ACCEPTED_PAPER_OBSERVATION_IN_PROGRESS_RELEASE_BLOCKED",
+  "report": "docs/eur-release-readiness-2026-11-06.md",
+  "private_evidence_directory": "var/eur-release-readiness-20261106",
+  "broker_account_id": 52211463,
+  "environment": "demo",
+  "native_probe": {
+    "classification": "ACTUAL_FULL_ENTRY_WORKING_STOP_EXACT_CANCEL_FLAT_EXIT_NOT_PARTIAL",
+    "instrument": "ASML_AS_EQ",
+    "buy_order_id": "57600344785",
+    "buy_fill_id": "57600344787",
+    "stop_order_id": "57600344791",
+    "exit_order_id": "57600344814",
+    "exit_fill_id": "57600344816",
+    "requested_and_filled_quantity": "1.92901",
+    "entry_limit_eur": "1296.0",
+    "maximum_entry_notional_eur": "2500",
+    "native_partial_entry_observed": false,
+    "first_fill_to_working_stop_timestamp_difference_seconds": "5.910241882",
+    "network_latency_guarantee": false,
+    "phase": "FLAT",
+    "reason": "BROKER_FILL_PROTECTION_DEADLINE_EXCEEDED",
+    "new_native_fill_count": 2,
+    "new_native_fill_cash_delta_eur": "-0.77",
+    "strategy_performance": false,
+    "new_simultaneous_stop_fill_cancel_race_observed": false
+  },
+  "account_audit": {
+    "completed_at": "2026-11-06T13:40:26.652218+00:00",
+    "complete": true,
+    "pages": 2,
+    "rows": 100,
+    "distinct_fills": 56,
+    "cash_eur": "4993.42",
+    "flat": true,
+    "broker_mutations": 0
+  },
+  "capability_attribution": {
+    "status": "INDEPENDENTLY_ACCEPTED_FOUR_CAPABILITY_FILLS_TWO_EXACT_CLEANUP_HEADS",
+    "evidence_sha256": "812c3a1ce610fb4354c22b86681727771fc86a3cd51fcc09b3ecd44b4ee09efd",
+    "pending_registry_sha256": "126112b0aaab3122597edcc37e39142b9eb6b1b358d46e28c0760778f5fbbcc3",
+    "capability_fill_count": 4,
+    "external_cleanup_count": 2,
+    "old_accepted_registry_modified": false,
+    "new_registry_installed": false,
+    "reviewed_registry_sha256": "f9ba7f4f54a7bd542aba8bef2c519dd7cb8081f982d3f3efaf19a8ca296b0a0a",
+    "reviewer": "Codex gpt-6.1-sol /root, sol-review-round1 (independent review-only role)",
+    "reviewed_at": "2026-11-06T13:57:33.881258+00:00",
+    "coverage_observed_through": "2026-11-06T13:40:26.191842563Z",
+    "cash_delta_eur": "0.74",
+    "complete_month_economics_accepted": false
+  },
+  "validation": {
+    "rust_workspace_passed": 678,
+    "disposable_postgres_cli_passed": 43,
+    "python_passed": 72,
+    "format": true,
+    "locked_check": true,
+    "strict_clippy": true,
+    "assets_and_links": true,
+    "tests_are_native_partial_or_positive_paper_evidence": false
+  },
+  "paper": {
+    "status": "BOUNDED_NEW_NATURAL_CYCLE_OBSERVATION_IN_PROGRESS",
+    "cutoff": "2026-11-06T15:50:00Z",
+    "maximum_natural_plan_attempts": 1,
+    "strategy_forced": false,
+    "successful_real_input_lifecycle": false
+  },
+  "native_producer": {
+    "binary_sha256": "764edd9fa1a8c48deda2e50d60e8cfe24b81c568e3e8ed97de4c6148c3e1d05c",
+    "test_binary_sha256": "e20d2f6fdf8475955f0f972b99e8c647c6e979af14a89fc0601580b8e40571ec",
+    "source_vector_sha256": "80339880f6f9d25019e5057c02a69327ee81581af7cbd17246b96cd1b9627c89"
+  },
+  "general_demo_service_enabled": false,
+  "demo_activated": false,
+  "live_enabled": false,
+  "new_schedules_created": false,
+  "owner_approval_receipt_created": false,
+  "new_approvable_release_manifest_sha256": null,
+  "prior_sealed_manifest_preserved": "d09df2264cbb3bb13fb4fc8ad3e5de9b449348bfdb0446a021b68b09ee31fc73",
+  "remaining_release_blockers": [
+    "GENUINE_NATIVE_PARTIAL_BUY_REMAINDER_CANCEL_AND_SMALLER_QUANTITY_PROTECTION_UNOBSERVED",
+    "SUCCESSFUL_REAL_INPUT_PAPER_AND_CREDENTIAL_FREE_REPLAY_UNOBSERVED",
+    "COMPLETE_NEW_EXACT_RELEASE_REVIEW_NOT_ACCEPTED",
+    "NEW_EXACT_MANIFEST_OWNER_APPROVAL_NOT_YET_POSSIBLE"
+  ],
+  "independent_source_review": {
+    "verdict": "APPROVE",
+    "rounds": 1,
+    "model": "gpt-6.1-sol",
+    "effort": "max",
+    "findings": [],
+    "report_path": "var/eur-release-readiness-20261106/sol-review-round1/review.md",
+    "report_sha256": "86d699c0f2b458d4ad8118fc7fc4ef638a9630bc30a3a7ea8157a07cb6977016",
+    "evidence_assertions_passed": 356,
+    "complete_release_accepted": false
+  }
+}
