@@ -24,7 +24,7 @@ ROLES = {"runtime", "binary", "activation_helper", "crosswalk", "ibkr_config", "
 TICKERS = {"AIRp_EQ": "NL0000235190", "ASMLa_EQ": "NL0010273215"}
 CASES = {"partial_entry_fill", "stop_rejection", "cancellation_race", "stop_fill_cancellation_race", "unknown_submission", "restart_recovery"}
 OPTIONAL_ROLES = {"broker_observations", "protocol_trace", "validation_logs", "paper_day_inputs", "probe_sources",
-                  "instrument_observations", "yfinance_config", "research_config", "opencode_config", "demo_operation", "shadow_runtime", "quote_stream_archive", "universe_config", "current_bars_config", "current_bars_bridge"}
+                  "instrument_observations", "yfinance_config", "research_config", "opencode_config", "demo_operation", "shadow_runtime", "quote_stream_archive", "universe_config", "current_bars_config", "current_bars_bridge", "capability_attribution", "capability_evidence"}
 RECEIPT_ROOT = Path("/etc/trady/eur-approvals")
 RECEIPT_GROUP = "trady-executor"
 
@@ -348,6 +348,29 @@ def verify_paper_capsule(value, files):
                 and summary["broker_mutations"] == 0, "POSITIVE_REAL_INPUT_PAPER_REPLAY_REQUIRED")
 
 
+def verify_capability_attribution(files, manifest, now, operation_start, operation_end):
+    value=load(files["capability_attribution"])
+    require(value["schema_version"]==1 and value["kind"]=="EUR_REVIEWED_CAPABILITY_ATTRIBUTION"
+            and value["owner_id"]==manifest["owner_id"] and value["account_id"]==manifest["account_id"]
+            and value["broker_account_id"]==52211463 and value["environment"]=="demo" and value["live_enabled"] is False
+            and value["passed"] is True and isinstance(value["reviewer"],str) and value["reviewer"].strip()
+            and value["reviewer"]!=manifest["builder"] and instant(value["reviewed_at"])<=now<instant(value["valid_until"])
+            and operation_end<=instant(value["valid_until"]) and value["evidence_sha256"]==digest(files["capability_evidence"])
+            and instant(value["period_start"])==operation_start and instant(value["period_end"])==operation_end,
+            "CAPABILITY_REVIEW_OR_EVIDENCE_INVALID")
+    # Delegate protocol hash-chain/flatness and exact native quantity checks to
+    # the same bundled implementation, with neither credentials nor providers.
+    with tempfile.TemporaryDirectory(prefix="eur-capability-proof-") as directory:
+        binary=Path(directory)/"binary"
+        shutil.copyfile(files["binary"],binary);binary.chmod(0o500)
+        result=subprocess.run([str(binary),"eur","capability-attribution-check","--registry",str(files["capability_attribution"].resolve()),"--evidence",str(files["capability_evidence"].resolve())],
+            env={},stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=30)
+        proof=json.loads(result.stdout)
+        require(result.returncode==0 and proof["status"]=="REVIEWED_CAPABILITY_ATTRIBUTION_VALID"
+                and proof["broker_mutations"]==proof["provider_calls"]==0 and proof["release_accepted"] is False,
+                "CAPABILITY_NATIVE_PROOF_INVALID")
+
+
 def paths_and_manifest(bundle):
     require(not bundle.is_symlink(), "BUNDLE_SYMLINK")
     manifest = load(bundle / "manifest.json")
@@ -382,9 +405,13 @@ def evidence_blockers(manifest, files, now):
     if runtime["enabled"] is not True:
         blockers.append("RUNTIME_DISABLED")
     policy = runtime["policy"]
-    require(policy["max_daily_entries"] == policy["max_open_positions"] == 1 and policy["rotation_enabled"] is False
+    require(((policy["revision"]=="eur_intraday_v1" and 1<=policy["max_daily_entries"]<=2 and policy.get("max_daily_exits") in [1,2])
+             or (policy["revision"]=="eur_intraday_30_entries_v2" and 1<=policy["max_daily_entries"]<=30 and policy.get("max_daily_exits")==None))
+            and policy["max_open_positions"] == 1 and policy["rotation_enabled"] is False
             and policy["no_overnight"] is True and Decimal(policy["max_initial_loss_fraction"]) <= Decimal("0.02")
             and Decimal(policy["min_reward_to_risk"]) >= Decimal("1.5"), "RUNTIME_LIMITS_EXCEEDED")
+    if policy["revision"]=="eur_intraday_30_entries_v2" and not runtime.get("operation_config"):
+        blockers.append("BOUNDED_DEMO_OPERATION_REQUIRED")
     if not runtime.get("shadow", {}).get("ibkr_config"):
         blockers.append("IBKR_SMART_LIVE_CONFIGURATION_REQUIRED")
     require(runtime["eligibility"]["quote_max_age_seconds"] <= 10, "QUOTE_FRESHNESS_LIMIT_EXCEEDED")
@@ -413,12 +440,23 @@ def evidence_blockers(manifest, files, now):
         require(operation["schema_version"]==1 and operation["account_id"]==runtime["account_id"] and operation["owner_id"]==runtime["owner_id"]
                 and operation["broker_account_id"]==52211463 and operation["environment"]=="demo" and operation["live_enabled"] is False
                 and 0<(end-start).total_seconds()<=31*86400 and end<=instant(manifest["valid_until"])
-                and operation["max_daily_entries"]==operation["max_open_positions"]==1 and operation["no_overnight"] is True
+                and 1<=operation["max_daily_entries"]<=30 and operation["max_daily_entries"]==policy["max_daily_entries"]
+                and operation["max_open_positions"]==1 and operation["no_overnight"] is True
                 and operation["automatic_live_activation"] is False and operation["automatic_model_promotion"] is False
                 and source["execution_stage"]=="SHADOW" and source["live_enabled"] is False and source["account_id"]==runtime["account_id"]
                 and source["owner_id"]==runtime["owner_id"] and source["policy"]==runtime["policy"]
                 and source["approved_universe_snapshot_id"]==runtime["approved_universe_snapshot_id"], "DEMO_MONTH_SCOPE_OR_SOURCE_INVALID")
         require(source.get("shadow",{}).get("current_bars_config")==runtime.get("shadow",{}).get("current_bars_config"), "DEMO_MONTH_CANDLE_SOURCE_CHANGED")
+        registry_path,evidence_path=operation.get("capability_attribution_config"),operation.get("capability_evidence_config")
+        require(bool(registry_path)==bool(evidence_path), "CAPABILITY_CONFIGURATION_INCOMPLETE")
+        require(policy["revision"]!="eur_intraday_30_entries_v2" or bool(registry_path), "CAPABILITY_ATTRIBUTION_REQUIRED_FOR_THIRTY_ENTRY_MONTH")
+        if registry_path:
+            require({"capability_attribution","capability_evidence"}<=files.keys(),"CAPABILITY_ARTIFACTS_MISSING")
+            try:
+                verify_capability_attribution(files, manifest, now, start, end)
+            except (ValueError, KeyError, TypeError, subprocess.TimeoutExpired):
+                blockers.append("CAPABILITY_ATTRIBUTION_NOT_ACCEPTED")
+
         require("crosswalk" in files and end <= instant(load(files["crosswalk"])["expires_at"]), "DEMO_MONTH_IDENTITY_END_NOT_COVERED")
         for role in ["instrument_rules", "quote_compatibility", "costs", "forward_cost_model", "protocol_acceptance", "paper_day_acceptance", "independent_review"]:
             if role in files and end > instant(load(files[role])["valid_until"]):

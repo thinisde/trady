@@ -43,3 +43,12 @@ The authorized next-session continuation must retain its one-run self-disable
 guard, observation window, single EUR 2,500 entry-attempt cap and complete
 evidence/approval gates. Its reviewed source/binary references must be rebound
 to any rebuilt deployment before it runs.
+
+The subsequent [Nov6 continuation report](./eur-evidence-continuation-2026-11-06.md)
+and [current evidence record](./evidence/eur-evidence-continuation-2026-11-06.json)
+carry the latest source/binary pins and actual results. The cleanup observations
+and sealed Nov5 candidate above remain preserved historical artifacts.
+
+The later [30-entry policy follow-up](./eur-demo-entry-policy-2026-11-06.md)
+and its evidence record now carry the current installed SHADOW pins. All
+cleanup and morning-continuation candidates above remain unchanged evidence.

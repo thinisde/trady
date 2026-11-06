@@ -140,7 +140,7 @@ pub struct EurExecutionCycle<B: EurExecutionPort> {
     pub coordinator: EurCoordinator,
     pub broker: B,
     entries_today: u8,
-    exits_today: u8,
+    exits_today: u64,
     journal: Box<dyn EurExecutionJournal>,
     lifecycle: Box<dyn EurLifecycleSink>,
     journal_bound: bool,
@@ -194,7 +194,7 @@ impl<B: EurExecutionPort> EurExecutionCycle<B> {
         self.entries_today
     }
 
-    pub fn exits_today(&self) -> u8 {
+    pub fn exits_today(&self) -> u64 {
         self.exits_today
     }
 
@@ -482,7 +482,10 @@ impl<B: EurExecutionPort> EurExecutionCycle<B> {
             });
         }
         require(
-            self.exits_today < self.config.policy.max_daily_exits,
+            self.config
+                .policy
+                .max_daily_exits
+                .is_none_or(|limit| self.exits_today < limit),
             "EUR daily exit limit reached",
         )?;
         let account_id = trady_domain::AccountId::new(observation.plan.account_id.clone())?;

@@ -9,6 +9,11 @@ LIVE is rejected. DEMO remains blocked on native partial-entry/protection
 evidence, a positive real-input paper lifecycle, complete independent acceptance
 and exact-hash owner approval. Scoped quote/rule/cost components are accepted.
 
+The [6 November release-readiness follow-up](./docs/eur-release-readiness-2026-11-06.md)
+records the latest bounded native probe, account reconciliation and verification.
+Its new ASML entry filled completely; it does not supply the missing partial-fill
+evidence or authorize automatic DEMO.
+
 The target operator profile is [config/eur-demo.example.json](./config/eur-demo.example.json).
 The migration plan and authority boundary are documented in
 [docs/trady-bot-implementation-plan.md](./docs/trady-bot-implementation-plan.md).

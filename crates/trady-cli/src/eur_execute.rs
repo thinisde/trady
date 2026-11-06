@@ -208,7 +208,7 @@ pub fn run(args: &[String]) -> Result<Value> {
         config.owner_id.clone(),
         config.account_id.to_string(),
     )?;
-    store.acquire_executor_lease(&new_id("eur_protocol_worker"), 180)?;
+    store.acquire_demo_broker_lease(&new_id("eur_protocol_worker"), 180)?;
     let result = (|| {
         let records = store.load(&values["--intent"])?;
         let mut entry_snapshot = None;
@@ -385,6 +385,7 @@ pub fn run(args: &[String]) -> Result<Value> {
                         .map_or(snapshot.plan.flatten_deadline, |(op, _)| op.ends_at),
                 ),
                 max_unprotected_seconds: 10,
+                research_cycle_id: Some(snapshot.selection.session_id.clone()),
                 entry_valid_until: None,
             };
             context.validate()?;

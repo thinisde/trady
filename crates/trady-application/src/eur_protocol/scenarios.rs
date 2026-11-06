@@ -43,6 +43,7 @@ pub(super) fn context() -> ProtocolContext {
         created_at: at,
         flatten_at: at + Duration::hours(7),
         max_unprotected_seconds: 5,
+        research_cycle_id: None,
         entry_valid_until: None,
     }
 }

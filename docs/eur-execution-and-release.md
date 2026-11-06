@@ -1,5 +1,10 @@
 # EUR execution and release
 
+The [Nov6 entry-policy follow-up](./eur-demo-entry-policy-2026-11-06.md) records
+the owner's 30-entry daily cap, unlimited STOP/exit changes, physical-account
+fencing and reviewed capability attribution. That change does not supply any
+missing native/paper evidence or exact-hash activation approval.
+
 The [bounded month handoff](./eur-demo-month-2026-11.md) documents the prospective
 6 November–6 December DEMO supervisor, immutable intraday research cycles,
 short-restart catalog recovery, account-wide economic audit and root-authored
@@ -22,6 +27,9 @@ unapproved model content.
 The executor writes an immutable scoped request; the analyst service reads it
 using its own DSN and model credential. Results and unknown-after-restart model
 attempts are durable. A missing analyst response produces a waiting checkpoint.
+Bounded actual analyst completion messages or provider error codes are retained
+privately, with sanitized failure diagnostics, so an invalid result remains
+inspectable. This does not retry a failed cycle or authorize a model change.
 After a valid selection, the executor obtains a new IBKR book, then calculates
 quantity, entry, stop, target, costs and deadline in Rust. Missing reviewed order
 rules or EUR costs block risk calculation. Selection alone cannot grant entry.
@@ -142,6 +150,16 @@ orders or incomplete totals block reconciliation and return the explicit
 fill IDs reject the observation. A restart can obtain a new proof. The
 eight-page bound does not require scanning unrelated old ticker history; this
 proof does not establish account-wide economic-history completeness.
+
+Native execution quantities are signed: BUY fills must be positive and SELL
+fills negative before their magnitudes enter the ledger. Native whole-second
+fill clocks receive only the existing one-second dispatch precision allowance.
+Complete multi-leg views use one `ObservedBatch` reconciliation after all exact
+legs update, avoiding a false holding conflict while applying an exit or a
+partially filled working STOP. A locally rejected zero-filled leg without a
+native ID does not require invented native history. Unknown no-ID legs remain
+blocked. Historical individual `Observed` records retain their original replay
+semantics; repaired source does not rewrite an earlier native journal.
 Unchanged protected holdings retain their raw broker observations without
 duplicating reducer events. Migration 21 and replay remove the former 10,000-event
 ceiling, so older long journals can still reconcile and flatten.

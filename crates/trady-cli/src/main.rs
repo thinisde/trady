@@ -2,6 +2,7 @@ mod api_health;
 mod autonomous;
 mod broker_read;
 mod eur;
+mod eur_attribution;
 mod eur_decision;
 mod eur_execute;
 mod eur_operation;

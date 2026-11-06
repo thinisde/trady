@@ -1,5 +1,11 @@
 # EUR DEMO month preparation
 
+The owner subsequently changed the limit to **30 stock entries per UTC day**,
+with **unlimited protective STOPs and exit order changes**. The
+[Nov6 policy follow-up](./eur-demo-entry-policy-2026-11-06.md) and its evidence
+record contain the latest implementation, review and installed pins. The
+one-entry observations below describe the earlier authority and remain preserved.
+
 The requested window is **6 November 2026 00:00 UTC through 6 December 2026
 00:00 UTC**: thirty calendar days on Trading 212 **DEMO 52211463**. Research
 uses real market inputs. LIVE remains disabled and is never activated after a
@@ -12,6 +18,16 @@ The independent reviewer must assess the complete resulting release, and the
 owner must approve its exact manifest hash. Engineering tests, capability trades
 and a blocked manifest cannot supply these missing gates. See the
 [current evidence record](./evidence/eur-blocker-followup-2026-11-05.json).
+
+The authorized Nov6 capability continuation made one full-entry round trip,
+finished physically flat at EUR 4,994.19, and changed cash by EUR +1.51. Its two
+fills are capability evidence within the month window, separate from strategy
+performance. The then-active one-entry Nov6 allowance was consumed. The owner
+has since authorized the 30-entry policy above. General DEMO stays disabled
+pending missing evidence, the reviewed policy release and exact-hash approval; capability
+attribution is required before strategy economics can pass. The full account
+cash audit includes historical legacy FX rather than assuming every old fill
+was EUR-to-EUR. See the [Nov6 continuation](./eur-evidence-continuation-2026-11-06.md).
 
 ## Prepared behavior
 
@@ -32,8 +48,8 @@ not DEMO entry authority.
 
 `trady eur demo-run` discovers unresolved account intents before considering a
 new entry. An unfinished intent retains its original exact recovery bundle.
-The common gate and `protocol-drive` enforce one position, one entry per UTC
-day, no overnight holding, current primary calendar, exact listing and reviewed
+The common gate and `protocol-drive` enforce one position, the release's daily entry cap,
+no overnight holding, current primary calendar, exact listing and reviewed
 price/cost limits. Both manual and supervised entry paths enforce the finite
 month window and the same source-runtime dependencies. The primary flatten
 deadline, month end and earliest actual approval/evidence expiry cap entry

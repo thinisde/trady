@@ -438,7 +438,11 @@ fn unchanged_protected_observations_do_not_grow_the_state_journal() {
     d.broker.stop_terminal = true;
     drive(&mut d, &c, None);
     d.broker.exit_filled = c.quantity;
-    assert_eq!(drive(&mut d, &c, None).phase, ProtocolPhase::Flat);
+    let final_state = drive(&mut d, &c, None);
+    assert_eq!(final_state.phase, ProtocolPhase::Flat);
+    assert_eq!(final_state.reason.as_deref(), Some("OWNER_EXIT"));
+    assert!(!final_state.reconciliation_required);
+    assert_eq!(recover(&d.journal.records).unwrap(), final_state);
 }
 
 #[test]
@@ -637,6 +641,77 @@ fn partial_entry_waits_for_terminal_cancellation_and_protects_late_fill() {
     assert_eq!(drive(&mut d, &c, None).phase, ProtocolPhase::Protected);
 }
 #[test]
+fn complete_view_applies_partial_stop_before_checking_the_shared_holding() {
+    let (c, mut d) = fixture();
+    drive(&mut d, &c, None);
+    d.broker.entry_filled = c.quantity;
+    d.broker.entry_terminal = true;
+    drive(&mut d, &c, None);
+    drive(&mut d, &c, None);
+    let before = d.journal.records.len();
+    d.broker.stop_filled = Decimal::ONE;
+    let state = drive(&mut d, &c, None);
+    assert_eq!(state.phase, ProtocolPhase::Protected);
+    assert_eq!(state.holding_quantity, Decimal::ONE);
+    assert!(!state.exit_requested && !state.reconciliation_required);
+    assert!(state.reason.is_none());
+    assert_eq!(d.broker.submitted.len(), 2);
+    assert!(d.broker.cancelled.is_empty());
+    assert!(
+        d.journal.records[before..]
+            .iter()
+            .any(|r| matches!(r.input, ProtocolInput::ObservedBatch { .. }))
+    );
+    assert!(
+        d.journal.records[before..]
+            .iter()
+            .all(|r| r.state.reason.as_deref() != Some("HISTORY_AND_HOLDING_CONFLICT"))
+    );
+    assert_eq!(recover(&d.journal.records).unwrap(), state);
+    let mut batch = d.journal.records[before..]
+        .iter()
+        .find_map(|r| match &r.input {
+            ProtocolInput::ObservedBatch { orders } => Some(orders.clone()),
+            _ => None,
+        })
+        .unwrap();
+    // A genuine complete-view mismatch must still latch recovery. These are
+    // synthetic faults, never claimed as new broker observations.
+    for order in &mut batch {
+        if let ProtocolInput::Observed {
+            holding_quantity, ..
+        } = order
+        {
+            *holding_quantity = c.quantity;
+        }
+    }
+    let conflict = state
+        .transition(
+            "actual_ledger_conflict_control".into(),
+            ProtocolInput::ObservedBatch {
+                orders: batch.clone(),
+            },
+            d.broker.at,
+        )
+        .unwrap()
+        .state;
+    assert!(conflict.reconciliation_required && conflict.exit_requested);
+    assert_eq!(
+        conflict.reason.as_deref(),
+        Some("HISTORY_AND_HOLDING_CONFLICT")
+    );
+    batch[1] = batch[0].clone();
+    assert!(
+        state
+            .transition(
+                "duplicate_leg_control".into(),
+                ProtocolInput::ObservedBatch { orders: batch },
+                d.broker.at
+            )
+            .is_err()
+    );
+}
+#[test]
 fn stop_cancel_race_subtracts_its_partial_fill_before_market_exit() {
     let (c, mut d) = fixture();
     drive(&mut d, &c, None);
@@ -665,6 +740,14 @@ fn rejected_stop_flattens_exact_reconciled_holding() {
         d.broker.submitted.last().unwrap().kind,
         OrderKind::Market { .. }
     ));
+    d.broker.exit_filled = c.quantity;
+    let state = drive(&mut d, &c, None);
+    assert_eq!(state.phase, ProtocolPhase::Flat);
+    assert_eq!(state.reason.as_deref(), Some("PROTECTION_OR_EXIT_REJECTED"));
+    assert!(!state.reconciliation_required);
+    assert_eq!(d.broker.submitted.len(), 3);
+    assert!(d.broker.cancelled.is_empty());
+    assert_eq!(recover(&d.journal.records).unwrap(), state);
 }
 #[test]
 fn unknown_submission_survives_restart_and_never_resends() {

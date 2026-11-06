@@ -90,7 +90,18 @@ impl TargetRecord {
             Self::Selection(value) => value.validate(now),
             Self::CoordinatorEvent(value) => value.validate(now),
             Self::TradePlan(value) => {
-                value.validate(now, &trady_policy::intraday::IntradayRiskPolicy::default())
+                use trady_policy::intraday::{IntradayRiskPolicy, THIRTY_ENTRY_POLICY_VERSION};
+                let policy = if value.policy_revision == THIRTY_ENTRY_POLICY_VERSION {
+                    IntradayRiskPolicy {
+                        revision: THIRTY_ENTRY_POLICY_VERSION.into(),
+                        max_daily_entries: 30,
+                        max_daily_exits: None,
+                        ..IntradayRiskPolicy::default()
+                    }
+                } else {
+                    IntradayRiskPolicy::default()
+                };
+                value.validate(now, &policy)
             }
             Self::Exit(value) => require(
                 !value.plan_id.is_empty() && value.decided_at <= now,
@@ -373,6 +384,24 @@ impl PgTargetStore {
             .map(|_| ())
     }
 
+    /// One physical DEMO account is shared by every logical EUR alias.
+    pub fn acquire_demo_broker_lease(&mut self, worker_id: &str, ttl_seconds: i32) -> Result<i64> {
+        require(
+            valid_id(worker_id) && (1..=3600).contains(&ttl_seconds),
+            "invalid DEMO executor fence",
+        )?;
+        let generation = self
+            .client
+            .query_one(
+                "SELECT target.acquire_demo_executor_lease($1,$2,$3)",
+                &[&self.account_id, &worker_id, &ttl_seconds],
+            )
+            .map_err(crate::db)?
+            .get(0);
+        self.fence = Some((worker_id.to_owned(), generation));
+        Ok(generation)
+    }
+
     pub fn renew_executor_lease(&mut self, ttl_seconds: i32) -> Result<()> {
         let (worker, generation) = self
             .fence
@@ -385,6 +414,10 @@ impl PgTargetStore {
             )
             .map_err(crate::db)?;
         Ok(())
+    }
+
+    pub fn has_executor_fence(&self) -> bool {
+        self.fence.is_some()
     }
 
     pub fn release_executor_lease(&mut self) -> Result<()> {
@@ -408,6 +441,33 @@ impl PgTargetStore {
             )
             .map_err(crate::db)
             .map(|row| row.get(0))
+    }
+
+    pub fn physical_unresolved_protocols(&mut self) -> Result<serde_json::Value> {
+        self.client
+            .query_one("SELECT target.physical_unresolved_protocols()", &[])
+            .map_err(crate::db)
+            .map(|r| r.get(0))
+    }
+
+    pub fn protocol_is_externally_cleaned(&mut self, intent: &str) -> Result<bool> {
+        self.client
+            .query_one(
+                "SELECT target.protocol_is_externally_cleaned($1,$2,$3)",
+                &[&self.owner_id, &self.account_id, &intent],
+            )
+            .map_err(crate::db)
+            .map(|r| r.get(0))
+    }
+
+    pub fn physical_unresolved_protocols_for_audit(&mut self) -> Result<serde_json::Value> {
+        self.client
+            .query_one(
+                "SELECT target.physical_unresolved_protocols_for_audit()",
+                &[],
+            )
+            .map_err(crate::db)
+            .map(|r| r.get(0))
     }
 
     pub fn daily_entry_count(&mut self, day: chrono::NaiveDate) -> Result<i64> {
@@ -921,6 +981,62 @@ mod tests {
         DateTime::parse_from_rfc3339("2026-11-03T10:00:00Z")
             .expect("time")
             .to_utc()
+    }
+
+    #[test]
+    fn persisted_thirty_entry_plan_keeps_reproducible_financial_checks() {
+        use rust_decimal::Decimal;
+        use trady_policy::intraday::{IntradayCostModel, THIRTY_ENTRY_POLICY_VERSION};
+        let costs = IntradayCostModel {
+            entry: trady_policy::EntryCosts {
+                fixed: money(0),
+                rate: Decimal::ZERO,
+                uncertainty: money(0),
+                fx: None,
+            },
+            exit: trady_policy::economics::ExitCosts {
+                fixed: money(0),
+                rate: Decimal::ZERO,
+                uncertainty: money(0),
+                fx: None,
+            },
+        };
+        let mut plan = IntradayTradePlan {
+            plan_id: "synthetic_plan_30".into(),
+            policy_revision: THIRTY_ENTRY_POLICY_VERSION.into(),
+            account_id: "paper_fixture".into(),
+            instrument_id: trady_domain::InstrumentId::new("AIR_PA_EQ").unwrap(),
+            currency: money(0).currency,
+            entry_price: 100.into(),
+            quantity: Decimal::ONE,
+            acquisition_cost: money(100),
+            stop_price: 99.into(),
+            target_price: 102.into(),
+            target_net_fraction: Decimal::new(2, 2),
+            planned_loss_fraction: Decimal::new(1, 2),
+            reward_to_risk: 2.into(),
+            created_at: now(),
+            flatten_deadline: now() + Duration::hours(1),
+            evidence_snapshot_ids: vec!["synthetic_fixture_only".into()],
+            stop_revision: 0,
+            cost_model: Some(costs),
+        };
+        let mut store = MemoryTargetStore::default();
+        store
+            .append(TargetRecord::TradePlan(plan.clone()), now())
+            .unwrap();
+        plan.policy_revision = "invented_unreviewed_policy".into();
+        assert!(
+            TargetRecord::TradePlan(plan.clone())
+                .validate(now())
+                .is_err()
+        );
+        plan.policy_revision = THIRTY_ENTRY_POLICY_VERSION.into();
+        plan.target_price = 103.into();
+        assert!(
+            TargetRecord::TradePlan(plan).validate(now()).is_err(),
+            "policy change cannot waive risk arithmetic"
+        );
     }
 
     #[test]

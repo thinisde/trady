@@ -630,5 +630,8 @@
       "log": "var/eur-legacy-cleanup-20261105/workspace.log",
       "passed": 660
     }
-  }
+  },
+  "latest_status_record": "docs/evidence/eur-evidence-continuation-2026-11-06.json",
+  "historical_record_preserved_current_installed_pins_in_latest_status": true,
+  "latest_entry_policy_followup": "docs/evidence/eur-demo-entry-policy-2026-11-06.json"
 }

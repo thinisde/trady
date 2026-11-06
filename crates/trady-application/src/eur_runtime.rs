@@ -157,12 +157,12 @@ impl EurRuntimeConfig {
             "EUR runtime requires reviewed exchange-local flatten deadlines",
         )?;
         require(
-            self.policy.max_daily_entries == 1
+            (1..=30).contains(&self.policy.max_daily_entries)
                 && self.policy.max_open_positions == 1
                 && self.policy.no_overnight
                 && self.policy.max_initial_loss_fraction <= rust_decimal::Decimal::new(2, 2)
                 && self.policy.min_reward_to_risk >= rust_decimal::Decimal::new(15, 1),
-            "EUR runtime policy exceeds the first-run loss, reward-to-risk, or entry-slot limits",
+            "EUR runtime policy exceeds the loss, reward-to-risk, or30entry daily limits",
         )?;
         let _ = now;
         Ok(())

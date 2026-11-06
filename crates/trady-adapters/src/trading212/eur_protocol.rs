@@ -8,7 +8,7 @@ use trady_application::eur_protocol::{
         request_for,
     },
 };
-use trady_domain::OrderStatus;
+use trady_domain::{OrderStatus, Side};
 
 pub struct Trading212ProtocolBroker<C: Clock = SystemClock> {
     pub executor: Trading212Executor<C>,
@@ -114,7 +114,8 @@ impl<C: Clock> ProtocolBroker for Trading212ProtocolBroker<C> {
         self.observed_sellable = None;
         self.complete_account_view = None;
         let r = &mut self.executor.reader;
-        if r.config.environment != Environment::Demo
+        if state.context.runtime_mode != trady_domain::ExecutionStage::Demo
+            || r.config.environment != Environment::Demo
             || r.config.broker_account_id as u64 != state.context.broker_account_id
             || r.config.account_id.as_str() != state.context.account_id
             || self.binding.instrument_id.as_str() != state.context.instrument_id
@@ -193,17 +194,26 @@ impl<C: Clock> ProtocolBroker for Trading212ProtocolBroker<C> {
                         .iter()
                         .chain(state.protection.iter())
                         .chain(state.exits.last())
-                        .any(|p| p.broker_id.as_ref() == Some(&order.broker_order_id));
-                    if relevant && let Some(fill) = &row.fill {
+                        .find(|p| p.broker_id.as_ref() == Some(&order.broker_order_id));
+                    if let Some(progress) = relevant
+                        && let Some(fill) = &row.fill
+                    {
                         let id = fill.id.filter(|id| *id > 0).ok_or_else(invalid)?;
                         let quantity = fill.quantity.ok_or_else(invalid)?.0;
                         let filled_at = fill.filled_at.ok_or_else(invalid)?;
-                        if quantity <= Decimal::ZERO
-                            || filled_at < state.context.created_at
+                        if !matches!(
+                            (order.side, quantity.cmp(&Decimal::ZERO)),
+                            (Side::Buy, std::cmp::Ordering::Greater)
+                                | (Side::Sell, std::cmp::Ordering::Less)
+                        ) // Native filledAt has whole-second precision; match the reducer.
+                            || filled_at < progress.dispatched_at - chrono::Duration::seconds(1)
                             || filled_at > r.clock.now()
                         {
                             return Err(invalid());
                         }
+                        // Native executions use signed quantities, whereas protocol
+                        // progress and exact-order totals use positive magnitudes.
+                        let quantity = quantity.abs();
                         if let Some(previous) = history_fills
                             .entry(order.broker_order_id.clone())
                             .or_default()

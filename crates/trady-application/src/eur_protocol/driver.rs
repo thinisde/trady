@@ -283,6 +283,7 @@ impl<J: ProtocolJournal, B: ProtocolBroker> ProtocolDriver<J, B> {
         )?;
         self.journal.record_observation(context, &view)?;
         let mut ids = std::collections::BTreeSet::new();
+        let mut updates = Vec::new();
         for exact in &view.exact_orders {
             let expected = state.progress(exact.leg)?;
             require(
@@ -299,17 +300,14 @@ impl<J: ProtocolJournal, B: ProtocolBroker> ProtocolDriver<J, B> {
             )?;
             let terminal =
                 exact.order.status.terminal() && view.history_complete && !exact.pending_present;
-            if !state.reconciliation_required
+            let unchanged = !state.reconciliation_required
                 && expected.filled == exact.order.filled_quantity
                 && expected.status == exact.order.status
                 && expected.reconciled_terminal == terminal
                 && expected.stop_price == exact.stop_price
-                && state.holding_quantity == view.holding_quantity
-            {
-                continue;
-            }
-            self.record(
-                context,
+                && state.holding_quantity == view.holding_quantity;
+            updates.push((
+                unchanged,
                 ProtocolInput::Observed {
                     leg: exact.leg,
                     broker_id: exact.order.broker_order_id.clone(),
@@ -322,8 +320,33 @@ impl<J: ProtocolJournal, B: ProtocolBroker> ProtocolDriver<J, B> {
                     history_complete: view.history_complete,
                     stop_price: exact.stop_price,
                 },
-                at,
-            )?;
+            ));
+        }
+        let complete_batch = view.history_complete
+            && updates.len() > 1
+            && state
+                .entry
+                .iter()
+                .chain(state.protection.iter())
+                .chain(state.exits.last())
+                .filter(|p| p.requires_native_observation())
+                .all(|p| p.broker_id.as_ref().is_some_and(|id| ids.contains(id)));
+        if complete_batch {
+            if updates.iter().any(|(unchanged, _)| !unchanged) {
+                self.record(
+                    context,
+                    ProtocolInput::ObservedBatch {
+                        orders: updates.into_iter().map(|(_, order)| order).collect(),
+                    },
+                    at,
+                )?;
+            }
+        } else {
+            for (unchanged, order) in updates {
+                if !unchanged {
+                    self.record(context, order, at)?;
+                }
+            }
         }
         if let Some(filled_at) = view.entry_first_filled_at {
             let current = self.state(context)?;

@@ -777,25 +777,28 @@ fn process_research_request(loaded: &Loaded, repository: &mut PgTargetStore) -> 
         loaded.config.opencode_config.as_deref(),
         "analyst",
     )?)?;
+    let mut analyst_trace = Vec::new();
     let selection = (|| {
         let mut analyst = trady_adapters::opencode::eur_analyst::OpenCodeEurAnalyst::new(
             llm,
             super::secret("OPENCODE_API_KEY")?,
         )?
         .with_tools(tools);
-        trady_application::eur_runtime::analyst_select_candidate(
+        let selection = trady_application::eur_runtime::analyst_select_candidate(
             &mut analyst,
             &request,
             vec![],
             Utc::now(),
-        )
+        );
+        analyst_trace = analyst.audit_trace().to_vec();
+        selection
     })();
     let response = match selection {
         Ok(selection) => {
-            json!({"status":"COMPLETED","selection":selection,"request_hash":hash(&document)?})
+            json!({"status":"COMPLETED","selection":selection,"request_hash":hash(&document)?,"analyst_trace":analyst_trace})
         }
-        Err(_) => {
-            json!({"status":"ANALYST_FAILED_OR_RESPONSE_INVALID","request_hash":hash(&document)?,"entry_authorized":false})
+        Err(error) => {
+            json!({"status":"ANALYST_FAILED_OR_RESPONSE_INVALID","request_hash":hash(&document)?,"diagnostic":error.to_string(),"analyst_trace":analyst_trace,"entry_authorized":false})
         }
     };
     repository.append_document("provider_snapshot", &response_id, &response)?;
@@ -887,9 +890,14 @@ fn prepare_cycle(loaded: &Loaded, repository: &mut PgTargetStore) -> Result<Opti
 fn run_once(loaded: &Loaded) -> Result<Value> {
     require(loaded.config.enabled, "EUR shadow deployment is disabled")?;
     let mut repository = store(loaded, "trady_executor", "TRADY_EXECUTOR_DSN")?;
-    repository.acquire_executor_lease(&new_id("eur_worker"), LEASE_SECONDS)?;
+    repository.acquire_demo_broker_lease(&new_id("eur_worker"), LEASE_SECONDS)?;
     let result = (|| {
-        if super::eur_operation::protocol_needs_execution(&mut repository)? {
+        if repository
+            .physical_unresolved_protocols()?
+            .as_array()
+            .is_none_or(|rows| !rows.is_empty())
+            || super::eur_operation::protocol_needs_execution(&mut repository)?
+        {
             return Ok(
                 json!({"status":"SHADOW_DEFERRED_FOR_ACTIVE_PROTOCOL","broker_mutations":0,"entry_authorized":false}),
             );

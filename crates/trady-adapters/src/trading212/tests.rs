@@ -312,6 +312,32 @@ fn account_wide_month_history_requires_complete_scoped_pagination() {
 }
 
 #[test]
+fn month_history_covers_more_than_twenty_pages_for_thirty_entry_policy() {
+    let mut replies = vec![ok(
+        json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4000}}),
+    )];
+    for page in 0..21 {
+        let next = if page == 20 {
+            Value::Null
+        } else {
+            json!(format!(
+                "/api/v0/equity/history/orders?limit=50&cursor={}",
+                page + 1
+            ))
+        };
+        replies.push(ok(json!({"items":[],"nextPagePath":next})));
+    }
+    let server = Server::new(replies);
+    let mut reader = server.euro_executor().reader;
+    reader.config.broker_account_id = 52211463;
+    let value = reader.eur_month_order_history(|| Ok(())).unwrap();
+    assert_eq!(value["complete"], true);
+    assert_eq!(value["page_count"], 21);
+    assert_eq!(value["maximum_pages"], 256);
+    assert!(server.requests().iter().all(|r| r.line.starts_with("GET ")));
+}
+
+#[test]
 fn native_cash_collector_pages_with_a_fence_and_rejects_unsafe_continuations() {
     for next in [
         "/api/v0/equity/history/transactions?limit=50&cursor=2",
@@ -1173,6 +1199,7 @@ fn eur_protocol_observer_requires_exact_stop_shape_and_terminal_history() {
         created_at: now(),
         flatten_at: now() + chrono::Duration::hours(1),
         max_unprotected_seconds: 10,
+        research_cycle_id: None,
         entry_valid_until: None,
     };
     let mut state = ProtocolState::new(context).unwrap();
@@ -1340,6 +1367,181 @@ fn eur_protocol_observer_requires_exact_stop_shape_and_terminal_history() {
                 assert!(!result.unwrap().history_complete)
             }
             _ => assert!(result.is_err()),
+        }
+    }
+}
+
+#[test]
+fn eur_protocol_reconciles_captured_native_signed_market_and_stop_sells() {
+    use trady_application::eur_protocol::{
+        OrderProgress, ProtocolContext, ProtocolState, driver::ProtocolBroker,
+    };
+    // The wire quantities and clocks are unmodified Nov5 native observations.
+    // Wrong-sign/zero/duplicate variants below are offline fault controls.
+    let captured: Value =
+        serde_json::from_str(include_str!("fixtures/native-signed-sells-20261105.json")).unwrap();
+    for pair in captured["items"].as_array().unwrap().chunks_exact(2) {
+        let entry: dto::Order = serde_json::from_value(pair[0]["order"].clone()).unwrap();
+        let sell: dto::Order = serde_json::from_value(pair[1]["order"].clone()).unwrap();
+        let entry = entry.normalize().unwrap();
+        let sell = sell.normalize().unwrap();
+        let sell_at: DateTime<Utc> = pair[1]["fill"]["filledAt"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let created_at: DateTime<Utc> = pair[0]["order"]["createdAt"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let stop = pair[1]["order"]["type"] == "STOP";
+        let initial_stop = if stop {
+            pair[1]["order"]["stopPrice"].to_string().parse().unwrap()
+        } else {
+            pair[0]["fill"]["price"]
+                .to_string()
+                .parse::<Decimal>()
+                .unwrap()
+                - Decimal::ONE
+        };
+        let context = ProtocolContext {
+            runtime_mode: trady_domain::ExecutionStage::Demo,
+            policy_revision: "eur_intraday_v1".into(),
+            intent_id: "native_wire_offline_regression".into(),
+            account_id: "paper_t212_test".into(),
+            broker_account_id: 52211463,
+            instrument_id: "AIR_PA_EQ".into(),
+            broker_ticker: "AIRp_EQ".into(),
+            isin: "NL0000235190".into(),
+            policy_hash: "a".repeat(64),
+            configuration_hash: "b".repeat(64),
+            evidence_ids: vec!["offline_native_wire_regression".into()],
+            quantity: entry.quantity,
+            entry_limit: pair[0]["order"]["limitPrice"].to_string().parse().unwrap(),
+            initial_stop,
+            target: pair[0]["fill"]["price"]
+                .to_string()
+                .parse::<Decimal>()
+                .unwrap()
+                + Decimal::from(5),
+            created_at,
+            flatten_at: sell_at + chrono::Duration::hours(1),
+            max_unprotected_seconds: 10,
+            research_cycle_id: None,
+            entry_valid_until: None,
+        };
+        let mut state = ProtocolState::new(context).unwrap();
+        let progress = |order: &trady_domain::BrokerOrder| OrderProgress {
+            broker_id: Some(order.broker_order_id.clone()),
+            quantity: order.quantity,
+            filled: Decimal::ZERO,
+            status: OrderStatus::Unknown,
+            reconciled_terminal: false,
+            cancel_requested: false,
+            dispatched_at: created_at,
+            stop_price: None,
+        };
+        state.entry = Some(progress(&entry));
+        if stop {
+            let mut protection = progress(&sell);
+            protection.stop_price = Some(initial_stop);
+            state.protection = Some(protection);
+        } else {
+            state.exits.push(progress(&sell));
+        }
+        for (row, leg) in [
+            (
+                pair[0].clone(),
+                trady_application::eur_protocol::OrderLeg::Entry,
+            ),
+            (
+                pair[1].clone(),
+                if stop {
+                    trady_application::eur_protocol::OrderLeg::Protection
+                } else {
+                    trady_application::eur_protocol::OrderLeg::Exit
+                },
+            ),
+        ] {
+            let wire: dto::Order = serde_json::from_value(row["order"].clone()).unwrap();
+            let request =
+                trady_application::eur_protocol::driver::request_for(&state, leg).unwrap();
+            assert!(
+                wire.matches_history(&request, &wire.normalize().unwrap(), false),
+                "native row must match its original request: {leg:?} {request:?}"
+            );
+        }
+        let wire_number =
+            |value: Decimal| serde_json::from_str::<Value>(&value.to_string()).unwrap();
+        for case in [
+            "native",
+            "floored_native_clock",
+            "pre_dispatch_fill",
+            "future_fill",
+            "duplicate",
+            "wrong_sell_sign",
+            "wrong_buy_sign",
+            "zero_sell",
+            "conflicting_fill",
+            "incomplete_sell",
+        ] {
+            let mut observed_state = state.clone();
+            if case == "floored_native_clock" {
+                observed_state.context.created_at += chrono::Duration::milliseconds(750);
+                observed_state.entry.as_mut().unwrap().dispatched_at +=
+                    chrono::Duration::milliseconds(750);
+            }
+            let mut items = pair.to_vec();
+            if case == "pre_dispatch_fill" {
+                items[0]["fill"]["filledAt"] = json!(created_at - chrono::Duration::seconds(2));
+            }
+            if case == "future_fill" {
+                items[1]["fill"]["filledAt"] = json!(sell_at + chrono::Duration::seconds(6));
+            }
+            if case == "wrong_sell_sign" {
+                items[1]["fill"]["quantity"] = wire_number(sell.quantity);
+            }
+            if case == "wrong_buy_sign" {
+                items[0]["fill"]["quantity"] = wire_number(-entry.quantity);
+            }
+            if case == "zero_sell" {
+                items[1]["fill"]["quantity"] = json!(0);
+            }
+            if case == "incomplete_sell" {
+                items[1]["fill"]["quantity"] = wire_number(-sell.quantity / Decimal::from(2));
+            }
+            if matches!(case, "duplicate" | "conflicting_fill") {
+                let mut duplicate = items[1].clone();
+                if case == "conflicting_fill" {
+                    duplicate["fill"]["quantity"] = wire_number(-sell.quantity / Decimal::from(2));
+                }
+                items.push(duplicate);
+            }
+            let server = Server::new(vec![
+                ok(json!({"id":52211463,"currency":"EUR","cash":{"availableToTrade":4992.68}})),
+                ok(json!([])),
+                ok(json!([])),
+                ok(json!({"items":items,"nextPagePath":null})),
+            ]);
+            let mut executor = server.euro_executor();
+            executor.reader.config.broker_account_id = 52211463;
+            executor.reader.clock = FakeClock::new(sell_at + chrono::Duration::seconds(5));
+            let mut binding = euro_binding();
+            binding.broker_instrument_id = "AIRp_EQ".into();
+            binding.isin = "NL0000235190".into();
+            let result = eur_protocol::Trading212ProtocolBroker::new(executor, binding)
+                .observe(&observed_state);
+            match case {
+                "native" | "floored_native_clock" | "duplicate" => {
+                    let observed = result.unwrap_or_else(|e| panic!("{case} stop={stop}: {e:?}"));
+                    assert!(observed.history_complete, "{case}");
+                    assert_eq!(observed.exact_orders.len(), 2);
+                    assert_eq!(observed.holding_quantity, Decimal::ZERO);
+                }
+                "incomplete_sell" => assert!(!result.unwrap().history_complete),
+                _ => assert!(result.is_err(), "{case}"),
+            }
         }
     }
 }

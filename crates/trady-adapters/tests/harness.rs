@@ -619,6 +619,106 @@ fn server(
 fn event(value: Value) -> String {
     format!("data: {value}\n\n")
 }
+
+#[test]
+fn eur_analyst_accepts_read_only_evidence_and_rejects_execution_authority() {
+    use chrono::{Duration as ChronoDuration, Utc};
+    use trady_adapters::opencode::eur_analyst::OpenCodeEurAnalyst;
+    use trady_application::{
+        analyst::{AnalystRequest, EurResearchAnalyst},
+        market_tools::EurAnalystReadPort,
+    };
+
+    struct Evidence(Value);
+    impl EurAnalystReadPort for Evidence {
+        fn execute(&mut self, name: &str, args: &Value) -> Result<Value> {
+            assert_eq!(name, "evidence.read");
+            assert_eq!(args["evidence_id"], "fixture_quote");
+            Ok(self.0.clone())
+        }
+    }
+
+    for marker in [
+        None,
+        Some(json!(false)),
+        Some(json!(true)),
+        Some(Value::Null),
+    ] {
+        let at = Utc::now();
+        let request: AnalystRequest = serde_json::from_value(json!({
+            "run":{"schema_version":1,"run_id":"fixture_eur_research","account_id":"replay_fixture",
+                "session_id":"fixture_eur_session","universe_snapshot_id":"fixture_eur_universe",
+                "started_at":at,"completed_at":at,
+                "model":{"run_id":"fixture_eur_research","session_id":"fixture_eur_session",
+                    "provider":"opencode-go","model":"deepseek-v4.1-flash","prompt_hash":"a".repeat(64),
+                    "tool_manifest_hash":"b".repeat(64),"model_revision":"c".repeat(64)},
+                "fallback_attempts":[],"candidates":[],"selected_instrument_id":null,
+                "proposal":null,"evidence_snapshot_ids":["fixture_quote"],"failure":null},
+            "eligible_instrument_ids":["AIR_PA_EQ"],"candidate_evidence_ids":["fixture_quote"],
+            "fallback_attempts":[],"as_of":at
+        })).unwrap();
+        let mut evidence = json!({"instrument_id":"AIR_PA_EQ","bid":"196.08","ask":"196.10"});
+        if let Some(value) = &marker {
+            evidence["entry_authorized"] = value.clone();
+        }
+        let allowed = marker.as_ref().is_none_or(|value| value == false);
+        let calls = json!({"choices":[{"message":{"role":"assistant","content":"",
+            "tool_calls":[{"id":"fixture_evidence_read","type":"function","function":{
+                "name":"evidence_read_v1","arguments":json!({"evidence_id":"fixture_quote","as_of":at}).to_string()}}]},
+            "finish_reason":"tool_calls"}]}).to_string();
+        let mut responses = vec![(200, "application/json", calls)];
+        if allowed {
+            let final_response = json!({"run_id":request.run.run_id,"session_id":request.run.session_id,
+                "model":request.run.model,"ranks":[{"instrument_id":"AIR_PA_EQ","score":"1",
+                    "sentiment":null,"confidence":null,"evidence_ids":["fixture_quote"],"rationale":"Captured fixture quote"}],
+                "selected_instrument_id":"AIR_PA_EQ","proposal":{"entry_minimum":"196.10","entry_maximum":"196.10",
+                    "stop_price":"194.14","target_price":"200.02","maximum_hold_until":at+ChronoDuration::hours(1),
+                    "rationale":"Synthetic contract fixture only"},"uncertainties":[],"contradictions":[],"completed_at":at});
+            responses.push((
+                200,
+                "application/json",
+                json!({"choices":[{"message":{"role":"assistant",
+                "content":final_response.to_string()},"finish_reason":"stop"}]})
+                .to_string(),
+            ));
+        }
+        let (base_url, requests, worker) = server(responses);
+        let mut analyst = OpenCodeEurAnalyst::new(
+            OpenCodeGoConfig {
+                base_url,
+                stream: false,
+                ..OpenCodeGoConfig::default()
+            },
+            "fixture-secret".into(),
+        )
+        .unwrap()
+        .with_tools(Evidence(evidence.clone()));
+        let result = analyst.select(&request);
+        if allowed {
+            result.unwrap();
+            requests.recv_timeout(Duration::from_secs(2)).unwrap();
+            let followup = requests.recv_timeout(Duration::from_secs(2)).unwrap();
+            let reply = followup["messages"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|message| message["role"] == "tool")
+                .unwrap();
+            assert_eq!(reply["tool_call_id"], "fixture_evidence_read");
+            let body: Value = serde_json::from_str(reply["content"].as_str().unwrap()).unwrap();
+            assert_eq!(body, json!({"result":evidence,"entry_authorized":false}));
+        } else {
+            assert_eq!(
+                result.unwrap_err().to_string(),
+                "EUR analyst read tools cannot provide execution authority"
+            );
+            requests.recv_timeout(Duration::from_secs(2)).unwrap();
+            assert!(requests.try_recv().is_err());
+        }
+        worker.join().unwrap();
+    }
+}
+
 #[test]
 fn real_http_transport_accumulates_native_tool_deltas_and_preserves_correlation() {
     let stream = event(
