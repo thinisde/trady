@@ -13,6 +13,9 @@ The [6 November release-readiness follow-up](./docs/eur-release-readiness-2026-1
 records the latest bounded native probe, account reconciliation and verification.
 Its new ASML entry filled completely; it does not supply the missing partial-fill
 evidence or authorize automatic DEMO.
+The reviewed analyst fix is now installed in SHADOW; the
+[installation record](./docs/evidence/eur-shadow-install-2026-11-06.json) binds
+the three running services to the verified binary and runtime configuration.
 
 The target operator profile is [config/eur-demo.example.json](./config/eur-demo.example.json).
 The migration plan and authority boundary are documented in
