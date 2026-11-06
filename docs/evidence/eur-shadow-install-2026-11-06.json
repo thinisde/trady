@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "VERIFIED_OWNER_APPROVED_SHADOW_INSTALL_NOT_RELEASE_APPROVAL",
+  "recorded_at": "2026-11-06T16:44:09.155434+00:00",
+  "source_pr": "https://github.com/thinisde/trady/pull/4",
+  "source_merge_commit": "8c690c2e604ec02674e3d341bc600974988bcdac",
+  "authorization_scope": "PERSISTENT_SHADOW_BINARY_INSTALL_AND_THREE_SERVICE_RESTARTS_ONLY",
+  "previous_binary_sha256": "764edd9fa1a8c48deda2e50d60e8cfe24b81c568e3e8ed97de4c6148c3e1d05c",
+  "installed_binary_sha256": "d1463d818cda7929f8371367980c3965ecb68725547bd9883334f7d9c1fb83e3",
+  "runtime_config": "/etc/trady/runtime/eur-shadow.json",
+  "runtime_sha256": "be611c54084c3efd5dd9363d90e883c38837722221434ffa96aa1696f4d97f46",
+  "execution_stage": "SHADOW",
+  "services": [
+    {
+      "unit": "trady-eur-analyst.service",
+      "main_pid": 1732433,
+      "active_state": "active",
+      "sub_state": "running",
+      "restart_count": 0,
+      "running_binary_sha256": "d1463d818cda7929f8371367980c3965ecb68725547bd9883334f7d9c1fb83e3"
+    },
+    {
+      "unit": "trady-eur-executor.service",
+      "main_pid": 1732437,
+      "active_state": "active",
+      "sub_state": "running",
+      "restart_count": 0,
+      "running_binary_sha256": "d1463d818cda7929f8371367980c3965ecb68725547bd9883334f7d9c1fb83e3"
+    },
+    {
+      "unit": "trady-eur-gateway.service",
+      "main_pid": 1732434,
+      "active_state": "active",
+      "sub_state": "running",
+      "restart_count": 0,
+      "running_binary_sha256": "d1463d818cda7929f8371367980c3965ecb68725547bd9883334f7d9c1fb83e3"
+    }
+  ],
+  "all_three_running_binary_pins_verified": true,
+  "post_restart_stability_seconds": 35,
+  "application_statuses_observed": [
+    "EUR_ANALYST_WAITING_FOR_PRIMARY_SESSION",
+    "EUR_GATEWAY_DRAINED",
+    "EUR_SHADOW_WAITING_FOR_ANALYST_INPUTS",
+    "WAITING_NEXT_RESEARCH_BUCKET"
+  ],
+  "runtime_configuration_changed": false,
+  "credentials_changed": false,
+  "migrations_run": false,
+  "capability_registry_installed": false,
+  "rollback_binary_preserved": true,
+  "general_demo_service_enabled": false,
+  "general_demo_service_active": false,
+  "live_enabled": false,
+  "owner_release_approval_receipt_created": false,
+  "native_partial_entry_observed": false,
+  "successful_real_input_paper_lifecycle_observed": false,
+  "new_approvable_release_manifest_sha256": null,
+  "private_install_directory": "var/eur-release-readiness-20261106/shadow-install-20261106T164325Z",
+  "private_install_receipt_sha256": "0982bbdba3108a441eaa6ad716b1f687d6455980b43c9cdeb57952af288975f2",
+  "remaining_release_blockers": [
+    "GENUINE_NATIVE_PARTIAL_BUY_REMAINDER_CANCEL_AND_SMALLER_QUANTITY_PROTECTION_UNOBSERVED",
+    "SUCCESSFUL_REAL_INPUT_PAPER_AND_CREDENTIAL_FREE_REPLAY_UNOBSERVED",
+    "COMPLETE_NEW_EXACT_RELEASE_REVIEW_NOT_ACCEPTED",
+    "NEW_EXACT_MANIFEST_OWNER_APPROVAL_NOT_YET_POSSIBLE"
+  ]
+}

@@ -91,9 +91,10 @@ values remain rejected. The application continues to wrap tool results with
 its own `entry_authorized: false`. A loopback HTTP regression reproduced the
 original failure, then passed after the fix, including successful correlated
 tool-result continuation and rejection of claimed/malformed authority. Failed
-native requests remain immutable and were not retried. The fixed candidate
-binary is separate from the installed SHADOW producer; a successful real-input
-paper lifecycle on the repaired candidate remains required.
+native requests remain immutable and were not retried. The fixed candidate was
+retained separately during these observations. The approved SHADOW installation
+below subsequently installed those bytes; a successful real-input paper
+lifecycle on the repaired source remains required.
 
 The final recorded 15:45 inputs were exported without another provider call.
 Credential-free `paper-day-check` replay exited 1 with `PAPER_DAY_BLOCKED`:
@@ -145,6 +146,26 @@ Both Sol rounds approved their behavior scope without findings or requested
 code changes. The second round covers the newly observed analyst repair and
 owner-authorized cash sizing. Review usage was not exposed. These source and
 attribution approvals do not approve a complete release or activate DEMO.
+
+## Approved SHADOW installation
+
+After source PR #4 merged as `8c690c2`, the owner explicitly approved the
+prepared persistent SHADOW binary replacement and restart of its three services.
+The install completed at 16:44 UTC. Analyst, executor and gateway all ran new
+PIDs on binary
+`d1463d818cda7929f8371367980c3965ecb68725547bd9883334f7d9c1fb83e3`,
+with no restarts during the 35-second stability check. The original binary is
+retained privately for rollback.
+
+The runtime remains SHADOW with configuration hash
+`be611c54084c3efd5dd9363d90e883c38837722221434ffa96aa1696f4d97f46`.
+The install changed no configuration, credential, migration or capability
+registry. General DEMO remains disabled/inactive and LIVE remains disabled.
+Post-install application output reports waiting for the next primary session;
+this is operational startup proof, not a repaired positive paper lifecycle.
+The [installation evidence](./evidence/eur-shadow-install-2026-11-06.json)
+records the exact running pins and original private receipt hash. Earlier
+observations keep their actual producing bytes and timestamps.
 
 Current native API documentation was fetched through Context7. The cancellation
 API documents acceptance of a cancellation request, not guaranteed cancellation;
